@@ -1,0 +1,64 @@
+name: Contracts
+
+on:
+  pull_request:
+    paths:
+      - "contracts/**"
+      - "scripts/generate-clients.ps1"
+      - "mobile/packages/kelimio_api_client/**"
+      - "admin-web/src/generated/api/**"
+      - ".github/workflows/contracts.yml"
+  push:
+    branches: [main]
+    paths:
+      - "contracts/**"
+      - "scripts/generate-clients.ps1"
+      - "mobile/packages/kelimio_api_client/**"
+      - "admin-web/src/generated/api/**"
+      - ".github/workflows/contracts.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate-openapi:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
+        with:
+          version: 11.9.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24.18.0
+          cache: pnpm
+          cache-dependency-path: contracts/pnpm-lock.yaml
+      - name: Verify response schemas
+        working-directory: contracts
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm test
+          pnpm audit --audit-level=moderate
+      - name: Validate OpenAPI contract
+        # openapitools/openapi-generator-cli v7.14.0
+        run: >-
+          docker run --rm
+          -v "${{ github.workspace }}:/workspace"
+          openapitools/openapi-generator-cli@sha256:a620610d9fabf7ce05310c648417ba168125aac2f4517580030e115921ac1a52
+          validate -i /workspace/contracts/openapi/kelimio-api.yaml
+      - uses: dart-lang/setup-dart@65eb853c7ba17dde3be364c3d2858773e7144260 # v1.7.2
+        with:
+          sdk: 3.12.0
+      - name: Regenerate clients
+        shell: pwsh
+        run: ./scripts/generate-clients.ps1
+      - name: Reject generated-client drift
+        shell: bash
+        run: |
+          drift="$(git status --porcelain --untracked-files=all -- mobile/packages/kelimio_api_client admin-web/src/generated/api)"
+          if [[ -n "$drift" ]]; then
+            printf '%s\n' "$drift"
+            exit 1
+          fi

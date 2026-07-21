@@ -1,0 +1,78 @@
+name: Mobile
+
+on:
+  pull_request:
+    paths: ["mobile/**", ".github/workflows/mobile.yml"]
+  push:
+    branches: [main]
+    paths: ["mobile/**", ".github/workflows/mobile.yml"]
+
+permissions:
+  contents: read
+
+jobs:
+  analyze-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9 # v4.8.0
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          flutter-version: 3.44.0
+          channel: stable
+          cache: true
+      - working-directory: mobile
+        run: flutter pub get --enforce-lockfile
+      - working-directory: mobile
+        run: flutter gen-l10n
+      - name: Reject dependency and localization drift
+        shell: bash
+        run: |
+          drift="$(git status --porcelain --untracked-files=all -- mobile/pubspec.lock mobile/lib/l10n/generated)"
+          if [[ -n "$drift" ]]; then
+            printf '%s\n' "$drift"
+            exit 1
+          fi
+      - working-directory: mobile
+        run: dart format --output=none --set-exit-if-changed .
+      - working-directory: mobile
+        run: flutter analyze --fatal-infos
+      - working-directory: mobile
+        run: flutter test
+      - working-directory: mobile
+        run: flutter build appbundle --debug
+
+  ios-no-sign:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9 # v4.8.0
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          flutter-version: 3.44.0
+          channel: stable
+          cache: true
+      - working-directory: mobile
+        run: flutter pub get --enforce-lockfile
+      - working-directory: mobile
+        run: flutter gen-l10n
+      - name: Reject dependency and localization drift
+        shell: bash
+        run: |
+          drift="$(git status --porcelain --untracked-files=all -- mobile/pubspec.lock mobile/lib/l10n/generated)"
+          if [[ -n "$drift" ]]; then
+            printf '%s\n' "$drift"
+            exit 1
+          fi
+      - working-directory: mobile
+        run: flutter build ios --no-codesign --debug

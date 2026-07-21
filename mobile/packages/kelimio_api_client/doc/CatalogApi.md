@@ -1,0 +1,102 @@
+# kelimio_api_client.api.CatalogApi
+
+## Load the API package
+```dart
+import 'package:kelimio_api_client/api.dart';
+```
+
+All URIs are relative to *http://localhost*
+
+Method | HTTP request | Description
+------------- | ------------- | -------------
+[**getCourse**](CatalogApi.md#getcourse) | **GET** /v1/courses/{courseId} | Return course details visible to the authenticated user
+[**listCatalogCourses**](CatalogApi.md#listcatalogcourses) | **GET** /v1/catalog/courses | List public, published courses
+
+
+# **getCourse**
+> CourseDetail getCourse(courseId)
+
+Return course details visible to the authenticated user
+
+### Example
+```dart
+import 'package:kelimio_api_client/api.dart';
+
+final api = KelimioApiClient().getCatalogApi();
+final String courseId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+
+try {
+    final response = api.getCourse(courseId);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling CatalogApi->getCourse: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **courseId** | **String**|  |
+
+### Return type
+
+[**CourseDetail**](CourseDetail.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json, application/problem+json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **listCatalogCourses**
+> CoursePage listCatalogCourses(cursor, limit, targetLanguage, supportLanguage)
+
+List public, published courses
+
+### Example
+```dart
+import 'package:kelimio_api_client/api.dart';
+
+final api = KelimioApiClient().getCatalogApi();
+final String cursor = cursor_example; // String |
+final int limit = 56; // int |
+final String targetLanguage = targetLanguage_example; // String |
+final String supportLanguage = supportLanguage_example; // String |
+
+try {
+    final response = api.listCatalogCourses(cursor, limit, targetLanguage, supportLanguage);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling CatalogApi->listCatalogCourses: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **cursor** | **String**|  | [optional]
+ **limit** | **int**|  | [optional] [default to 20]
+ **targetLanguage** | **String**|  | [optional]
+ **supportLanguage** | **String**|  | [optional]
+
+### Return type
+
+[**CoursePage**](CoursePage.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json, application/problem+json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)

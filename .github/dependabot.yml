@@ -1,0 +1,65 @@
+version: 2
+updates:
+  - package-ecosystem: gradle
+    directory: /backend
+    schedule:
+      interval: weekly
+    groups:
+      backend-minor-patch:
+        update-types: [minor, patch]
+  - package-ecosystem: gradle
+    directory: /mobile/android
+    schedule:
+      interval: weekly
+  - package-ecosystem: pub
+    directory: /mobile
+    schedule:
+      interval: weekly
+    groups:
+      mobile-minor-patch:
+        update-types: [minor, patch]
+  - package-ecosystem: pub
+    directory: /mobile/packages/kelimio_api_client
+    schedule:
+      interval: weekly
+  - package-ecosystem: npm
+    directory: /admin-web
+    schedule:
+      interval: weekly
+    groups:
+      web-minor-patch:
+        update-types: [minor, patch]
+  - package-ecosystem: npm
+    directory: /public-web
+    schedule:
+      interval: weekly
+    groups:
+      public-web-minor-patch:
+        update-types: [minor, patch]
+  - package-ecosystem: npm
+    directory: /contracts
+    schedule:
+      interval: weekly
+    groups:
+      contracts-minor-patch:
+        update-types: [minor, patch]
+  - package-ecosystem: terraform
+    directory: /infrastructure/terraform/environments/development
+    schedule:
+      interval: weekly
+  - package-ecosystem: terraform
+    directory: /infrastructure/terraform/bootstrap
+    schedule:
+      interval: weekly
+  - package-ecosystem: docker
+    directory: /backend
+    schedule:
+      interval: weekly
+  - package-ecosystem: docker
+    directory: /infrastructure/local/localstack
+    schedule:
+      interval: weekly
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

@@ -1,0 +1,64 @@
+{
+  "realm": "kelimio",
+  "enabled": true,
+  "displayName": "Kelimio Local",
+  "registrationAllowed": true,
+  "registrationEmailAsUsername": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "verifyEmail": false,
+  "resetPasswordAllowed": true,
+  "rememberMe": true,
+  "sslRequired": "none",
+  "accessTokenLifespan": 300,
+  "ssoSessionIdleTimeout": 1800,
+  "ssoSessionMaxLifespan": 36000,
+  "roles": {
+    "realm": [
+      { "name": "moderator" },
+      { "name": "support" },
+      { "name": "finance-admin" }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "kelimio-api",
+      "name": "Kelimio API",
+      "enabled": true,
+      "bearerOnly": true,
+      "protocol": "openid-connect"
+    },
+    {
+      "clientId": "kelimio-mobile",
+      "name": "Kelimio Mobile Local",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "implicitFlowEnabled": false,
+      "redirectUris": [
+        "com.kelimio.app:/oauthredirect",
+        "http://127.0.0.1:*/*",
+        "http://localhost:*/*"
+      ],
+      "webOrigins": ["http://127.0.0.1:*", "http://localhost:*"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "com.kelimio.app:/logout||http://127.0.0.1:*/*||http://localhost:*/*"
+      },
+      "protocolMappers": [
+        {
+          "name": "kelimio-api-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "kelimio-api",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ]
+}

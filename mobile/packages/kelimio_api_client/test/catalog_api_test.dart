@@ -1,0 +1,23 @@
+import 'package:test/test.dart';
+import 'package:kelimio_api_client/kelimio_api_client.dart';
+
+/// tests for CatalogApi
+void main() {
+  final instance = KelimioApiClient().getCatalogApi();
+
+  group(CatalogApi, () {
+    // Return course details visible to the authenticated user
+    //
+    //Future<CourseDetail> getCourse(String courseId) async
+    test('test getCourse', () async {
+      // TODO
+    });
+
+    // List public, published courses
+    //
+    //Future<CoursePage> listCatalogCourses({ String cursor, int limit, String targetLanguage, String supportLanguage }) async
+    test('test listCatalogCourses', () async {
+      // TODO
+    });
+  });
+}

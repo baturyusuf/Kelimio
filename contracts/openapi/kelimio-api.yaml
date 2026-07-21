@@ -1,0 +1,607 @@
+openapi: 3.1.0
+info:
+  title: Kelimio API
+  version: 0.1.0
+  license:
+    name: Proprietary
+    identifier: LicenseRef-Proprietary
+  description: >-
+    Versioned contract for the Kelimio mobile and administrative clients. Server
+    state is authoritative for identity, answers, score, energy, progress, and
+    entitlements.
+jsonSchemaDialect: https://json-schema.org/draft/2020-12/schema
+servers:
+  - url: /
+    description: Base URL supplied by the environment-specific client configuration.
+tags:
+  - name: Profile
+    description: Authenticated profile and language preferences.
+  - name: Catalog
+    description: Published course discovery and details.
+  - name: Enrollment
+    description: Contextual learner access to courses.
+  - name: Learning
+    description: Authoritative online attempts and answer evaluation.
+  - name: Energy
+    description: Free-course energy state managed by the server.
+security:
+  - bearerAuth: []
+paths:
+  /v1/me:
+    get:
+      operationId: getMe
+      tags: [Profile]
+      summary: Return the authenticated user's profile and language preferences
+      responses:
+        "200":
+          description: Authenticated profile
+          headers:
+            X-Request-Id:
+              $ref: "#/components/headers/RequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MeResponse"
+        "401":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/catalog/courses:
+    get:
+      operationId: listCatalogCourses
+      tags: [Catalog]
+      summary: List public, published courses
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+        - name: targetLanguage
+          in: query
+          schema:
+            $ref: "#/components/schemas/LanguageTag"
+        - name: supportLanguage
+          in: query
+          schema:
+            $ref: "#/components/schemas/LanguageTag"
+      responses:
+        "200":
+          description: A cursor page of courses
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CoursePage"
+        "401":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/courses/{courseId}:
+    get:
+      operationId: getCourse
+      tags: [Catalog]
+      summary: Return course details visible to the authenticated user
+      parameters:
+        - $ref: "#/components/parameters/CourseId"
+      responses:
+        "200":
+          description: Course details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CourseDetail"
+        "401":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/courses/{courseId}/enrollments:
+    post:
+      operationId: enrollInCourse
+      tags: [Enrollment]
+      summary: Enroll the authenticated user in a free public course
+      parameters:
+        - $ref: "#/components/parameters/CourseId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateEnrollmentRequest"
+      responses:
+        "201":
+          description: Enrollment created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnrollmentResponse"
+        "200":
+          description: Existing enrollment returned for an idempotent retry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnrollmentResponse"
+        "401":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/tests/{testId}/attempts:
+    post:
+      operationId: startAttempt
+      tags: [Learning]
+      summary: Start an online attempt for the current test revision
+      parameters:
+        - name: testId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/Id"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "201":
+          description: Attempt created; answer keys are deliberately absent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AttemptResponse"
+        "401":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/attempts/{attemptId}/answers:
+    post:
+      operationId: submitAnswer
+      tags: [Learning]
+      summary: Record and evaluate one online answer exactly once
+      description: >-
+        Reusing submissionId returns the previously committed response and never
+        creates a second attempt fact, score event, energy event, or outbox event.
+      parameters:
+        - $ref: "#/components/parameters/AttemptId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubmitAnswerRequest"
+      responses:
+        "200":
+          description: Authoritative evaluation and resulting server state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnswerRecordedResponse"
+        "401":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/attempts/{attemptId}/finish:
+    post:
+      operationId: finishAttempt
+      tags: [Learning]
+      summary: Finish an attempt after all planned questions are answered
+      parameters:
+        - $ref: "#/components/parameters/AttemptId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "200":
+          description: Final attempt result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FinishAttemptResponse"
+        "401":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/energy:
+    get:
+      operationId: getEnergy
+      tags: [Energy]
+      summary: Return the lazily regenerated free-course energy account
+      responses:
+        "200":
+          description: Current energy state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnergyResponse"
+        "401":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: OIDC access token obtained with Authorization Code and PKCE.
+  headers:
+    RequestId:
+      description: Correlation identifier generated or accepted by the API edge.
+      schema:
+        type: string
+        format: uuid
+  parameters:
+    CourseId:
+      name: courseId
+      in: path
+      required: true
+      schema:
+        $ref: "#/components/schemas/Id"
+    AttemptId:
+      name: attemptId
+      in: path
+      required: true
+      schema:
+        $ref: "#/components/schemas/Id"
+    Cursor:
+      name: cursor
+      in: query
+      schema:
+        type: string
+        maxLength: 512
+    Limit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: Stable UUID generated once for the logical command.
+      schema:
+        type: string
+        format: uuid
+  responses:
+    Problem:
+      description: RFC 9457 problem details
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+  schemas:
+    Id:
+      type: string
+      format: uuid
+    LanguageTag:
+      type: string
+      description: >-
+        Canonically cased BCP 47 subset: lowercase primary language, optional
+        title-case script, uppercase region, and lowercase variants. Extensions
+        and private-use subtags are outside the initial API contract.
+      minLength: 2
+      maxLength: 35
+      pattern: "^[a-z]{2,8}(?:-[A-Z][a-z]{3})?(?:-(?:[A-Z]{2}|[0-9]{3}))?(?:-(?:[a-z0-9]{5,8}|[0-9][a-z0-9]{3}))*$"
+      examples: [tr, en, ar, fr, pt-BR, zh-Hant]
+    MeResponse:
+      type: object
+      additionalProperties: false
+      required: [id, subject, displayName, appLocale, activeTargetLanguage]
+      properties:
+        id:
+          $ref: "#/components/schemas/Id"
+        subject:
+          type: string
+          minLength: 1
+          maxLength: 255
+        displayName:
+          type: string
+          minLength: 1
+          maxLength: 80
+        username:
+          type: [string, "null"]
+          maxLength: 40
+        appLocale:
+          $ref: "#/components/schemas/LanguageTag"
+        activeTargetLanguage:
+          $ref: "#/components/schemas/LanguageTag"
+    CourseSummary:
+      type: object
+      additionalProperties: false
+      required:
+        [id, name, targetLanguage, supportLanguages, accessType, visibility, enrolled]
+      properties:
+        id:
+          $ref: "#/components/schemas/Id"
+        name:
+          type: string
+          minLength: 1
+          maxLength: 160
+        description:
+          type: [string, "null"]
+          maxLength: 2000
+        targetLanguage:
+          $ref: "#/components/schemas/LanguageTag"
+        supportLanguages:
+          type: array
+          uniqueItems: true
+          items:
+            $ref: "#/components/schemas/LanguageTag"
+        accessType:
+          type: string
+          enum: [FREE, PAID]
+        visibility:
+          type: string
+          enum: [PUBLIC, PRIVATE]
+        enrolled:
+          type: boolean
+    CourseDetail:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - name
+        - targetLanguage
+        - supportLanguages
+        - accessType
+        - visibility
+        - enrolled
+        - ownerDisplayName
+        - releaseId
+        - tests
+      properties:
+        id:
+          $ref: "#/components/schemas/Id"
+        name:
+          type: string
+          minLength: 1
+          maxLength: 160
+        description:
+          type: [string, "null"]
+          maxLength: 2000
+        targetLanguage:
+          $ref: "#/components/schemas/LanguageTag"
+        supportLanguages:
+          type: array
+          uniqueItems: true
+          items:
+            $ref: "#/components/schemas/LanguageTag"
+        accessType:
+          type: string
+          enum: [FREE, PAID]
+        visibility:
+          type: string
+          enum: [PUBLIC, PRIVATE]
+        enrolled:
+          type: boolean
+        ownerDisplayName:
+          type: string
+          maxLength: 80
+        releaseId:
+          $ref: "#/components/schemas/Id"
+        tests:
+          type: array
+          items:
+            $ref: "#/components/schemas/TestSummary"
+    TestSummary:
+      type: object
+      additionalProperties: false
+      required: [id, revisionId, name, position, questionCount]
+      properties:
+        id:
+          $ref: "#/components/schemas/Id"
+        revisionId:
+          $ref: "#/components/schemas/Id"
+        name:
+          type: string
+          maxLength: 160
+        position:
+          type: integer
+          minimum: 1
+        questionCount:
+          type: integer
+          minimum: 1
+    CoursePage:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/CourseSummary"
+        nextCursor:
+          type: [string, "null"]
+    CreateEnrollmentRequest:
+      type: object
+      additionalProperties: false
+      required: [supportLanguage]
+      properties:
+        supportLanguage:
+          $ref: "#/components/schemas/LanguageTag"
+    EnrollmentResponse:
+      type: object
+      additionalProperties: false
+      required: [id, courseId, supportLanguage, status, enrolledAt]
+      properties:
+        id:
+          $ref: "#/components/schemas/Id"
+        courseId:
+          $ref: "#/components/schemas/Id"
+        supportLanguage:
+          $ref: "#/components/schemas/LanguageTag"
+        status:
+          type: string
+          enum: [ACTIVE]
+        enrolledAt:
+          type: string
+          format: date-time
+    AttemptResponse:
+      type: object
+      additionalProperties: false
+      required: [id, testId, testRevisionId, state, questions, startedAt]
+      properties:
+        id:
+          $ref: "#/components/schemas/Id"
+        testId:
+          $ref: "#/components/schemas/Id"
+        testRevisionId:
+          $ref: "#/components/schemas/Id"
+        state:
+          $ref: "#/components/schemas/AttemptState"
+        questions:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/QuestionPayload"
+        startedAt:
+          type: string
+          format: date-time
+    QuestionPayload:
+      type: object
+      additionalProperties: false
+      required: [questionId, questionRevisionId, type, position, prompt, options]
+      properties:
+        questionId:
+          $ref: "#/components/schemas/Id"
+        questionRevisionId:
+          $ref: "#/components/schemas/Id"
+        type:
+          type: string
+          enum: [WORD_MULTIPLE_CHOICE]
+        position:
+          type: integer
+          minimum: 1
+        prompt:
+          type: string
+          minLength: 1
+          maxLength: 1000
+        options:
+          type: array
+          minItems: 4
+          maxItems: 4
+          items:
+            $ref: "#/components/schemas/AnswerOption"
+    AnswerOption:
+      type: object
+      additionalProperties: false
+      required: [id, text]
+      properties:
+        id:
+          $ref: "#/components/schemas/Id"
+        text:
+          type: string
+          minLength: 1
+          maxLength: 500
+    SubmitAnswerRequest:
+      type: object
+      additionalProperties: false
+      required: [submissionId, questionRevisionId, selectedOptionId]
+      properties:
+        submissionId:
+          $ref: "#/components/schemas/Id"
+        questionRevisionId:
+          $ref: "#/components/schemas/Id"
+        selectedOptionId:
+          $ref: "#/components/schemas/Id"
+    AnswerRecordedResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - submissionId
+        - correct
+        - correctOptionId
+        - activeScoreDelta
+        - lifetimeScoreDelta
+        - activeQuestionScore
+        - lifetimeScore
+        - energy
+        - attemptState
+      properties:
+        submissionId:
+          $ref: "#/components/schemas/Id"
+        correct:
+          type: boolean
+        correctOptionId:
+          $ref: "#/components/schemas/Id"
+        activeScoreDelta:
+          type: integer
+          minimum: 0
+          maximum: 60
+        lifetimeScoreDelta:
+          type: integer
+          minimum: 0
+          maximum: 60
+        activeQuestionScore:
+          type: integer
+          minimum: 0
+          maximum: 60
+        lifetimeScore:
+          type: integer
+          minimum: 0
+        energy:
+          $ref: "#/components/schemas/EnergyResponse"
+        attemptState:
+          $ref: "#/components/schemas/AttemptState"
+    FinishAttemptResponse:
+      type: object
+      additionalProperties: false
+      required: [attemptId, state, correctCount, questionCount, correctRatio, completedAt]
+      properties:
+        attemptId:
+          $ref: "#/components/schemas/Id"
+        state:
+          $ref: "#/components/schemas/AttemptState"
+        correctCount:
+          type: integer
+          minimum: 0
+        questionCount:
+          type: integer
+          minimum: 1
+        correctRatio:
+          type: number
+          minimum: 0
+          maximum: 1
+        completedAt:
+          type: string
+          format: date-time
+    AttemptState:
+      type: string
+      enum: [IN_PROGRESS, COMPLETED_PASS, COMPLETED_FAIL, INTERRUPTED_ENERGY]
+    EnergyResponse:
+      type: object
+      additionalProperties: false
+      required: [balance, maximum, unlimited, asOf]
+      properties:
+        balance:
+          type: integer
+          minimum: 0
+          maximum: 5
+        maximum:
+          type: integer
+          const: 5
+        unlimited:
+          type: boolean
+        nextRegenerationAt:
+          type: [string, "null"]
+          format: date-time
+        asOf:
+          type: string
+          format: date-time
+    Problem:
+      type: object
+      additionalProperties: true
+      required: [type, title, status]
+      properties:
+        type:
+          type: string
+          format: uri-reference
+        title:
+          type: string
+        status:
+          type: integer
+          minimum: 400
+          maximum: 599
+        detail:
+          type: string
+        instance:
+          type: string
+          format: uri-reference
+        code:
+          type: string
+        requestId:
+          type: string
