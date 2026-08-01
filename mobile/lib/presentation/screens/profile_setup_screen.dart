@@ -116,6 +116,7 @@ final class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
             child: Column(
               children: [
                 TextFormField(
+                  key: const Key('profile-display-name'),
                   controller: _displayNameController,
                   enabled: !saving,
                   maxLength: 80,
@@ -193,6 +194,7 @@ final class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
           ),
           const SizedBox(height: 20),
           FilledButton.icon(
+            key: const Key('profile-setup-submit'),
             onPressed: saving ? null : _submit,
             icon: saving
                 ? const SizedBox.square(

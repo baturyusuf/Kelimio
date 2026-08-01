@@ -45,7 +45,7 @@ jobs:
       - working-directory: mobile
         run: flutter test
       - working-directory: mobile
-        run: flutter build appbundle --debug
+        run: flutter build appbundle --debug --flavor production
 
   ios-no-sign:
     runs-on: macos-latest

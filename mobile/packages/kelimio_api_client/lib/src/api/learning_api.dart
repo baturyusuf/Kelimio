@@ -109,7 +109,7 @@ class LearningApi {
   }
 
   /// Return the authenticated learner&#39;s rebuildable course progress projection
-  /// Counts and scores are projected only from server-authoritative PostgreSQL facts. When updating is true, the last completed projection is returned while pending outbox facts are processed.
+  /// Counts and scores are projected only from server-authoritative PostgreSQL facts. When updating is true, the last completed projection is returned while unresolved outbox facts remain, including a delivery awaiting operational replay after exhausting worker retries. Clients must use bounded polling and expose a retry state instead of an endless spinner.
   ///
   /// Parameters:
   /// * [courseId]

@@ -59,6 +59,7 @@ final class AuthController extends AsyncNotifier<AuthSession?> {
       ref.invalidate(catalogControllerProvider);
       ref.invalidate(energyControllerProvider);
       ref.invalidate(courseDetailProvider);
+      ref.invalidate(courseProgressProvider);
       ref.invalidate(dioProvider);
       ref.invalidate(recoveryStoreProvider);
     }

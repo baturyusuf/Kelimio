@@ -51,6 +51,7 @@ final class SignInScreen extends ConsumerWidget {
                   SizedBox(
                     width: double.infinity,
                     child: FilledButton.icon(
+                      key: const Key('sign-in-submit'),
                       onPressed: auth.isLoading
                           ? null
                           : ref.read(authControllerProvider.notifier).signIn,

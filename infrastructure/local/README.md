@@ -33,3 +33,12 @@ emulator or attached device, prefer `adb reverse tcp:8081 tcp:8081` and
 set both `KELIMIO_LOCAL_KEYCLOAK_BASE_URL` and `KELIMIO_LOCAL_OIDC_ISSUER` to
 the same reachable host before creating the stack; tokens and API validation
 must use the exact same issuer.
+
+Every published host port has a `KELIMIO_LOCAL_*_HOST_PORT` override while its
+default remains unchanged, and `KELIMIO_LOCAL_RESTART_POLICY` defaults to
+`unless-stopped`. The LocalStack build tag can be isolated with
+`KELIMIO_LOCALSTACK_IMAGE`. `scripts/local-android-e2e.ps1` uses those controls
+with a randomly named project and restart policy `no` so a fresh real-service
+test can run beside the normal stack. Its cleanup accepts only the guarded E2E
+project name, exact test image tags, and project-owned Docker labels; it never
+prunes or deletes normal volumes.

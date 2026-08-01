@@ -50,12 +50,14 @@ run from the repository root:
 .\scripts\android-emulator.cmd -Action start
 cd mobile
 flutter run -d emulator-5554 `
+  --flavor production `
   --dart-define=KELIMIO_API_BASE_URL=http://localhost:8080 `
   --dart-define=KELIMIO_OIDC_ISSUER=http://localhost:8081/realms/kelimio `
   --dart-define=KELIMIO_OIDC_CLIENT_ID=kelimio-mobile `
   --dart-define=KELIMIO_LOCAL_DEVELOPMENT_TOOLS=true
 
 flutter test integration_test -d emulator-5554 `
+  --flavor production `
   --dart-define=KELIMIO_API_BASE_URL=http://localhost:8080 `
   --dart-define=KELIMIO_OIDC_ISSUER=http://localhost:8081/realms/kelimio `
   --dart-define=KELIMIO_OIDC_CLIENT_ID=kelimio-mobile `
@@ -65,6 +67,26 @@ flutter test integration_test -d emulator-5554 `
 The script configures ADB reverse mappings for the API and Keycloak ports. The
 AVD contains Google APIs but intentionally has no Play Store; store billing and
 Play Integrity remain separate release-stage tests.
+
+From the repository root, `scripts\local-android-e2e.cmd` runs the isolated
+real-registration acceptance flow. It uses separate Compose volumes and ports,
+public Keycloak registration, Mailpit verification, a genuine S256 PKCE token,
+the generated API repositories, real Drift storage, and the production Flutter
+UI. It verifies profile gating, starter-course installation, enrollment, all six
+server-scored answers, idempotent answer replay, the final 6/6 and 360/360
+projection, sign-out, and private-cache removal. It is skipped by ordinary
+integration-test invocations unless the guarded runner enables it.
+
+Android has explicit `production` and `e2e` flavors. Normal Android run/build
+commands must select `--flavor production`; the guarded acceptance runner alone
+selects `e2e`, whose `com.kelimio.app.e2e` package keeps its Drift and platform
+storage separate from the normal app. The iOS project has no flavor/scheme
+change and therefore remains buildable with its existing `Runner` scheme.
+
+The test overrides only the authentication repository and access-token
+interface after the real protocol exchange. It intentionally does not claim
+that the native Custom Tab, app-link callback, or secure-token persistence path
+has been exercised; retain those checks for native/staging acceptance.
 
 Release signing credentials are intentionally absent from source control. The
 deployment pipeline must supply the Android upload key and iOS signing profile;

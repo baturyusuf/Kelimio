@@ -22,11 +22,16 @@ final class AppAuthGateway implements AuthRepository, AccessTokenProvider {
   final FlutterAppAuth _appAuth;
   final FlutterSecureStorage _storage;
   Future<String?>? _refreshInFlight;
+  int? _refreshGeneration;
+  int _sessionGeneration = 0;
+  bool _locallySignedOut = false;
+  Future<void> _tokenStorageTail = Future<void>.value();
 
   static const _accessTokenKey = 'oidc.access_token';
   static const _refreshTokenKey = 'oidc.refresh_token';
   static const _idTokenKey = 'oidc.id_token';
   static const _expiresAtKey = 'oidc.expires_at';
+  static const _signedOutKey = 'oidc.signed_out';
   static const _scopes = <String>[
     'openid',
     'profile',
@@ -36,17 +41,28 @@ final class AppAuthGateway implements AuthRepository, AccessTokenProvider {
 
   @override
   Future<AuthSession?> restore() async {
+    final generation = _sessionGeneration;
     final token = await accessToken();
-    if (token == null) {
+    if (token == null || generation != _sessionGeneration) {
       return null;
     }
-    final expiresAt = await _readExpiry();
-    return expiresAt == null ? null : AuthSession(expiresAt: expiresAt);
+    final snapshot = await _readTokenSnapshot();
+    return generation != _sessionGeneration || snapshot.expiresAt == null
+        ? null
+        : AuthSession(expiresAt: snapshot.expiresAt!);
   }
 
   @override
   Future<AuthSession> signIn() async {
+    final generation = ++_sessionGeneration;
+    _locallySignedOut = true;
+    _refreshInFlight = null;
+    _refreshGeneration = null;
     try {
+      await _clearTokens(generation: generation);
+      if (generation != _sessionGeneration) {
+        throw const AuthenticationCancelledFailure();
+      }
       final response = await _appAuth.authorizeAndExchangeCode(
         AuthorizationTokenRequest(
           _config.oidcClientId,
@@ -63,12 +79,17 @@ final class AppAuthGateway implements AuthRepository, AccessTokenProvider {
           'OIDC response did not include an access token',
         );
       }
-      await _writeTokens(
+      final stored = await _writeTokens(
+        generation: generation,
         accessToken: accessToken,
         refreshToken: response.refreshToken,
         idToken: response.idToken,
         expiresAt: expiresAt,
       );
+      if (!stored || generation != _sessionGeneration) {
+        throw const AuthenticationCancelledFailure();
+      }
+      _locallySignedOut = false;
       return AuthSession(expiresAt: expiresAt);
     } on FlutterAppAuthUserCancelledException catch (error) {
       throw AuthenticationCancelledFailure(cause: error);
@@ -81,12 +102,46 @@ final class AppAuthGateway implements AuthRepository, AccessTokenProvider {
 
   @override
   Future<void> signOut() async {
-    final idToken = await _storage.read(key: _idTokenKey);
+    ++_sessionGeneration;
+    _locallySignedOut = true;
+    _refreshInFlight = null;
+    _refreshGeneration = null;
+    String? idToken;
+    Object? localFailure;
+    StackTrace? localFailureStackTrace;
     try {
-      if (idToken != null) {
+      await _withTokenStorage(() async {
+        Object? operationFailure;
+        StackTrace? operationFailureStackTrace;
+        try {
+          idToken = await _storage.read(key: _idTokenKey);
+        } on Object catch (error, stackTrace) {
+          operationFailure = error;
+          operationFailureStackTrace = stackTrace;
+        }
+        try {
+          await _clearTokensUnlocked();
+        } on Object catch (error, stackTrace) {
+          operationFailure ??= error;
+          operationFailureStackTrace ??= stackTrace;
+        }
+        if (operationFailure != null) {
+          Error.throwWithStackTrace(
+            operationFailure,
+            operationFailureStackTrace ?? StackTrace.current,
+          );
+        }
+      });
+    } on Object catch (error, stackTrace) {
+      localFailure = error;
+      localFailureStackTrace = stackTrace;
+    }
+    final tokenForLogout = idToken;
+    try {
+      if (tokenForLogout != null) {
         await _appAuth.endSession(
           EndSessionRequest(
-            idTokenHint: idToken,
+            idTokenHint: tokenForLogout,
             postLogoutRedirectUrl: _config.postLogoutRedirectUri,
             issuer: _config.oidcIssuer.toString(),
             allowInsecureConnections: !_config.isProduction,
@@ -95,15 +150,27 @@ final class AppAuthGateway implements AuthRepository, AccessTokenProvider {
       }
     } on Object {
       // Local credentials are still removed when provider logout is unavailable.
-    } finally {
-      await _clearTokens();
+    }
+    if (localFailure != null) {
+      Error.throwWithStackTrace(
+        localFailure,
+        localFailureStackTrace ?? StackTrace.current,
+      );
     }
   }
 
   @override
   Future<String?> accessToken({bool forceRefresh = false}) async {
-    final accessToken = await _storage.read(key: _accessTokenKey);
-    final expiresAt = await _readExpiry();
+    if (_locallySignedOut) {
+      return null;
+    }
+    final generation = _sessionGeneration;
+    final snapshot = await _readTokenSnapshot();
+    if (generation != _sessionGeneration) {
+      return null;
+    }
+    final accessToken = snapshot.accessToken;
+    final expiresAt = snapshot.expiresAt;
     final isUsable =
         accessToken != null &&
         expiresAt != null &&
@@ -115,22 +182,30 @@ final class AppAuthGateway implements AuthRepository, AccessTokenProvider {
     }
 
     final existingRefresh = _refreshInFlight;
-    if (existingRefresh != null) {
+    if (existingRefresh != null && _refreshGeneration == generation) {
       return existingRefresh;
     }
-    final future = _refresh();
+    final future = _refresh(generation);
     _refreshInFlight = future;
+    _refreshGeneration = generation;
     try {
       return await future;
     } finally {
-      _refreshInFlight = null;
+      if (identical(_refreshInFlight, future)) {
+        _refreshInFlight = null;
+        _refreshGeneration = null;
+      }
     }
   }
 
-  Future<String?> _refresh() async {
-    final refreshToken = await _storage.read(key: _refreshTokenKey);
+  Future<String?> _refresh(int generation) async {
+    final snapshot = await _readTokenSnapshot();
+    if (generation != _sessionGeneration) {
+      return null;
+    }
+    final refreshToken = snapshot.refreshToken;
     if (refreshToken == null) {
-      await _clearTokens();
+      await _clearTokens(generation: generation);
       return null;
     }
     try {
@@ -146,51 +221,155 @@ final class AppAuthGateway implements AuthRepository, AccessTokenProvider {
       );
       final accessToken = response.accessToken;
       final expiresAt = response.accessTokenExpirationDateTime;
-      if (accessToken == null || expiresAt == null) {
-        await _clearTokens();
+      if (generation != _sessionGeneration) {
         return null;
       }
-      await _writeTokens(
+      if (accessToken == null || expiresAt == null) {
+        await _clearTokens(generation: generation);
+        return null;
+      }
+      final stored = await _writeTokens(
+        generation: generation,
         accessToken: accessToken,
         refreshToken: response.refreshToken ?? refreshToken,
-        idToken: response.idToken ?? await _storage.read(key: _idTokenKey),
+        idToken: response.idToken ?? snapshot.idToken,
         expiresAt: expiresAt,
       );
-      return accessToken;
+      return stored && generation == _sessionGeneration ? accessToken : null;
     } on Object {
-      await _clearTokens();
+      if (generation == _sessionGeneration) {
+        await _clearTokens(generation: generation);
+      }
       return null;
     }
   }
 
-  Future<DateTime?> _readExpiry() async {
-    final value = await _storage.read(key: _expiresAtKey);
-    return value == null ? null : DateTime.tryParse(value)?.toUtc();
+  Future<_TokenSnapshot> _readTokenSnapshot() {
+    return _withTokenStorage(() async {
+      if (await _storage.read(key: _signedOutKey) == 'true') {
+        return const _TokenSnapshot.empty();
+      }
+      final values = await Future.wait([
+        _storage.read(key: _accessTokenKey),
+        _storage.read(key: _refreshTokenKey),
+        _storage.read(key: _idTokenKey),
+        _storage.read(key: _expiresAtKey),
+      ]);
+      return _TokenSnapshot(
+        accessToken: values[0],
+        refreshToken: values[1],
+        idToken: values[2],
+        expiresAt: values[3] == null
+            ? null
+            : DateTime.tryParse(values[3]!)?.toUtc(),
+      );
+    });
   }
 
-  Future<void> _writeTokens({
+  Future<bool> _writeTokens({
+    required int generation,
     required String accessToken,
     required String? refreshToken,
     required String? idToken,
     required DateTime expiresAt,
-  }) async {
-    await Future.wait([
-      _storage.write(key: _accessTokenKey, value: accessToken),
-      _storage.write(key: _refreshTokenKey, value: refreshToken),
-      _storage.write(key: _idTokenKey, value: idToken),
-      _storage.write(
-        key: _expiresAtKey,
-        value: expiresAt.toUtc().toIso8601String(),
-      ),
-    ]);
+  }) {
+    return _withTokenStorage(() async {
+      if (generation != _sessionGeneration) {
+        return false;
+      }
+      try {
+        await _storage.write(key: _signedOutKey, value: 'true');
+        await Future.wait([
+          _storage.write(key: _accessTokenKey, value: accessToken),
+          _storage.write(key: _refreshTokenKey, value: refreshToken),
+          _storage.write(key: _idTokenKey, value: idToken),
+          _storage.write(
+            key: _expiresAtKey,
+            value: expiresAt.toUtc().toIso8601String(),
+          ),
+        ]);
+        await _storage.delete(key: _signedOutKey);
+      } on Object {
+        try {
+          await _clearTokensUnlocked();
+        } on Object {
+          // Preserve the original persistence failure. The signed-out marker
+          // is written before token mutation whenever secure storage permits.
+        }
+        rethrow;
+      }
+      return generation == _sessionGeneration;
+    });
   }
 
-  Future<void> _clearTokens() async {
-    await Future.wait([
-      _storage.delete(key: _accessTokenKey),
-      _storage.delete(key: _refreshTokenKey),
-      _storage.delete(key: _idTokenKey),
-      _storage.delete(key: _expiresAtKey),
-    ]);
+  Future<void> _clearTokens({required int generation}) {
+    if (generation == _sessionGeneration) {
+      _locallySignedOut = true;
+    }
+    return _withTokenStorage(() async {
+      if (generation == _sessionGeneration) {
+        await _clearTokensUnlocked();
+      }
+    });
   }
+
+  Future<void> _clearTokensUnlocked() async {
+    Object? failure;
+    StackTrace? failureStackTrace;
+    try {
+      await _storage.write(key: _signedOutKey, value: 'true');
+    } on Object catch (error, stackTrace) {
+      failure = error;
+      failureStackTrace = stackTrace;
+    }
+    try {
+      await Future.wait([
+        _storage.delete(key: _accessTokenKey),
+        _storage.delete(key: _refreshTokenKey),
+        _storage.delete(key: _idTokenKey),
+        _storage.delete(key: _expiresAtKey),
+      ]);
+    } on Object catch (error, stackTrace) {
+      failure ??= error;
+      failureStackTrace ??= stackTrace;
+    }
+    if (failure != null) {
+      Error.throwWithStackTrace(
+        failure,
+        failureStackTrace ?? StackTrace.current,
+      );
+    }
+  }
+
+  Future<T> _withTokenStorage<T>(Future<T> Function() operation) {
+    final completer = Completer<T>();
+    _tokenStorageTail = _tokenStorageTail.then((_) async {
+      try {
+        completer.complete(await operation());
+      } on Object catch (error, stackTrace) {
+        completer.completeError(error, stackTrace);
+      }
+    });
+    return completer.future;
+  }
+}
+
+final class _TokenSnapshot {
+  const _TokenSnapshot({
+    required this.accessToken,
+    required this.refreshToken,
+    required this.idToken,
+    required this.expiresAt,
+  });
+
+  const _TokenSnapshot.empty()
+    : accessToken = null,
+      refreshToken = null,
+      idToken = null,
+      expiresAt = null;
+
+  final String? accessToken;
+  final String? refreshToken;
+  final String? idToken;
+  final DateTime? expiresAt;
 }

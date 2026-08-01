@@ -155,6 +155,7 @@ final class AttemptQuestionView extends StatelessWidget {
       questionCount,
     );
     return ListView(
+      key: ValueKey('attempt-question-${question.revisionId}'),
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
       children: [
         Semantics(
@@ -348,6 +349,7 @@ final class AttemptResultView extends StatelessWidget {
               ),
               const SizedBox(height: 24),
               FilledButton(
+                key: const Key('attempt-result-done'),
                 onPressed: onDone,
                 child: Text(context.l10n.backToCourse),
               ),

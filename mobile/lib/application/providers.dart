@@ -10,6 +10,7 @@ import '../domain/auth/auth.dart';
 import '../domain/catalog/catalog.dart';
 import '../domain/development/development.dart';
 import '../domain/energy/energy.dart';
+import '../domain/failures.dart';
 import '../domain/identifiers.dart';
 import '../domain/learning/learning.dart';
 import '../domain/profile/profile.dart';
@@ -35,6 +36,10 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
   return ref.watch(authGatewayProvider);
 });
 
+final accessTokenProviderProvider = Provider<AccessTokenProvider>((ref) {
+  return ref.watch(authGatewayProvider);
+});
+
 final dioProvider = Provider<Dio>((ref) {
   final config = ref.watch(appConfigProvider);
   final dio = Dio(
@@ -53,7 +58,7 @@ final dioProvider = Provider<Dio>((ref) {
   dio.interceptors.addAll([
     CorrelationInterceptor(ref.watch(identifierFactoryProvider)),
     IdempotencyInterceptor(),
-    AuthInterceptor(dio, ref.watch(authGatewayProvider)),
+    AuthInterceptor(dio, ref.watch(accessTokenProviderProvider)),
     AnswerKeyLeakGuardInterceptor(),
     RedactedLogInterceptor(enabled: !config.isProduction),
   ]);
@@ -120,12 +125,34 @@ final courseDetailProvider = FutureProvider.family<CourseDetail, String>((
   return ref.watch(catalogRepositoryProvider).getCourse(id);
 });
 
-final courseProgressProvider = FutureProvider.family<CourseProgress, String>((
-  ref,
-  id,
-) {
-  return ref.watch(catalogRepositoryProvider).getProgress(id);
-});
+final courseProgressRefreshDelaysProvider = Provider<List<Duration>>(
+  (ref) => const [
+    Duration(milliseconds: 500),
+    Duration(seconds: 1),
+    Duration(seconds: 2),
+    Duration(seconds: 4),
+    Duration(seconds: 4),
+  ],
+);
+
+final courseProgressProvider = StreamProvider.autoDispose
+    .family<CourseProgress, String>((ref, id) async* {
+      var progress = await ref.watch(catalogRepositoryProvider).getProgress(id);
+      yield progress;
+
+      final refreshDelays = ref.watch(courseProgressRefreshDelaysProvider);
+      for (final delay in refreshDelays) {
+        if (!progress.updating) {
+          return;
+        }
+        await Future<void>.delayed(delay);
+        progress = await ref.read(catalogRepositoryProvider).getProgress(id);
+        yield progress;
+      }
+      if (progress.updating) {
+        throw const TimeoutFailure();
+      }
+    }, retry: (retryCount, error) => null);
 
 final class UuidIdentifierFactory implements IdentifierFactory {
   const UuidIdentifierFactory();

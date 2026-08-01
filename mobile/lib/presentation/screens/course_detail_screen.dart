@@ -100,6 +100,7 @@ final class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
           SizedBox(
             width: double.infinity,
             child: FilledButton.icon(
+              key: const Key('course-enroll'),
               onPressed:
                   _enrolling ||
                       selected == null ||
@@ -148,6 +149,7 @@ final class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
                   ref.invalidate(courseProgressProvider(widget.courseId)),
             ),
             data: (value) => Card(
+              key: const Key('course-progress-card'),
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
@@ -201,6 +203,7 @@ final class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
               title: Text(test.name),
               subtitle: Text(context.l10n.questionCount(test.questionCount)),
               trailing: FilledButton(
+                key: Key('course-test-${test.id}'),
                 onPressed: summary.enrolled
                     ? () => context.push('/attempt/${test.id}')
                     : null,

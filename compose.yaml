@@ -25,7 +25,7 @@ services:
       POSTGRES_USER: kelimio
       POSTGRES_PASSWORD: ${KELIMIO_LOCAL_DB_PASSWORD:-kelimio_local_only}
     ports:
-      - "127.0.0.1:5432:5432"
+      - "127.0.0.1:${KELIMIO_LOCAL_POSTGRES_HOST_PORT:-5432}:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./infrastructure/local/postgres/init:/docker-entrypoint-initdb.d:ro
@@ -34,13 +34,13 @@ services:
       interval: 5s
       timeout: 3s
       retries: 20
-    restart: unless-stopped
+    restart: "${KELIMIO_LOCAL_RESTART_POLICY:-unless-stopped}"
 
   redis:
     image: redis:7.4.2-alpine@sha256:02419de7eddf55aa5bcf49efb74e88fa8d931b4d77c07eff8a6b2144472b6952
     command: ["redis-server", "--appendonly", "yes", "--save", "60", "1"]
     ports:
-      - "127.0.0.1:6379:6379"
+      - "127.0.0.1:${KELIMIO_LOCAL_REDIS_HOST_PORT:-6379}:6379"
     volumes:
       - redis-data:/data
     healthcheck:
@@ -48,10 +48,10 @@ services:
       interval: 5s
       timeout: 3s
       retries: 20
-    restart: unless-stopped
+    restart: "${KELIMIO_LOCAL_RESTART_POLICY:-unless-stopped}"
 
   localstack:
-    image: kelimio-localstack:4.4.0
+    image: ${KELIMIO_LOCALSTACK_IMAGE:-kelimio-localstack:4.4.0}
     build:
       context: ./infrastructure/local/localstack
     environment:
@@ -59,7 +59,7 @@ services:
       AWS_DEFAULT_REGION: eu-central-1
       DEBUG: "0"
     ports:
-      - "127.0.0.1:4566:4566"
+      - "127.0.0.1:${KELIMIO_LOCAL_LOCALSTACK_HOST_PORT:-4566}:4566"
     volumes:
       - localstack-data:/var/lib/localstack
     healthcheck:
@@ -71,7 +71,7 @@ services:
       interval: 5s
       timeout: 4s
       retries: 30
-    restart: unless-stopped
+    restart: "${KELIMIO_LOCAL_RESTART_POLICY:-unless-stopped}"
 
   keycloak:
     image: quay.io/keycloak/keycloak:26.2.5@sha256:4883630ef9db14031cde3e60700c9a9a8eaf1b5c24db1589d6a2d43de38ba2a9
@@ -87,7 +87,7 @@ services:
       KC_HOSTNAME_STRICT: "true"
       KC_HTTP_ENABLED: "true"
     ports:
-      - "127.0.0.1:8081:8080"
+      - "127.0.0.1:${KELIMIO_LOCAL_KEYCLOAK_HOST_PORT:-8081}:8080"
     volumes:
       - ./infrastructure/local/keycloak:/opt/keycloak/data/import:ro
     depends_on:
@@ -101,7 +101,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 30
-    restart: unless-stopped
+    restart: "${KELIMIO_LOCAL_RESTART_POLICY:-unless-stopped}"
 
   keycloak-config:
     image: quay.io/keycloak/keycloak:26.2.5@sha256:4883630ef9db14031cde3e60700c9a9a8eaf1b5c24db1589d6a2d43de38ba2a9
@@ -134,14 +134,14 @@ services:
   mailpit:
     image: axllent/mailpit:v1.24.1@sha256:4873e5a441ed368f1e98a832f61257a033859f5e829542cd03fb772d2282ea4e
     ports:
-      - "127.0.0.1:1025:1025"
-      - "127.0.0.1:8025:8025"
-    restart: unless-stopped
+      - "127.0.0.1:${KELIMIO_LOCAL_MAILPIT_SMTP_HOST_PORT:-1025}:1025"
+      - "127.0.0.1:${KELIMIO_LOCAL_MAILPIT_HTTP_HOST_PORT:-8025}:8025"
+    restart: "${KELIMIO_LOCAL_RESTART_POLICY:-unless-stopped}"
 
   clamav:
     image: clamav/clamav:1.4.5@sha256:e7ead98e7e07231b151bce988e0cfb0a3b46e6e7046d9dd44fd838c0df724a03
     ports:
-      - "127.0.0.1:3310:3310"
+      - "127.0.0.1:${KELIMIO_LOCAL_CLAMAV_HOST_PORT:-3310}:3310"
     volumes:
       - clamav-data:/var/lib/clamav
     healthcheck:
@@ -150,7 +150,7 @@ services:
       timeout: 10s
       retries: 20
       start_period: 60s
-    restart: unless-stopped
+    restart: "${KELIMIO_LOCAL_RESTART_POLICY:-unless-stopped}"
 
   otel-collector:
     image: otel/opentelemetry-collector-contrib:0.156.0@sha256:125bdbeb7590cc1952c5b3430ecf14063568980c2c93d5b38676cc0446ed8108
@@ -158,10 +158,10 @@ services:
     volumes:
       - ./infrastructure/local/otel/collector.yaml:/etc/otelcol-contrib/config.yaml:ro
     ports:
-      - "127.0.0.1:4317:4317"
-      - "127.0.0.1:4318:4318"
-      - "127.0.0.1:8889:8889"
-    restart: unless-stopped
+      - "127.0.0.1:${KELIMIO_LOCAL_OTEL_GRPC_HOST_PORT:-4317}:4317"
+      - "127.0.0.1:${KELIMIO_LOCAL_OTEL_HTTP_HOST_PORT:-4318}:4318"
+      - "127.0.0.1:${KELIMIO_LOCAL_OTEL_METRICS_HOST_PORT:-8889}:8889"
+    restart: "${KELIMIO_LOCAL_RESTART_POLICY:-unless-stopped}"
 
   api:
     profiles: [app]
@@ -171,7 +171,7 @@ services:
     environment:
       <<: *local-only-environment
     ports:
-      - "127.0.0.1:8080:8080"
+      - "127.0.0.1:${KELIMIO_LOCAL_API_HOST_PORT:-8080}:8080"
     depends_on:
       postgres:
         condition: service_healthy
@@ -189,7 +189,7 @@ services:
       timeout: 5s
       retries: 20
       start_period: 30s
-    restart: unless-stopped
+    restart: "${KELIMIO_LOCAL_RESTART_POLICY:-unless-stopped}"
 
 volumes:
   postgres-data:

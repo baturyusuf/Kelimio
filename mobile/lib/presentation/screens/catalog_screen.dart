@@ -22,6 +22,7 @@ final class CatalogScreen extends ConsumerWidget {
         title: Text(context.l10n.catalog),
         actions: [
           IconButton(
+            key: const Key('catalog-sign-out'),
             tooltip: context.l10n.signOut,
             onPressed: () =>
                 unawaited(ref.read(authControllerProvider.notifier).signOut()),
@@ -66,6 +67,7 @@ final class CatalogScreen extends ConsumerWidget {
                               ),
                               const SizedBox(height: 16),
                               FilledButton.icon(
+                                key: const Key('catalog-install-starter'),
                                 onPressed: () => unawaited(
                                   ref
                                       .read(catalogControllerProvider.notifier)
@@ -121,6 +123,7 @@ final class _CourseCard extends StatelessWidget {
         : context.l10n.paid;
     final enrollment = course.enrolled ? context.l10n.enrolled : '';
     return Semantics(
+      key: Key('catalog-course-${course.id}'),
       button: true,
       label:
           '${course.name}, $access${enrollment.isEmpty ? '' : ', $enrollment'}',

@@ -87,17 +87,44 @@ healthy:
 ```powershell
 cd mobile
 flutter run -d emulator-5554 `
+  --flavor production `
   --dart-define=KELIMIO_API_BASE_URL=http://localhost:8080 `
   --dart-define=KELIMIO_OIDC_ISSUER=http://localhost:8081/realms/kelimio `
   --dart-define=KELIMIO_OIDC_CLIENT_ID=kelimio-mobile `
   --dart-define=KELIMIO_LOCAL_DEVELOPMENT_TOOLS=true
 
 flutter test integration_test -d emulator-5554 `
+  --flavor production `
   --dart-define=KELIMIO_API_BASE_URL=http://localhost:8080 `
   --dart-define=KELIMIO_OIDC_ISSUER=http://localhost:8081/realms/kelimio `
   --dart-define=KELIMIO_OIDC_CLIENT_ID=kelimio-mobile `
   --dart-define=KELIMIO_LOCAL_DEVELOPMENT_TOOLS=true
 ```
+
+Run the complete real local acceptance journey with one command after the
+emulator is ready (the normal Compose stack may remain running):
+
+```powershell
+.\scripts\local-android-e2e.cmd
+```
+
+This runner creates a randomly named Compose project with separate ports,
+network, and volumes; registers a random user through Keycloak's public form;
+verifies the Mailpit message; exchanges a real Authorization Code + S256 PKCE
+code; and drives the production Flutter repositories, controllers, Drift store,
+and UI through profile setup, enrollment, six answers, idempotent replay,
+projection, and sign-out. Random credentials are generated at runtime, remain
+limited to the isolated run, and are never printed or written to the repository;
+the runner restores its process environment and deletes temporary service/app
+state during guarded cleanup. The Android build uses the separate
+`com.kelimio.app.e2e` application ID, so it cannot overwrite the normal app's
+Drift or secure-storage state. The runner deletes its validated project resources
+and exact test images, restores its own ADB mappings, then verifies that the
+normal Compose container identities and reverse mappings are unchanged.
+
+The automated test injects the genuine Keycloak session after completing the
+protocol flow, so it does not claim coverage of the native FlutterAppAuth Custom
+Tab/deep-link presentation. That remains a separate native/staging release gate.
 
 Each Node workspace uses its committed `pnpm-lock.yaml`:
 

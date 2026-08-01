@@ -1,3 +1,4 @@
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:kelimio_mobile/main.dart' as app;
@@ -10,6 +11,9 @@ void main() {
   testWidgets('a signed-out cold start reaches the sign-in screen', (
     tester,
   ) async {
+    const storage = FlutterSecureStorage();
+    await storage.deleteAll().timeout(const Duration(seconds: 10));
+
     app.main();
 
     final deadline = DateTime.now().add(const Duration(seconds: 15));

@@ -101,7 +101,12 @@ final class SequenceIdentifierFactory implements IdentifierFactory {
 }
 
 final class RecordingCatalogRepository implements CatalogRepository {
+  RecordingCatalogRepository({List<CourseProgress>? progressResults})
+    : _progressResults = [...?progressResults];
+
+  final List<CourseProgress> _progressResults;
   int listCalls = 0;
+  int progressCalls = 0;
 
   @override
   Future<CatalogPage> listCourses({String? cursor, int limit = 20}) async {
@@ -138,8 +143,23 @@ final class RecordingCatalogRepository implements CatalogRepository {
   }
 
   @override
-  Future<CourseProgress> getProgress(String courseId) {
-    throw UnimplementedError('Not used by this focused test');
+  Future<CourseProgress> getProgress(String courseId) async {
+    progressCalls += 1;
+    if (_progressResults.isNotEmpty) {
+      return _progressResults.removeAt(0);
+    }
+    return CourseProgress(
+      courseId: courseId,
+      answeredQuestions: progressCalls,
+      correctAnswers: progressCalls,
+      completedAttempts: progressCalls,
+      passedAttempts: progressCalls,
+      activeScore: progressCalls * 60,
+      lifetimeScore: progressCalls * 60,
+      projectionVersion: progressCalls,
+      updating: false,
+      updatedAt: DateTime.utc(2026),
+    );
   }
 }
 

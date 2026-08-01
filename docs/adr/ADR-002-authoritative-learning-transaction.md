@@ -2,6 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-07-21
+- Last amended: 2026-08-01
 
 ## Context
 
@@ -36,6 +37,22 @@ The durable facts and command result are synchronous. Asynchronous consumers may
 An `AnswerRecorded` consumer must never calculate a second authoritative award. If the event catalog retains a Scoring consumer label, that consumer means score projection/reconciliation only. `ScoreChanged` references the already-persisted score event.
 
 Every consumer is idempotent and handles at-least-once delivery. PostgreSQL is the source; Redis and projections can be deleted and rebuilt.
+
+### Projection freshness and failed deliveries
+
+`updating=true` means that the returned values are the last completed
+projection and unresolved authoritative facts still exist. This includes both
+deliveries that are pending/retryable and deliveries moved to `DEAD` after the
+bounded worker retry policy. A dead delivery must not be treated as
+`updating=false`, because doing so would present known-stale values as final.
+
+The initial API contract deliberately does not expose internal delivery state.
+Mobile polls with bounded backoff; if the projection remains updating after the
+budget is exhausted, it replaces the updating indicator with a retryable error
+and an explicit retry action. It must not leave a permanent spinner. Operations
+must alert on dead deliveries and replay the delivery or rebuild the projection
+from PostgreSQL facts. A future public `failed` projection status requires a
+versioned contract change and an ADR update.
 
 ## Module and extraction consequences
 

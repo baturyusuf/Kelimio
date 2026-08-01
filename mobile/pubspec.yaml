@@ -25,9 +25,11 @@ dependencies:
   uuid: ^4.6.0
 
 dev_dependencies:
+  crypto: 3.0.7
   flutter_lints: ^6.0.0
   flutter_test:
     sdk: flutter
+  html: 0.15.6
   integration_test:
     sdk: flutter
 

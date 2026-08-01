@@ -81,7 +81,7 @@ export interface LearningApiInterface {
     finishAttempt(requestParameters: FinishAttemptRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<FinishAttemptResponse>;
 
     /**
-     * Counts and scores are projected only from server-authoritative PostgreSQL facts. When updating is true, the last completed projection is returned while pending outbox facts are processed.
+     * Counts and scores are projected only from server-authoritative PostgreSQL facts. When updating is true, the last completed projection is returned while unresolved outbox facts remain, including a delivery awaiting operational replay after exhausting worker retries. Clients must use bounded polling and expose a retry state instead of an endless spinner.
      * @summary Return the authenticated learner\'s rebuildable course progress projection
      * @param {string} courseId
      * @param {*} [options] Override http request option.
@@ -91,7 +91,7 @@ export interface LearningApiInterface {
     getCourseProgressRaw(requestParameters: GetCourseProgressRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<CourseProgressResponse>>;
 
     /**
-     * Counts and scores are projected only from server-authoritative PostgreSQL facts. When updating is true, the last completed projection is returned while pending outbox facts are processed.
+     * Counts and scores are projected only from server-authoritative PostgreSQL facts. When updating is true, the last completed projection is returned while unresolved outbox facts remain, including a delivery awaiting operational replay after exhausting worker retries. Clients must use bounded polling and expose a retry state instead of an endless spinner.
      * Return the authenticated learner\'s rebuildable course progress projection
      */
     getCourseProgress(requestParameters: GetCourseProgressRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<CourseProgressResponse>;
@@ -194,7 +194,7 @@ export class LearningApi extends runtime.BaseAPI implements LearningApiInterface
     }
 
     /**
-     * Counts and scores are projected only from server-authoritative PostgreSQL facts. When updating is true, the last completed projection is returned while pending outbox facts are processed.
+     * Counts and scores are projected only from server-authoritative PostgreSQL facts. When updating is true, the last completed projection is returned while unresolved outbox facts remain, including a delivery awaiting operational replay after exhausting worker retries. Clients must use bounded polling and expose a retry state instead of an endless spinner.
      * Return the authenticated learner\'s rebuildable course progress projection
      */
     async getCourseProgressRaw(requestParameters: GetCourseProgressRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<CourseProgressResponse>> {
@@ -232,7 +232,7 @@ export class LearningApi extends runtime.BaseAPI implements LearningApiInterface
     }
 
     /**
-     * Counts and scores are projected only from server-authoritative PostgreSQL facts. When updating is true, the last completed projection is returned while pending outbox facts are processed.
+     * Counts and scores are projected only from server-authoritative PostgreSQL facts. When updating is true, the last completed projection is returned while unresolved outbox facts remain, including a delivery awaiting operational replay after exhausting worker retries. Clients must use bounded polling and expose a retry state instead of an endless spinner.
      * Return the authenticated learner\'s rebuildable course progress projection
      */
     async getCourseProgress(requestParameters: GetCourseProgressRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<CourseProgressResponse> {

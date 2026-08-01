@@ -25,6 +25,21 @@ android {
         versionCode = flutter.versionCode
         versionName = flutter.versionName
         manifestPlaceholders["appAuthRedirectScheme"] = "com.kelimio.app"
+        manifestPlaceholders["appLabel"] = "Kelimio"
+    }
+
+    flavorDimensions += "environment"
+    productFlavors {
+        create("production") {
+            dimension = "environment"
+        }
+        create("e2e") {
+            dimension = "environment"
+            applicationIdSuffix = ".e2e"
+            versionNameSuffix = "-e2e"
+            manifestPlaceholders["appAuthRedirectScheme"] = "com.kelimio.app.e2e"
+            manifestPlaceholders["appLabel"] = "Kelimio E2E"
+        }
     }
 }
 

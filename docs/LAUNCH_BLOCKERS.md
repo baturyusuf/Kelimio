@@ -7,7 +7,7 @@ This register contains conditions that prevent a production release. A row close
 | ID | Blocking condition | Required resolution/evidence | Status |
 | --- | --- | --- | :---: |
 | LB-001 | A complete reproducible cross-platform product runtime does not exist. | Run the Docker-backed stack and migrations, native Android/iOS builds, both web deployments, CI, and infrastructure from clean supported hosts with retained evidence. | Open |
-| LB-002 | The auth-to-answer code slice lacks real staging acceptance. | Staging E2E evidence for real registration/sign-in, course access, answer submission, backend score/energy transaction, idempotent retry, outbox projection, and mobile display. | Open |
+| LB-002 | The auth-to-answer code slice lacks real staging acceptance. | The isolated local real-service Android path passes; retain the blocker until staging E2E covers native sign-in, course access, answer submission, backend score/energy, idempotent retry, outbox projection, and mobile display. | Open |
 | LB-003 | Owner P0 product/legal/platform decisions are unresolved. | Relevant rows in `docs/OWNER_ACTIONS.md` are approved and recorded in contracts/ADRs where needed. | Open |
 | LB-004 | Identity and account lifecycle are not production-integrated. | Managed OIDC, recovery, multi-device refresh rotation, export, deletion, and audited support behavior pass integration/security tests. | Open |
 | LB-005 | Safe Excel import and mobile authoring are absent. | Malicious-fixture tests, deterministic planner tests, immutable archive, idempotent commit, conflict UI, release publication, rollback, and reprojection evidence. | Open |
