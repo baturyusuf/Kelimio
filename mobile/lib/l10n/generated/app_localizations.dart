@@ -289,7 +289,7 @@ abstract class AppLocalizations {
   /// No description provided for @localStarterCourseBody.
   ///
   /// In en, this message translates to:
-  /// **'For local testing, install the reviewed Type-A starter course. This does not create users or learning results.'**
+  /// **'For local testing, install the reviewed mixed Type-A and Type-B starter course. This does not create users or learning results.'**
   String get localStarterCourseBody;
 
   /// No description provided for @installLocalStarterCourse.
@@ -535,6 +535,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Incorrect answer'**
   String get accessibilityIncorrectAnswer;
+
+  /// No description provided for @accessibilityBlank.
+  ///
+  /// In en, this message translates to:
+  /// **'blank'**
+  String get accessibilityBlank;
 }
 
 class _AppLocalizationsDelegate

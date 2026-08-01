@@ -44,6 +44,22 @@ AttemptSession fixtureSession() {
   );
 }
 
+Question fixtureClozeQuestion({
+  String prompt = 'Ben her sabah çay ---.',
+}) => Question(
+  id: '00000000-0000-4000-8000-000000000106',
+  revisionId: '00000000-0000-4000-8000-000000000104',
+  type: QuestionType.multipleChoiceCloze,
+  position: 1,
+  prompt: prompt,
+  options: const [
+    AnswerOption(id: '00000000-0000-4000-8000-000000000110', text: 'içerim'),
+    AnswerOption(id: '00000000-0000-4000-8000-000000000111', text: 'yerim'),
+    AnswerOption(id: '00000000-0000-4000-8000-000000000112', text: 'koşarım'),
+    AnswerOption(id: '00000000-0000-4000-8000-000000000113', text: 'yazarım'),
+  ],
+);
+
 AnswerFeedback fixtureFeedback({String id = submissionId}) {
   return AnswerFeedback(
     submissionId: id,

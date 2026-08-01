@@ -2,6 +2,7 @@ package com.kelimio.api.learningsession
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.kelimio.api.catalog.LearningContentQuery
+import com.kelimio.api.catalog.LearningQuestionType
 import com.kelimio.api.energy.EnergyService
 import com.kelimio.api.energy.EnergySnapshot
 import com.kelimio.api.idempotency.IdempotencyService
@@ -66,8 +67,12 @@ class LearningSessionService(
             throw ConflictProblem("The active test revision contains no questions.")
         }
         sourceQuestions.forEach { source ->
-            if (source.type != "A" || source.options.size != 4 || source.options.count { it.correct } != 1) {
-                throw ConflictProblem("The active test revision contains an invalid A question.")
+            val promptIsValid = when (source.type) {
+                LearningQuestionType.WORD_MULTIPLE_CHOICE -> true
+                LearningQuestionType.MULTIPLE_CHOICE_CLOZE -> source.prompt.hasExactlyOneClozeMarker()
+            }
+            if (!promptIsValid || source.options.size != 4 || source.options.count { it.correct } != 1) {
+                throw ConflictProblem("The active test revision contains an invalid multiple-choice question.")
             }
         }
 
@@ -436,4 +441,11 @@ class LearningSessionService(
     private fun now(): OffsetDateTime = OffsetDateTime.ofInstant(clock.instant(), ZoneOffset.UTC)
 
     private fun json(payload: Map<String, Any?>): JSONB = JSONB.valueOf(objectMapper.writeValueAsString(payload))
+
+    private fun String.hasExactlyOneClozeMarker(): Boolean =
+        windowed(CLOZE_MARKER.length).count { it == CLOZE_MARKER } == 1
+
+    private companion object {
+        const val CLOZE_MARKER = "---"
+    }
 }

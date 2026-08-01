@@ -645,7 +645,23 @@ components:
     QuestionPayload:
       type: object
       additionalProperties: false
+      description: >-
+        Answer-key-free online question payload. MULTIPLE_CHOICE_CLOZE carries
+        the raw target-language sentence and exactly one literal ASCII ---
+        marker; the client renders that marker as an accessible visual blank.
+      x-kelimio-cross-field-invariants:
+        - MULTIPLE_CHOICE_CLOZE prompt contains exactly one literal ASCII ---; overlapping occurrences count.
       required: [questionId, questionRevisionId, type, position, prompt, options]
+      allOf:
+        - if:
+            properties:
+              type:
+                const: MULTIPLE_CHOICE_CLOZE
+            required: [type]
+          then:
+            properties:
+              prompt:
+                pattern: '^(?![\s\S]*----)(?![\s\S]*---[\s\S]*---)[\s\S]*---[\s\S]*$'
       properties:
         questionId:
           $ref: "#/components/schemas/Id"
@@ -653,7 +669,7 @@ components:
           $ref: "#/components/schemas/Id"
         type:
           type: string
-          enum: [WORD_MULTIPLE_CHOICE]
+          enum: [WORD_MULTIPLE_CHOICE, MULTIPLE_CHOICE_CLOZE]
         position:
           type: integer
           minimum: 1

@@ -49,10 +49,24 @@ data class TestContext(
     val passThreshold: BigDecimal,
 )
 
+enum class LearningQuestionType(
+    val storageCode: String,
+    val apiValue: String,
+) {
+    WORD_MULTIPLE_CHOICE("A", "WORD_MULTIPLE_CHOICE"),
+    MULTIPLE_CHOICE_CLOZE("B", "MULTIPLE_CHOICE_CLOZE");
+
+    companion object {
+        fun fromStorageCode(storageCode: String): LearningQuestionType =
+            entries.singleOrNull { it.storageCode == storageCode }
+                ?: error("Unsupported stored learning question type")
+    }
+}
+
 data class AttemptQuestionSource(
     val questionId: UUID,
     val questionRevisionId: UUID,
-    val type: String,
+    val type: LearningQuestionType,
     val prompt: String,
     val options: List<QuestionOptionSource>,
     val position: Int,

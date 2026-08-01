@@ -1,6 +1,6 @@
 import '../energy/energy.dart';
 
-enum QuestionType { wordMultipleChoice }
+enum QuestionType { wordMultipleChoice, multipleChoiceCloze }
 
 enum ServerAttemptStatus {
   inProgress,
@@ -29,7 +29,15 @@ final class Question {
       throw ArgumentError.value(
         options.length,
         'options',
-        'Type-A requires four options',
+        'Multiple-choice questions require four options',
+      );
+    }
+    if (type == QuestionType.multipleChoiceCloze &&
+        !_hasExactlyOneClozeMarker(prompt)) {
+      throw ArgumentError.value(
+        prompt,
+        'prompt',
+        'Multiple-choice cloze requires exactly one marker',
       );
     }
   }
@@ -41,8 +49,36 @@ final class Question {
   final String prompt;
   final List<AnswerOption> options;
 
+  ClozePromptSegments get clozePromptSegments {
+    if (type != QuestionType.multipleChoiceCloze) {
+      throw StateError('Only a multiple-choice cloze question has segments');
+    }
+    final markerIndex = prompt.indexOf(_clozeMarker);
+    return ClozePromptSegments(
+      before: prompt.substring(0, markerIndex),
+      after: prompt.substring(markerIndex + _clozeMarker.length),
+    );
+  }
+
   bool containsOption(String optionId) =>
       options.any((option) => option.id == optionId);
+}
+
+final class ClozePromptSegments {
+  const ClozePromptSegments({required this.before, required this.after});
+
+  final String before;
+  final String after;
+}
+
+const _clozeMarker = '---';
+
+bool _hasExactlyOneClozeMarker(String prompt) {
+  final first = prompt.indexOf(_clozeMarker);
+  if (first == -1) {
+    return false;
+  }
+  return prompt.indexOf(_clozeMarker, first + 1) == -1;
 }
 
 final class AttemptSession {

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart' show Bidi;
 
 import '../../application/attempt_controller.dart';
 import '../../domain/learning/attempt_machine.dart';
@@ -173,11 +174,7 @@ final class AttemptQuestionView extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 28),
-        Text(
-          question.prompt,
-          style: Theme.of(context).textTheme.headlineSmall,
-          textAlign: TextAlign.center,
-        ),
+        _QuestionPrompt(question: question),
         const SizedBox(height: 24),
         for (final option in question.options) ...[
           _AnswerOptionButton(
@@ -234,6 +231,62 @@ final class AttemptQuestionView extends StatelessWidget {
                 ),
         ),
       ],
+    );
+  }
+}
+
+final class _QuestionPrompt extends StatelessWidget {
+  const _QuestionPrompt({required this.question});
+
+  final Question question;
+
+  @override
+  Widget build(BuildContext context) => switch (question.type) {
+    QuestionType.wordMultipleChoice => Text(
+      question.prompt,
+      key: const Key('attempt-word-prompt'),
+      style: Theme.of(context).textTheme.headlineSmall,
+      textAlign: TextAlign.center,
+    ),
+    QuestionType.multipleChoiceCloze => _ClozePrompt(question: question),
+  };
+}
+
+final class _ClozePrompt extends StatelessWidget {
+  const _ClozePrompt({required this.question});
+
+  final Question question;
+
+  @override
+  Widget build(BuildContext context) {
+    final segments = question.clozePromptSegments;
+    final fallbackDirection = Directionality.of(context);
+    final textDirection = Bidi.startsWithRtl(question.prompt)
+        ? TextDirection.rtl
+        : Bidi.startsWithLtr(question.prompt)
+        ? TextDirection.ltr
+        : fallbackDirection;
+    final blankLabel = context.l10n.accessibilityBlank;
+    return Text.rich(
+      TextSpan(
+        children: [
+          TextSpan(text: segments.before),
+          const TextSpan(
+            text: '\u00a0\u00a0\u00a0\u00a0',
+            style: TextStyle(
+              decoration: TextDecoration.underline,
+              decorationThickness: 2,
+            ),
+          ),
+          TextSpan(text: segments.after),
+        ],
+      ),
+      key: const Key('attempt-cloze-prompt'),
+      style: Theme.of(context).textTheme.headlineSmall,
+      textAlign: TextAlign.center,
+      textDirection: textDirection,
+      softWrap: true,
+      semanticsLabel: '${segments.before}$blankLabel${segments.after}',
     );
   }
 }

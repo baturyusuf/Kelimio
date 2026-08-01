@@ -17,10 +17,28 @@ final class CatalogScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final catalog = ref.watch(catalogControllerProvider);
+    final localToolsEnabled = ref
+        .watch(appConfigProvider)
+        .localDevelopmentToolsEnabled;
+    final hasCatalogItems = switch (catalog) {
+      AsyncData(:final value) => value.items.isNotEmpty,
+      _ => false,
+    };
     return Scaffold(
       appBar: AppBar(
         title: Text(context.l10n.catalog),
         actions: [
+          if (localToolsEnabled && hasCatalogItems)
+            IconButton(
+              key: const Key('catalog-install-starter'),
+              tooltip: context.l10n.installLocalStarterCourse,
+              onPressed: () => unawaited(
+                ref
+                    .read(catalogControllerProvider.notifier)
+                    .installLocalStarterCourse(),
+              ),
+              icon: const Icon(Icons.add_circle_outline),
+            ),
           IconButton(
             key: const Key('catalog-sign-out'),
             tooltip: context.l10n.signOut,
@@ -39,9 +57,6 @@ final class CatalogScreen extends ConsumerWidget {
         ),
         data: (page) {
           if (page.items.isEmpty) {
-            final localToolsEnabled = ref
-                .watch(appConfigProvider)
-                .localDevelopmentToolsEnabled;
             return RefreshIndicator(
               onRefresh: ref.read(catalogControllerProvider.notifier).refresh,
               child: ListView(

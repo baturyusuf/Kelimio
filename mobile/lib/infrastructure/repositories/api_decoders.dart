@@ -96,24 +96,29 @@ AttemptSession mapAttempt(api.AttemptResponse value) {
   final questions =
       value.questions
           .map((question) {
-            if (question.type !=
-                api.QuestionPayloadTypeEnum.WORD_MULTIPLE_CHOICE) {
-              throw ProtocolFailure(
-                'Unsupported question type: ${question.type}',
+            final type = switch (question.type) {
+              api.QuestionPayloadTypeEnum.WORD_MULTIPLE_CHOICE =>
+                QuestionType.wordMultipleChoice,
+              api.QuestionPayloadTypeEnum.MULTIPLE_CHOICE_CLOZE =>
+                QuestionType.multipleChoiceCloze,
+            };
+            try {
+              return Question(
+                id: question.questionId,
+                revisionId: question.questionRevisionId,
+                type: type,
+                position: question.position,
+                prompt: question.prompt,
+                options: question.options
+                    .map(
+                      (option) =>
+                          AnswerOption(id: option.id, text: option.text),
+                    )
+                    .toList(growable: false),
               );
+            } on ArgumentError {
+              throw const ProtocolFailure('Invalid question payload');
             }
-            return Question(
-              id: question.questionId,
-              revisionId: question.questionRevisionId,
-              type: QuestionType.wordMultipleChoice,
-              position: question.position,
-              prompt: question.prompt,
-              options: question.options
-                  .map(
-                    (option) => AnswerOption(id: option.id, text: option.text),
-                  )
-                  .toList(growable: false),
-            );
           })
           .toList(growable: false)
         ..sort((left, right) => left.position.compareTo(right.position));

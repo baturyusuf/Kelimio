@@ -31,7 +31,7 @@
   "genericError": "Something went wrong.",
   "networkError": "Check your connection and try again.",
   "emptyCatalog": "No courses are available right now.",
-  "localStarterCourseBody": "For local testing, install the reviewed Type-A starter course. This does not create users or learning results.",
+  "localStarterCourseBody": "For local testing, install the reviewed mixed Type-A and Type-B starter course. This does not create users or learning results.",
   "installLocalStarterCourse": "Install local starter course",
   "yourProgress": "Your progress",
   "progressAnswers": "{correct} of {answered} answers correct",
@@ -71,5 +71,6 @@
   "authenticationCancelled": "Sign-in was cancelled.",
   "accessibilitySelectedAnswer": "Selected answer",
   "accessibilityCorrectAnswer": "Correct answer",
-  "accessibilityIncorrectAnswer": "Incorrect answer"
+  "accessibilityIncorrectAnswer": "Incorrect answer",
+  "accessibilityBlank": "blank"
 }

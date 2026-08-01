@@ -22,7 +22,7 @@ import {
 } from './AnswerOption';
 
 /**
- *
+ * Answer-key-free online question payload. MULTIPLE_CHOICE_CLOZE carries the raw target-language sentence and exactly one literal ASCII --- marker; the client renders that marker as an accessible visual blank.
  * @export
  * @interface QuestionPayload
  */
@@ -70,7 +70,8 @@ export interface QuestionPayload {
  * @export
  */
 export const QuestionPayloadTypeEnum = {
-    WordMultipleChoice: 'WORD_MULTIPLE_CHOICE'
+    WordMultipleChoice: 'WORD_MULTIPLE_CHOICE',
+    MultipleChoiceCloze: 'MULTIPLE_CHOICE_CLOZE'
 } as const;
 export type QuestionPayloadTypeEnum = typeof QuestionPayloadTypeEnum[keyof typeof QuestionPayloadTypeEnum];
 

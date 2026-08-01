@@ -39,7 +39,7 @@ const _starterAnswers = <String, String>{
   'Teşekkür ederim': 'Thank you',
   'Lütfen': 'Please',
   'Evet': 'Yes',
-  'Hayır': 'No',
+  'Ben her sabah çay ---.': 'içerim',
 };
 
 void main() {
@@ -190,6 +190,8 @@ void main() {
       final startTest = find.byKey(Key('course-test-$testId'));
       await _tapVisible(tester, startTest, label: 'test start');
 
+      var renderedClozeQuestions = 0;
+      var replayedClozeSubmission = false;
       for (var index = 0; index < 6; index += 1) {
         await _pumpUntil(tester, () {
           final state = container.read(attemptControllerProvider);
@@ -197,6 +199,21 @@ void main() {
         }, label: 'question ${index + 1}');
         final presenting =
             container.read(attemptControllerProvider) as AttemptPresenting;
+        switch (presenting.question.type) {
+          case QuestionType.wordMultipleChoice:
+            expect(
+              find.byKey(const Key('attempt-word-prompt')),
+              findsOneWidget,
+            );
+            break;
+          case QuestionType.multipleChoiceCloze:
+            renderedClozeQuestions += 1;
+            final prompt = tester.widget<Text>(
+              find.byKey(const Key('attempt-cloze-prompt')),
+            );
+            expect(prompt.textSpan!.toPlainText(), isNot(contains('---')));
+            break;
+        }
         final expectedAnswer = _starterAnswers[presenting.question.prompt];
         expect(expectedAnswer, isNotNull);
         final selected = presenting.question.options.singleWhere(
@@ -227,7 +244,8 @@ void main() {
         expect(feedback.feedback.lifetimeScore, (index + 1) * 60);
         expect(feedback.feedback.energy.balance, 5);
 
-        if (index == 0) {
+        if (feedback.question.type == QuestionType.multipleChoiceCloze &&
+            !replayedClozeSubmission) {
           final replay = await _runIo(
             tester,
             () => container
@@ -243,6 +261,7 @@ void main() {
           expect(replay.correct, feedback.feedback.correct);
           expect(replay.lifetimeScore, feedback.feedback.lifetimeScore);
           expect(replay.energy.balance, feedback.feedback.energy.balance);
+          replayedClozeSubmission = true;
         }
 
         await _tapVisible(
@@ -251,6 +270,8 @@ void main() {
           label: 'answer continue ${index + 1}',
         );
       }
+      expect(renderedClozeQuestions, 1);
+      expect(replayedClozeSubmission, isTrue);
 
       await _pumpUntil(
         tester,

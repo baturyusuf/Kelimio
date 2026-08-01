@@ -117,7 +117,7 @@ private fun StartAttemptResult.toResponse() = StartAttemptResponse(
         AttemptQuestionResponse(
             questionId = question.questionId,
             questionRevisionId = question.questionRevisionId,
-            type = "WORD_MULTIPLE_CHOICE",
+            type = question.type.apiValue,
             prompt = question.prompt,
             position = question.position,
             options = question.options.map { AttemptOptionResponse(it.id, it.text) },

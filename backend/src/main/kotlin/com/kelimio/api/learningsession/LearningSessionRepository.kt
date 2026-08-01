@@ -1,5 +1,6 @@
 package com.kelimio.api.learningsession
 
+import com.kelimio.api.catalog.LearningQuestionType
 import com.kelimio.api.persistence.AnswerSubmissions
 import com.kelimio.api.persistence.AttemptEvents
 import com.kelimio.api.persistence.AttemptManifest
@@ -148,7 +149,7 @@ class LearningSessionRepository(
                 ManifestQuestion(
                     questionId = it.get(QuestionRevisions.QUESTION_ID)!!,
                     questionRevisionId = it.get(QuestionRevisions.ID)!!,
-                    type = it.get(QuestionRevisions.TYPE)!!,
+                    type = LearningQuestionType.fromStorageCode(it.get(QuestionRevisions.TYPE)!!),
                     prompt = it.get(QuestionRevisions.PROMPT)!!,
                     options = findOptions(questionRevisionId),
                     position = it.get(AttemptManifest.POSITION)!!,
@@ -172,7 +173,7 @@ class LearningSessionRepository(
                 ManifestQuestion(
                     questionId = it.get(QuestionRevisions.QUESTION_ID)!!,
                     questionRevisionId = revisionId,
-                    type = it.get(QuestionRevisions.TYPE)!!,
+                    type = LearningQuestionType.fromStorageCode(it.get(QuestionRevisions.TYPE)!!),
                     prompt = it.get(QuestionRevisions.PROMPT)!!,
                     options = findOptions(revisionId),
                     position = it.get(AttemptManifest.POSITION)!!,

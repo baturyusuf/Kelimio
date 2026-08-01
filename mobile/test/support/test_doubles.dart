@@ -101,10 +101,16 @@ final class SequenceIdentifierFactory implements IdentifierFactory {
 }
 
 final class RecordingCatalogRepository implements CatalogRepository {
-  RecordingCatalogRepository({List<CourseProgress>? progressResults})
-    : _progressResults = [...?progressResults];
+  RecordingCatalogRepository({
+    List<CourseProgress>? progressResults,
+    List<CourseSummary>? initialItems,
+  }) : _progressResults = [...?progressResults],
+       _initialItems = initialItems == null
+           ? null
+           : List.unmodifiable(initialItems);
 
   final List<CourseProgress> _progressResults;
+  final List<CourseSummary>? _initialItems;
   int listCalls = 0;
   int progressCalls = 0;
 
@@ -112,19 +118,21 @@ final class RecordingCatalogRepository implements CatalogRepository {
   Future<CatalogPage> listCourses({String? cursor, int limit = 20}) async {
     listCalls += 1;
     return CatalogPage(
-      items: listCalls == 1
-          ? []
-          : [
-              CourseSummary(
-                id: '00000000-0000-4000-8000-000000000101',
-                name: 'Starter',
-                targetLanguage: 'tr',
-                supportLanguages: const ['en'],
-                accessType: CourseAccessType.free,
-                visibility: CourseVisibility.public,
-                enrolled: false,
-              ),
-            ],
+      items:
+          _initialItems ??
+          (listCalls == 1
+              ? []
+              : [
+                  CourseSummary(
+                    id: '00000000-0000-4000-8000-000000000101',
+                    name: 'Starter',
+                    targetLanguage: 'tr',
+                    supportLanguages: const ['en'],
+                    accessType: CourseAccessType.free,
+                    visibility: CourseVisibility.public,
+                    enrolled: false,
+                  ),
+                ]),
     );
   }
 

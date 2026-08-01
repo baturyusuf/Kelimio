@@ -31,7 +31,7 @@
   "genericError": "Bir sorun oluştu.",
   "networkError": "Bağlantını kontrol edip tekrar dene.",
   "emptyCatalog": "Şu anda kullanılabilir kurs yok.",
-  "localStarterCourseBody": "Yerel test için incelenmiş Type-A başlangıç kursunu kur. Bu işlem kullanıcı veya öğrenme sonucu oluşturmaz.",
+  "localStarterCourseBody": "Yerel test için incelenmiş karma Type-A ve Type-B başlangıç kursunu kur. Bu işlem kullanıcı veya öğrenme sonucu oluşturmaz.",
   "installLocalStarterCourse": "Yerel başlangıç kursunu kur",
   "yourProgress": "İlerlemen",
   "progressAnswers": "{answered} cevabın {correct} tanesi doğru",
@@ -71,5 +71,6 @@
   "authenticationCancelled": "Giriş iptal edildi.",
   "accessibilitySelectedAnswer": "Seçili cevap",
   "accessibilityCorrectAnswer": "Doğru cevap",
-  "accessibilityIncorrectAnswer": "Yanlış cevap"
+  "accessibilityIncorrectAnswer": "Yanlış cevap",
+  "accessibilityBlank": "boşluk"
 }

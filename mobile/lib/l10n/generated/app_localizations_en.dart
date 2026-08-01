@@ -107,7 +107,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get localStarterCourseBody =>
-      'For local testing, install the reviewed Type-A starter course. This does not create users or learning results.';
+      'For local testing, install the reviewed mixed Type-A and Type-B starter course. This does not create users or learning results.';
 
   @override
   String get installLocalStarterCourse => 'Install local starter course';
@@ -261,4 +261,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get accessibilityIncorrectAnswer => 'Incorrect answer';
+
+  @override
+  String get accessibilityBlank => 'blank';
 }

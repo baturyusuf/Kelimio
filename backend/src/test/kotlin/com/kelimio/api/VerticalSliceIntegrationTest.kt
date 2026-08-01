@@ -316,6 +316,28 @@ class VerticalSliceIntegrationTest {
                 jsonPath("$.tests[0].questionCount") { value(6) }
             }
 
+        assertThat(
+            jdbcTemplate.queryForObject(
+                "select count(*) from question_revision where course_id = ? and question_type = 'A'",
+                Int::class.java,
+                courseId,
+            ),
+        ).isEqualTo(5)
+        assertThat(
+            jdbcTemplate.queryForObject(
+                "select prompt from question_revision where course_id = ? and question_type = 'B'",
+                String::class.java,
+                courseId,
+            ),
+        ).isEqualTo("Ben her sabah çay ---.")
+        assertThat(
+            jdbcTemplate.queryForObject(
+                "select origin_key from course_origin where course_id = ?",
+                String::class.java,
+                courseId,
+            ),
+        ).isEqualTo("kurs-excel-plani-v3-type-a-b-en-v2")
+
         assertThat(count("course_origin", "course_id", courseId)).isEqualTo(1)
         assertThat(
             jdbcTemplate.queryForObject(
@@ -364,6 +386,7 @@ class VerticalSliceIntegrationTest {
         }.andExpect {
             status { isCreated() }
             jsonPath("$.questions[0].questionRevisionId") { value(fixture.questionRevisionId.toString()) }
+            jsonPath("$.questions[0].type") { value("WORD_MULTIPLE_CHOICE") }
             jsonPath("$.questions[0].options[0].correct") { doesNotExist() }
             jsonPath("$.questions[0].correctOptionId") { doesNotExist() }
         }.andReturn().response.contentAsString
@@ -438,12 +461,138 @@ class VerticalSliceIntegrationTest {
         ).isEqualTo(jdbcTemplate.queryForObject("select count(*) from outbox_event", Int::class.java))
     }
 
-    private fun createCourseFixture(): Fixture {
+    @Test
+    fun `multiple choice cloze remains answer key free and records a server authoritative wrong answer once`() {
+        val fixture = createCourseFixture(
+            questionType = "B",
+            prompt = "Ben her sabah çay ---.",
+            correctAnswer = "içerim",
+            wrongAnswers = listOf("yerim", "koşarım", "yazarım"),
+        )
+        val learnerJwt = jwt().jwt {
+            it.subject("cloze-learner-${fixture.courseId}")
+                .claim("email", "cloze-learner@integration.invalid")
+                .claim("preferred_username", "cloze-learner")
+                .audience(listOf("kelimio-mobile"))
+        }
+        mockMvc.get("/v1/me") { with(learnerJwt) }
+            .andExpect { status { isOk() } }
+        completeProfileSetup(learnerJwt, displayName = "Cloze Learner")
+        mockMvc.post("/v1/courses/${fixture.courseId}/enrollments") {
+            with(learnerJwt)
+            header("Idempotency-Key", UUID.randomUUID().toString())
+            contentType = MediaType.APPLICATION_JSON
+            content = """{"supportLanguage":"en"}"""
+        }.andExpect { status { isCreated() } }
+
+        val startBody = mockMvc.post("/v1/tests/${fixture.testId}/attempts") {
+            with(learnerJwt)
+            header("Idempotency-Key", UUID.randomUUID().toString())
+        }.andExpect {
+            status { isCreated() }
+            jsonPath("$.questions[0].type") { value("MULTIPLE_CHOICE_CLOZE") }
+            jsonPath("$.questions[0].prompt") { value("Ben her sabah çay ---.") }
+            jsonPath("$.questions[0].options.length()") { value(4) }
+            jsonPath("$.questions[0].options[*].correct") { doesNotExist() }
+            jsonPath("$.questions[0].correctOptionId") { doesNotExist() }
+            jsonPath("$.questions[0].correctAnswer") { doesNotExist() }
+        }.andReturn().response.contentAsString
+        val attemptId = UUID.fromString(objectMapper.readTree(startBody)["id"].asText())
+
+        val forgedSubmissionId = UUID.randomUUID()
+        mockMvc.post("/v1/attempts/$attemptId/answers") {
+            with(learnerJwt)
+            header("Idempotency-Key", forgedSubmissionId.toString())
+            contentType = MediaType.APPLICATION_JSON
+            content =
+                """
+                {
+                  "submissionId":"$forgedSubmissionId",
+                  "questionRevisionId":"${fixture.questionRevisionId}",
+                  "selectedOptionId":"${fixture.wrongOptionId}",
+                  "correct":true
+                }
+                """.trimIndent()
+        }.andExpect { status { isBadRequest() } }
+        assertThat(count("answer_submission", "submission_id", forgedSubmissionId)).isZero()
+
+        val submissionId = UUID.randomUUID()
+        val answerJson =
+            """
+            {
+              "submissionId":"$submissionId",
+              "questionRevisionId":"${fixture.questionRevisionId}",
+              "selectedOptionId":"${fixture.wrongOptionId}"
+            }
+            """.trimIndent()
+        repeat(2) {
+            mockMvc.post("/v1/attempts/$attemptId/answers") {
+                with(learnerJwt)
+                header("Idempotency-Key", submissionId.toString())
+                contentType = MediaType.APPLICATION_JSON
+                content = answerJson
+            }.andExpect {
+                status { isOk() }
+                jsonPath("$.correct") { value(false) }
+                jsonPath("$.correctOptionId") { value(fixture.correctOptionId.toString()) }
+                jsonPath("$.activeScoreDelta") { value(0) }
+                jsonPath("$.lifetimeScoreDelta") { value(0) }
+                jsonPath("$.activeQuestionScore") { value(0) }
+                jsonPath("$.lifetimeScore") { value(0) }
+                jsonPath("$.energy.balance") { value(4) }
+                jsonPath("$.attemptState") { value("IN_PROGRESS") }
+            }
+        }
+
+        mockMvc.post("/v1/attempts/$attemptId/finish") {
+            with(learnerJwt)
+            header("Idempotency-Key", UUID.randomUUID().toString())
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$.state") { value("COMPLETED_FAIL") }
+            jsonPath("$.correctCount") { value(0) }
+            jsonPath("$.questionCount") { value(1) }
+            jsonPath("$.correctRatio") { value(0.0) }
+        }
+
+        assertThat(count("answer_submission", "submission_id", submissionId)).isEqualTo(1)
+        assertThat(count("score_event", "submission_id", submissionId)).isEqualTo(1)
+        assertThat(
+            jdbcTemplate.queryForObject(
+                "select count(*) from energy_event where submission_id = ? and event_type = 'WRONG_ANSWER_DEBIT'",
+                Int::class.java,
+                submissionId,
+            ),
+        ).isEqualTo(1)
+        assertThat(
+            jdbcTemplate.queryForObject(
+                "select count(*) from attempt_event where submission_id = ? and event_type = 'ANSWER_RECORDED'",
+                Int::class.java,
+                submissionId,
+            ),
+        ).isEqualTo(1)
+        assertThat(
+            jdbcTemplate.queryForObject(
+                "select count(*) from outbox_event where aggregate_id = ? and event_type = 'learning.answer-recorded.v1'",
+                Int::class.java,
+                attemptId,
+            ),
+        ).isEqualTo(1)
+    }
+
+    private fun createCourseFixture(
+        questionType: String = "A",
+        prompt: String = "Pencere",
+        correctAnswer: String = "Window",
+        wrongAnswers: List<String> = listOf("Door", "Table", "Chair"),
+    ): Fixture {
+        require(wrongAnswers.size == 3)
         val fixture = Fixture(
             courseId = UUID.randomUUID(),
             testId = UUID.randomUUID(),
             questionRevisionId = UUID.randomUUID(),
             correctOptionId = UUID.randomUUID(),
+            wrongOptionId = UUID.randomUUID(),
         )
         transactionTemplate.executeWithoutResult {
             val now = OffsetDateTime.now(ZoneOffset.UTC)
@@ -501,17 +650,20 @@ class VerticalSliceIntegrationTest {
                 now,
             )
             jdbcTemplate.update(
-                "insert into question_revision(id, question_id, course_id, revision_number, question_type, prompt, correct_answer, status, created_at) values (?, ?, ?, 1, 'A', 'Pencere', 'Window', 'DRAFT', ?)",
+                "insert into question_revision(id, question_id, course_id, revision_number, question_type, prompt, correct_answer, status, created_at) values (?, ?, ?, 1, ?, ?, ?, 'DRAFT', ?)",
                 fixture.questionRevisionId,
                 questionId,
                 fixture.courseId,
+                questionType,
+                prompt,
+                correctAnswer,
                 now,
             )
             val options = listOf(
-                fixture.correctOptionId to "Window",
-                UUID.randomUUID() to "Door",
-                UUID.randomUUID() to "Table",
-                UUID.randomUUID() to "Chair",
+                fixture.correctOptionId to correctAnswer,
+                fixture.wrongOptionId to wrongAnswers[0],
+                UUID.randomUUID() to wrongAnswers[1],
+                UUID.randomUUID() to wrongAnswers[2],
             )
             options.forEachIndexed { index, (id, text) ->
                 jdbcTemplate.update(
@@ -599,6 +751,7 @@ class VerticalSliceIntegrationTest {
         val testId: UUID,
         val questionRevisionId: UUID,
         val correctOptionId: UUID,
+        val wrongOptionId: UUID,
     )
 
     private class KPostgreSQLContainer(image: DockerImageName) : PostgreSQLContainer<KPostgreSQLContainer>(image)

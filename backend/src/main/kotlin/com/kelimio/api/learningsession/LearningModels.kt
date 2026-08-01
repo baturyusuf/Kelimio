@@ -1,5 +1,6 @@
 package com.kelimio.api.learningsession
 
+import com.kelimio.api.catalog.LearningQuestionType
 import com.kelimio.api.energy.EnergySnapshot
 import java.math.BigDecimal
 import java.time.OffsetDateTime
@@ -25,7 +26,7 @@ data class AttemptAggregate(
 data class ManifestQuestion(
     val questionId: UUID,
     val questionRevisionId: UUID,
-    val type: String,
+    val type: LearningQuestionType,
     val prompt: String,
     val options: List<ManifestOption>,
     val position: Int,

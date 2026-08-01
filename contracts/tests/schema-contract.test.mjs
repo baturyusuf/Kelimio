@@ -150,4 +150,67 @@ assert.equal(
   "profile setup must reject client-asserted identity fields",
 );
 
-console.log("Course and profile schemas accept valid fixtures and reject unsafe drift.");
+const option = (suffix, text) => ({
+  id: `00000000-0000-4000-8000-0000000000${suffix}`,
+  text,
+});
+const wordQuestion = {
+  questionId: "00000000-0000-4000-8000-000000000101",
+  questionRevisionId: "00000000-0000-4000-8000-000000000102",
+  type: "WORD_MULTIPLE_CHOICE",
+  position: 1,
+  prompt: "Pencere",
+  options: [
+    option("11", "Door"),
+    option("12", "Window"),
+    option("13", "Table"),
+    option("14", "Chair"),
+  ],
+};
+const clozeQuestion = {
+  ...wordQuestion,
+  questionId: "00000000-0000-4000-8000-000000000201",
+  questionRevisionId: "00000000-0000-4000-8000-000000000202",
+  type: "MULTIPLE_CHOICE_CLOZE",
+  prompt: "Ben her sabah çay ---.",
+};
+const validateQuestionPayload = compileSchema("QuestionPayload");
+assert.equal(
+  validateQuestionPayload(wordQuestion),
+  true,
+  `Type-A question must remain valid: ${ajv.errorsText(validateQuestionPayload.errors)}`,
+);
+assert.equal(
+  validateQuestionPayload(clozeQuestion),
+  true,
+  `Type-B question must be valid: ${ajv.errorsText(validateQuestionPayload.errors)}`,
+);
+for (const prompt of [
+  "Ben her sabah çay içerim.",
+  "--- Ben her sabah çay ---.",
+  "Ben her sabah çay ----.",
+  "Ben her sabah çay ------.",
+]) {
+  assert.equal(
+    validateQuestionPayload({ ...clozeQuestion, prompt }),
+    false,
+    `Type-B prompt must contain exactly one non-overlapping marker: ${prompt}`,
+  );
+}
+assert.equal(
+  validateQuestionPayload({ ...clozeQuestion, type: "TYPED_CLOZE" }),
+  false,
+  "unsupported question types must fail closed",
+);
+assert.equal(
+  validateQuestionPayload({ ...clozeQuestion, options: clozeQuestion.options.slice(0, 3) }),
+  false,
+  "multiple-choice questions must contain exactly four options",
+);
+assert.equal(
+  validateQuestionPayload({ ...clozeQuestion, correctOptionId: clozeQuestion.options[1].id }),
+  false,
+  "pre-answer question payloads must reject an answer key",
+);
+
+console.log("Course, profile, and question schemas accept valid fixtures and reject unsafe drift.");

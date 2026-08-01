@@ -307,7 +307,7 @@ class CatalogRepository(
                 AttemptQuestionSource(
                     questionId = it.get(QuestionRevisions.QUESTION_ID)!!,
                     questionRevisionId = it.get(QuestionRevisions.ID)!!,
-                    type = it.get(QuestionRevisions.TYPE)!!,
+                    type = LearningQuestionType.fromStorageCode(it.get(QuestionRevisions.TYPE)!!),
                     prompt = it.get(QuestionRevisions.PROMPT)!!,
                     options = findQuestionOptions(it.get(QuestionRevisions.ID)!!),
                     position = it.get(TestRevisionQuestions.POSITION)!!,

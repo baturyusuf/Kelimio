@@ -101,11 +101,12 @@ class LocalStarterCourseRepository(
                 insert into question_revision(
                     id, question_id, course_id, revision_number, question_type,
                     prompt, correct_answer, status, created_at
-                ) values (?, ?, ?, 1, 'A', ?, ?, 'DRAFT', cast(? as timestamptz))
+                ) values (?, ?, ?, 1, ?, ?, ?, 'DRAFT', cast(? as timestamptz))
                 """.trimIndent(),
                 questionRevisionId,
                 questionId,
                 courseId,
+                source.type.storageCode,
                 source.prompt,
                 source.correctAnswer,
                 now,

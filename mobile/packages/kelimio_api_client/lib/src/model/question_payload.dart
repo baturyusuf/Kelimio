@@ -82,7 +82,9 @@ class QuestionPayload {
 
 enum QuestionPayloadTypeEnum {
   @JsonValue(r'WORD_MULTIPLE_CHOICE')
-  WORD_MULTIPLE_CHOICE(r'WORD_MULTIPLE_CHOICE');
+  WORD_MULTIPLE_CHOICE(r'WORD_MULTIPLE_CHOICE'),
+  @JsonValue(r'MULTIPLE_CHOICE_CLOZE')
+  MULTIPLE_CHOICE_CLOZE(r'MULTIPLE_CHOICE_CLOZE');
 
   const QuestionPayloadTypeEnum(this.value);
 

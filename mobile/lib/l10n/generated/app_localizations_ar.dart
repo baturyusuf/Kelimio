@@ -106,7 +106,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get localStarterCourseBody =>
-      'للاختبار المحلي، ثبّت دورة البداية من النوع A التي تمت مراجعتها. لا ينشئ هذا مستخدمين أو نتائج تعلّم.';
+      'للاختبار المحلي، ثبّت دورة البداية المختلطة من النوعين A وB التي تمت مراجعتها. لا ينشئ هذا مستخدمين أو نتائج تعلّم.';
 
   @override
   String get installLocalStarterCourse => 'تثبيت دورة البداية المحلية';
@@ -252,4 +252,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get accessibilityIncorrectAnswer => 'الإجابة غير الصحيحة';
+
+  @override
+  String get accessibilityBlank => 'فراغ';
 }

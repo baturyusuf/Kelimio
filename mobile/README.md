@@ -20,8 +20,8 @@ Optional configuration:
 ```
 
 `KELIMIO_LOCAL_DEVELOPMENT_TOOLS` is accepted only by non-production builds.
-It reveals an explicit empty-catalog action that installs the reviewed Type-A
-starter course through the local backend; it never creates users or learning
+It reveals an explicit local-only action that installs the reviewed mixed
+Type-A/Type-B starter course through the local backend; it never creates users or learning
 results, and the backend rejects the command outside its enabled local mode.
 
 After a valid OIDC session, the app loads `/v1/me`. Provisional users must

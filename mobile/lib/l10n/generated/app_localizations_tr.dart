@@ -107,7 +107,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get localStarterCourseBody =>
-      'Yerel test için incelenmiş Type-A başlangıç kursunu kur. Bu işlem kullanıcı veya öğrenme sonucu oluşturmaz.';
+      'Yerel test için incelenmiş karma Type-A ve Type-B başlangıç kursunu kur. Bu işlem kullanıcı veya öğrenme sonucu oluşturmaz.';
 
   @override
   String get installLocalStarterCourse => 'Yerel başlangıç kursunu kur';
@@ -255,4 +255,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get accessibilityIncorrectAnswer => 'Yanlış cevap';
+
+  @override
+  String get accessibilityBlank => 'boşluk';
 }

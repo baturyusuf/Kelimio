@@ -53,4 +53,5 @@ Map<String, dynamic> _$QuestionPayloadToJson(QuestionPayload instance) =>
 
 const _$QuestionPayloadTypeEnumEnumMap = {
   QuestionPayloadTypeEnum.WORD_MULTIPLE_CHOICE: 'WORD_MULTIPLE_CHOICE',
+  QuestionPayloadTypeEnum.MULTIPLE_CHOICE_CLOZE: 'MULTIPLE_CHOICE_CLOZE',
 };

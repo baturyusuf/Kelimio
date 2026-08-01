@@ -31,7 +31,7 @@
   "genericError": "حدث خطأ ما.",
   "networkError": "تحقق من الاتصال وحاول مرة أخرى.",
   "emptyCatalog": "لا توجد دورات متاحة الآن.",
-  "localStarterCourseBody": "للاختبار المحلي، ثبّت دورة البداية من النوع A التي تمت مراجعتها. لا ينشئ هذا مستخدمين أو نتائج تعلّم.",
+  "localStarterCourseBody": "للاختبار المحلي، ثبّت دورة البداية المختلطة من النوعين A وB التي تمت مراجعتها. لا ينشئ هذا مستخدمين أو نتائج تعلّم.",
   "installLocalStarterCourse": "تثبيت دورة البداية المحلية",
   "yourProgress": "تقدمك",
   "progressAnswers": "{correct} إجابات صحيحة من أصل {answered}",
@@ -71,5 +71,6 @@
   "authenticationCancelled": "تم إلغاء تسجيل الدخول.",
   "accessibilitySelectedAnswer": "الإجابة المحددة",
   "accessibilityCorrectAnswer": "الإجابة الصحيحة",
-  "accessibilityIncorrectAnswer": "الإجابة غير الصحيحة"
+  "accessibilityIncorrectAnswer": "الإجابة غير الصحيحة",
+  "accessibilityBlank": "فراغ"
 }
