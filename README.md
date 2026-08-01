@@ -2,7 +2,7 @@
 
 Kelimio is a multilingual language-learning and course-marketplace product. The intended production system includes a Flutter Android/iOS application, a Kotlin/Spring backend, internal administration and public legal web surfaces, versioned API contracts, and AWS infrastructure.
 
-> Current state: Phase 0 foundations and a partial auth-to-answer vertical slice are implemented and locally buildable. The product is still **BLOCKED — external owner action required; NOT PUBLISH-READY** because production integrations, staging evidence, complete product flows, signed artifacts, and owner approvals are outstanding. See [status](docs/STATUS.md) and [launch blockers](docs/LAUNCH_BLOCKERS.md).
+> Current state: Phase 0 foundations, a secure deterministic Excel-preview core, and a partial auth-to-answer vertical slice are implemented and locally buildable. The product is still **BLOCKED — external owner action required; NOT PUBLISH-READY** because production integrations, staging evidence, complete product flows, signed artifacts, and owner approvals are outstanding. See [status](docs/STATUS.md) and [launch blockers](docs/LAUNCH_BLOCKERS.md).
 
 ## Architecture baseline
 
@@ -56,7 +56,7 @@ OIDC provider through `localhost`. Check or stop it with `-Action status` and
 policy and does not change the workstation's persistent security settings.
 Google Play Console access is not required for this emulator.
 
-Keycloak is available at `http://localhost:8081`, the API at `http://localhost:8080`, Mailpit at `http://localhost:8025`, and LocalStack at `http://localhost:4566`. The realm has no demo user. Register through OIDC, verify the captured message in Mailpit on a fresh realm, and complete the in-app profile setup. When local development tools are enabled, an authenticated and profile-complete user can install the immutable reviewed Type-A starter course from the empty catalog. This is local test content, not the production Excel-import workflow, and it creates no learning results.
+Keycloak is available at `http://localhost:8081`, the API at `http://localhost:8080`, Mailpit at `http://localhost:8025`, and LocalStack at `http://localhost:4566`. The realm has no demo user. Register through OIDC, verify the captured message in Mailpit on a fresh realm, and complete the in-app profile setup. When local development tools are enabled, an authenticated and profile-complete user can install the immutable reviewed Type-A starter course from the empty catalog. This is local test content, not the production Excel-import workflow, and it creates no learning results. The repository also tests a side-effect-free secure preview of the exact reviewed XLSX; it does not yet expose upload, approval, persistence, or publication.
 
 Run the backend checks:
 

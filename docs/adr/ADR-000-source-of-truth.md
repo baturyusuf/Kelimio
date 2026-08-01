@@ -95,6 +95,7 @@ This selects the transaction-specific feedback requirement over a literal readin
 | Master requires Spring Boot stable 3.x/Java 21 while Boot 4 exists upstream. | Pin Spring Boot 3.5.16 and Java 21. | ADR-001 and `docs/VERSIONS.md` |
 | Answer flow writes score in the request transaction, while an event table implies an asynchronous Scoring consumer. | Durable score/energy facts are synchronous; projections and downstream effects are asynchronous. | ADR-002 |
 | `ContentChanged`, revisions, change sets, and course releases are not fully unified in the PDFs. | Publish an immutable course release from a validated change set and activate it atomically. | ADR-003 |
+| The master permits safe cached formula values or rejection, while cached values cannot prove calculation freshness. | Reject every formula cell and parse only inert workbook values inside the isolated import boundary. | ADR-006 |
 | Payment diagrams suggest permanent entitlement, but refund/void/chargeback must revoke access. | Entitlement is a revocable state projection derived from immutable store events. | ADR-004 |
 | Matching email addresses suggest one person, but email text alone cannot safely authorize an account merge. | The managed OIDC broker links identities only after verified ownership; the backend keys users by stable subject and never auto-links by email. | ADR-005 |
 

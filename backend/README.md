@@ -36,8 +36,27 @@ No course or user is seeded on startup. When Compose explicitly enables
 `KELIMIO_LOCAL_STARTER_COURSE_ENABLED`, an authenticated local user can invoke
 `POST /v1/development/starter-course` to install one idempotent immutable
 Type-A course derived from the reviewed workbook's English subset. The route
-returns not found outside enabled local mode. Full multi-language Excel import
-and unsupported question types remain blocked rather than being discarded.
+returns not found outside enabled local mode and is separate from the import
+core described below.
+
+## Secure Excel preview core
+
+The backend contains an isolated, side-effect-free core for the reviewed XLSX
+format. It snapshots the input, applies bounded ZIP/XML and relationship
+preflight checks, streams visible inert cells, normalizes the multilingual
+workbook grammar, deterministically allocates tests, and produces versioned
+allocation and complete-preview SHA-256 digests. Formula, hidden, active,
+external, unsupported, incomplete, or ambiguous content fails closed.
+
+This is not a production import endpoint. It has no S3 quarantine/scanner
+worker, immutable archive/provenance approval, database commit, course-release,
+or teacher-authoring side effect. Those Phase 3 gates remain open.
+
+Run the focused evidence with:
+
+```powershell
+.\gradlew.bat test --tests "com.kelimio.api.importpipeline.*" --no-daemon
+```
 
 ## Verification
 

@@ -48,4 +48,8 @@ The workbook also relies on the import normalization and blank test-mode behavio
 - Publication is atomic even though potentially large learner reprojection is asynchronous.
 - Mobile must show conflict, publication, and “updating” states rather than claiming immediate global recomputation.
 - Initial schema needs course release manifests, active release pointer, change sets, revision tables, ETags/version numbers, release-aware projections, idempotent job checkpoints, and audit/outbox links.
-- Translation fallback/completeness policy remains an owner/product decision in `docs/OWNER_ACTIONS.md`; publication validation must fail according to the eventually approved rule rather than silently substituting an unrelated language.
+- The initial Excel import requires a nonblank translation for every declared
+  support language on each translatable word record and performs no
+  cross-language fallback, as recorded in ADR-006. Any future relaxation or
+  fallback policy requires a superseding ADR; publication must never silently
+  substitute an unrelated language.

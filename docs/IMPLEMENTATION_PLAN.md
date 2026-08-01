@@ -15,7 +15,7 @@ This plan turns the production requirements into vertically verifiable increment
 
 Status: in progress.
 
-Implemented so far: repository governance and ADRs; pinned wrappers and lockfiles; OpenAPI plus generated clients; the initial Flyway schema; a verified Docker Compose stack and real-PostgreSQL migration/integration path; backend/mobile/web scaffolds; a repository-managed Android API 36 emulator with device startup/storage tests and an isolated real-registration acceptance runner; Terraform bootstrap/network/foundation; scoring, energy, language, contract, widget, and vertical-slice test coverage; and immutable CI supply-chain pins. The phase remains open because the Excel planner/import defenses, external-provider sandbox proofs, baseline telemetry operations, and the full Phase 0 exit evidence are incomplete.
+Implemented so far: repository governance and ADRs; pinned wrappers and lockfiles; OpenAPI plus generated clients; the initial Flyway schema; a verified Docker Compose stack and real-PostgreSQL migration/integration path; backend/mobile/web scaffolds; a repository-managed Android API 36 emulator with device startup/storage tests and an isolated real-registration acceptance runner; Terraform bootstrap/network/foundation; scoring, energy, language, contract, widget, and vertical-slice test coverage; immutable CI supply-chain pins; and a fail-closed XLSX preflight/parser, workbook grammar normalizer, deterministic allocation planner, and complete-preview digest validated against the exact reviewed workbook. The phase remains open because external-provider sandbox proofs, baseline telemetry operations, and the full Phase 0 exit evidence are incomplete.
 
 Deliverables:
 
@@ -80,7 +80,9 @@ Public/private/free student journeys, every question type, retry/idempotency, sc
 
 ## Phase 3 — Teacher import, authoring, and release
 
-Status: not started.
+Status: secure parser/planner prototype implemented; production workflow not started.
+
+Foundation evidence: the isolated backend core performs bounded malicious-package preflight, read-only streaming parse, multilingual grammar normalization, deterministic test allocation, and versioned allocation/full-preview digests. It intentionally exposes no upload API or persistence path. The Phase 3 deliverables below remain required before an import can create or change a course.
 
 Deliverables:
 
