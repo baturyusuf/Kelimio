@@ -33,6 +33,13 @@ android {
         create("production") {
             dimension = "environment"
         }
+        create("smoke") {
+            dimension = "environment"
+            applicationIdSuffix = ".smoke"
+            versionNameSuffix = "-smoke"
+            manifestPlaceholders["appAuthRedirectScheme"] = "com.kelimio.app.smoke"
+            manifestPlaceholders["appLabel"] = "Kelimio Smoke"
+        }
         create("e2e") {
             dimension = "environment"
             applicationIdSuffix = ".e2e"

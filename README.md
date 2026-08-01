@@ -94,12 +94,19 @@ flutter run -d emulator-5554 `
   --dart-define=KELIMIO_LOCAL_DEVELOPMENT_TOOLS=true
 
 flutter test integration_test -d emulator-5554 `
-  --flavor production `
+  --flavor smoke `
   --dart-define=KELIMIO_API_BASE_URL=http://localhost:8080 `
   --dart-define=KELIMIO_OIDC_ISSUER=http://localhost:8081/realms/kelimio `
   --dart-define=KELIMIO_OIDC_CLIENT_ID=kelimio-mobile `
+  --dart-define=KELIMIO_OIDC_REDIRECT_URI=com.kelimio.app.smoke:/oauthredirect `
+  --dart-define=KELIMIO_OIDC_POST_LOGOUT_REDIRECT_URI=com.kelimio.app.smoke:/logout `
+  --dart-define=KELIMIO_ISOLATED_DEVICE_TEST_STORAGE=true `
   --dart-define=KELIMIO_LOCAL_DEVELOPMENT_TOOLS=true
 ```
+
+Ordinary device tests use the separate `com.kelimio.app.smoke` package and may
+reset only that package's test storage. They do not read, overwrite, or delete
+the normal `com.kelimio.app` session.
 
 Run the complete real local acceptance journey with one command after the
 emulator is ready (the normal Compose stack may remain running):

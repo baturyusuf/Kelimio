@@ -1,4 +1,6 @@
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:kelimio_mobile/application/auth_controller.dart';
@@ -11,13 +13,28 @@ final _config = AppConfig(
   apiBaseUri: Uri.parse('http://localhost:8080'),
   oidcIssuer: Uri.parse('http://localhost:8081/realms/kelimio'),
   oidcClientId: 'kelimio-mobile',
-  redirectUri: 'com.kelimio.app:/oauthredirect',
-  postLogoutRedirectUri: 'com.kelimio.app:/logout',
+  redirectUri: 'com.kelimio.app.smoke:/oauthredirect',
+  postLogoutRedirectUri: 'com.kelimio.app.smoke:/logout',
   isProduction: false,
+);
+
+const _isolatedDeviceTestStorage = bool.fromEnvironment(
+  'KELIMIO_ISOLATED_DEVICE_TEST_STORAGE',
 );
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+
+  setUpAll(() async {
+    if (!_isolatedDeviceTestStorage || appFlavor != 'smoke') {
+      throw StateError(
+        'Device smoke tests require an isolated application package.',
+      );
+    }
+    await const FlutterSecureStorage().deleteAll().timeout(
+      const Duration(seconds: 10),
+    );
+  });
 
   testWidgets('the authentication gateway restores an empty session', (
     tester,

@@ -57,10 +57,13 @@ flutter run -d emulator-5554 `
   --dart-define=KELIMIO_LOCAL_DEVELOPMENT_TOOLS=true
 
 flutter test integration_test -d emulator-5554 `
-  --flavor production `
+  --flavor smoke `
   --dart-define=KELIMIO_API_BASE_URL=http://localhost:8080 `
   --dart-define=KELIMIO_OIDC_ISSUER=http://localhost:8081/realms/kelimio `
   --dart-define=KELIMIO_OIDC_CLIENT_ID=kelimio-mobile `
+  --dart-define=KELIMIO_OIDC_REDIRECT_URI=com.kelimio.app.smoke:/oauthredirect `
+  --dart-define=KELIMIO_OIDC_POST_LOGOUT_REDIRECT_URI=com.kelimio.app.smoke:/logout `
+  --dart-define=KELIMIO_ISOLATED_DEVICE_TEST_STORAGE=true `
   --dart-define=KELIMIO_LOCAL_DEVELOPMENT_TOOLS=true
 ```
 
@@ -77,11 +80,12 @@ server-scored answers, idempotent answer replay, the final 6/6 and 360/360
 projection, sign-out, and private-cache removal. It is skipped by ordinary
 integration-test invocations unless the guarded runner enables it.
 
-Android has explicit `production` and `e2e` flavors. Normal Android run/build
-commands must select `--flavor production`; the guarded acceptance runner alone
-selects `e2e`, whose `com.kelimio.app.e2e` package keeps its Drift and platform
-storage separate from the normal app. The iOS project has no flavor/scheme
-change and therefore remains buildable with its existing `Runner` scheme.
+Android has explicit `production`, `smoke`, and `e2e` flavors. Normal Android
+run/build commands select `production`; ordinary device tests select `smoke`,
+whose `com.kelimio.app.smoke` package may reset only its own storage; and the
+guarded acceptance runner alone selects `e2e`. The iOS project has no
+flavor/scheme change and therefore remains buildable with its existing `Runner`
+scheme.
 
 The test overrides only the authentication repository and access-token
 interface after the real protocol exchange. It intentionally does not claim

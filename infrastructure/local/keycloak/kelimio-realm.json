@@ -47,6 +47,7 @@
       "implicitFlowEnabled": false,
       "redirectUris": [
         "com.kelimio.app:/oauthredirect",
+        "com.kelimio.app.smoke:/oauthredirect",
         "com.kelimio.app.e2e:/oauthredirect",
         "http://127.0.0.1:*/*",
         "http://localhost:*/*"
@@ -54,7 +55,7 @@
       "webOrigins": ["http://127.0.0.1:*", "http://localhost:*"],
       "attributes": {
         "pkce.code.challenge.method": "S256",
-        "post.logout.redirect.uris": "com.kelimio.app:/logout||com.kelimio.app.e2e:/logout||http://127.0.0.1:*/*||http://localhost:*/*"
+        "post.logout.redirect.uris": "com.kelimio.app:/logout||com.kelimio.app.smoke:/logout||com.kelimio.app.e2e:/logout||http://127.0.0.1:*/*||http://localhost:*/*"
       },
       "protocolMappers": [
         {
