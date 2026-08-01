@@ -41,14 +41,33 @@ docker compose up -d
 docker compose --profile app up --build
 ```
 
+Prepare and start the repository's Android 16 / API 36 development emulator:
+
+```powershell
+.\scripts\android-emulator.cmd -Action setup
+.\scripts\android-emulator.cmd -Action start
+```
+
+The script creates `kelimio_api36`, a Pixel 7 profile with Google APIs but no
+Play Store. It uses a cold boot to avoid host snapshot incompatibilities and
+reverses ports `8080` and `8081`, so the emulator can reach the local API and
+OIDC provider through `localhost`. Check or stop it with `-Action status` and
+`-Action stop`. The `.cmd` launcher applies a process-only PowerShell execution
+policy and does not change the workstation's persistent security settings.
+Google Play Console access is not required for this emulator.
+
 Keycloak is available at `http://localhost:8081`, the API at `http://localhost:8080`, Mailpit at `http://localhost:8025`, and LocalStack at `http://localhost:4566`. The realm has no demo user. Register through OIDC; do not seed fake learning results. The course-import workflow is not implemented yet, so a complete manual learner journey still requires real course data to be inserted by a future supported path.
 
 Run the backend checks:
 
 ```powershell
+$env:DOCKER_HOST = (docker context inspect --format '{{.Endpoints.docker.Host}}').Trim()
 cd backend
 .\gradlew.bat clean build
 ```
+
+The explicit Docker endpoint keeps Testcontainers on Docker Desktop's active
+engine instead of silently skipping the real-PostgreSQL integration test.
 
 Generate clients and run the mobile checks:
 
@@ -57,8 +76,25 @@ Generate clients and run the mobile checks:
 cd mobile
 flutter pub get --enforce-lockfile
 flutter gen-l10n
+dart format --set-exit-if-changed lib test integration_test
 flutter analyze --fatal-infos
 flutter test
+```
+
+Run the debug application on the local emulator after the Compose stack is
+healthy:
+
+```powershell
+cd mobile
+flutter run -d emulator-5554 `
+  --dart-define=KELIMIO_API_BASE_URL=http://localhost:8080 `
+  --dart-define=KELIMIO_OIDC_ISSUER=http://localhost:8081/realms/kelimio `
+  --dart-define=KELIMIO_OIDC_CLIENT_ID=kelimio-mobile
+
+flutter test integration_test -d emulator-5554 `
+  --dart-define=KELIMIO_API_BASE_URL=http://localhost:8080 `
+  --dart-define=KELIMIO_OIDC_ISSUER=http://localhost:8081/realms/kelimio `
+  --dart-define=KELIMIO_OIDC_CLIENT_ID=kelimio-mobile
 ```
 
 Each Node workspace uses its committed `pnpm-lock.yaml`:

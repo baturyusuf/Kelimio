@@ -18,6 +18,7 @@ import org.springframework.transaction.support.TransactionTemplate
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
+import org.testcontainers.utility.DockerImageName
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
 import java.util.UUID
@@ -261,13 +262,15 @@ class VerticalSliceIntegrationTest {
         val correctOptionId: UUID,
     )
 
-    private class KPostgreSQLContainer(image: String) : PostgreSQLContainer<KPostgreSQLContainer>(image)
+    private class KPostgreSQLContainer(image: DockerImageName) : PostgreSQLContainer<KPostgreSQLContainer>(image)
 
     companion object {
         @Container
         @JvmStatic
         private val postgres = KPostgreSQLContainer(
-            "postgres:17.5-alpine@sha256:6567bca8d7bc8c82c5922425a0baee57be8402df92bae5eacad5f01ae9544daa",
+            DockerImageName
+                .parse("postgres:17.5-alpine@sha256:6567bca8d7bc8c82c5922425a0baee57be8402df92bae5eacad5f01ae9544daa")
+                .asCompatibleSubstituteFor("postgres"),
         )
 
         @DynamicPropertySource

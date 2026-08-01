@@ -25,10 +25,31 @@ test with:
 ```text
 flutter pub get --enforce-lockfile
 flutter gen-l10n
-dart format --set-exit-if-changed lib test
+dart format --set-exit-if-changed lib test integration_test
 flutter analyze
 flutter test
 ```
+
+For the repository-managed Android emulator, start the local services and then
+run from the repository root:
+
+```powershell
+.\scripts\android-emulator.cmd -Action start
+cd mobile
+flutter run -d emulator-5554 `
+  --dart-define=KELIMIO_API_BASE_URL=http://localhost:8080 `
+  --dart-define=KELIMIO_OIDC_ISSUER=http://localhost:8081/realms/kelimio `
+  --dart-define=KELIMIO_OIDC_CLIENT_ID=kelimio-mobile
+
+flutter test integration_test -d emulator-5554 `
+  --dart-define=KELIMIO_API_BASE_URL=http://localhost:8080 `
+  --dart-define=KELIMIO_OIDC_ISSUER=http://localhost:8081/realms/kelimio `
+  --dart-define=KELIMIO_OIDC_CLIENT_ID=kelimio-mobile
+```
+
+The script configures ADB reverse mappings for the API and Keycloak ports. The
+AVD contains Google APIs but intentionally has no Play Store; store billing and
+Play Integrity remain separate release-stage tests.
 
 Release signing credentials are intentionally absent from source control. The
 deployment pipeline must supply the Android upload key and iOS signing profile;

@@ -106,6 +106,9 @@ final class _RecoverySchema implements QueryExecutorUser {
     QueryExecutor executor,
     OpeningDetails details,
   ) async {
+    // Background Drift connections proxy migrations back to this isolate.
+    // Opening that migration executor first is required before issuing SQL.
+    await executor.ensureOpen(this);
     await executor.runCustom(
       'CREATE TABLE IF NOT EXISTS attempt_recovery ('
       'slot INTEGER NOT NULL PRIMARY KEY CHECK (slot = 1), '

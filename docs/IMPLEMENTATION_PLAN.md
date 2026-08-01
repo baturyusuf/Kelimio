@@ -15,7 +15,7 @@ This plan turns the production requirements into vertically verifiable increment
 
 Status: in progress.
 
-Implemented so far: repository governance and ADRs; pinned wrappers and lockfiles; OpenAPI plus generated clients; the initial Flyway schema; local service orchestration; backend/mobile/web scaffolds; Terraform bootstrap/network/foundation; scoring, energy, language, contract, widget, and vertical-slice test coverage; and immutable CI supply-chain pins. The phase remains open because Docker-backed migration/integration proof, the Excel planner/import defenses, provider sandbox proofs, baseline telemetry operations, and the full Phase 0 exit evidence are incomplete.
+Implemented so far: repository governance and ADRs; pinned wrappers and lockfiles; OpenAPI plus generated clients; the initial Flyway schema; a verified Docker Compose stack and real-PostgreSQL migration/integration path; backend/mobile/web scaffolds; a repository-managed Android API 36 emulator with device startup/storage tests; Terraform bootstrap/network/foundation; scoring, energy, language, contract, widget, and vertical-slice test coverage; and immutable CI supply-chain pins. The phase remains open because the Excel planner/import defenses, provider sandbox proofs, baseline telemetry operations, and the full Phase 0 exit evidence are incomplete.
 
 Deliverables:
 
@@ -42,7 +42,7 @@ Exit gate:
 
 Status: in progress; the local code path exists, but the staging exit gate is not met.
 
-Implemented so far: JWT/OIDC resource-server validation, mobile Authorization Code + PKCE adapter, catalog/detail/enrollment, one Type-A attempt, persistent idempotency, authoritative scoring/energy/outbox transaction, generated-client mobile repositories, Drift recovery state, and result display. Explicit profile/language onboarding, asynchronous projections, production telemetry, real PostgreSQL runtime evidence, supported course creation, and staging end-to-end proof remain open.
+Implemented so far: JWT/OIDC resource-server validation, mobile Authorization Code + PKCE adapter, catalog/detail/enrollment, one Type-A attempt, persistent idempotency, authoritative scoring/energy/outbox transaction, generated-client mobile repositories, Drift recovery state, result display, and real-PostgreSQL local transaction evidence. Explicit profile/language onboarding, asynchronous projections, production telemetry, supported course creation, and staging end-to-end proof remain open.
 
 Deliverables:
 
