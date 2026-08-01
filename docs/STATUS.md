@@ -33,7 +33,7 @@ Kelimio now has a locally buildable Phase 0 foundation, a healthy Docker-backed 
 - The internal admin deployment always returns not found until server-side OIDC, MFA, RBAC, and audit exist. The separate public deployment keeps legal/support routes unpublished unless approved server-only content and versions are supplied.
 - Local Compose describes PostgreSQL, Redis, Keycloak, LocalStack, Mailpit, ClamAV, OpenTelemetry, and an optional API container. Terraform validates an encrypted state bootstrap plus account-guarded development networking/foundation resources.
 - Docker Compose has started every local dependency and the API successfully; PostgreSQL migrations, the digest-pinned Testcontainers PostgreSQL transaction, API readiness, OIDC discovery, email capture, LocalStack health, and OpenTelemetry metrics have been exercised locally.
-- GitHub workflows cover backend, mobile, contracts/generated drift, both web deployments, Terraform, secret scanning, dependency/filesystem scanning, runtime-image scanning, and CycloneDX SBOM retention. They are configured but have not yet run on GitHub for this uncommitted branch.
+- GitHub workflows cover backend, mobile, contracts/generated drift, both web deployments, Terraform, secret scanning, dependency/filesystem scanning, runtime-image scanning, and CycloneDX SBOM retention. They are configured but have not run for this branch because the workflows intentionally trigger on pull requests or pushes to `main`; no pull request has been opened.
 
 ## Latest local verification
 
