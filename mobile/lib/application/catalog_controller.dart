@@ -20,4 +20,19 @@ final class CatalogController extends AsyncNotifier<CatalogPage> {
       ref.read(catalogRepositoryProvider).listCourses,
     );
   }
+
+  Future<void> installLocalStarterCourse() async {
+    if (!ref.read(appConfigProvider).localDevelopmentToolsEnabled) {
+      throw StateError('Local development tools are disabled');
+    }
+    state = const AsyncLoading<CatalogPage>();
+    state = await AsyncValue.guard(() async {
+      await ref
+          .read(developmentRepositoryProvider)
+          .installStarterCourse(
+            commandId: ref.read(identifierFactoryProvider).create(),
+          );
+      return ref.read(catalogRepositoryProvider).listCourses();
+    });
+  }
 }

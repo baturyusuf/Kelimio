@@ -3,11 +3,13 @@ import 'package:kelimio_api_client/src/model/answer_recorded_response.dart';
 import 'package:kelimio_api_client/src/model/attempt_response.dart';
 import 'package:kelimio_api_client/src/model/course_detail.dart';
 import 'package:kelimio_api_client/src/model/course_page.dart';
+import 'package:kelimio_api_client/src/model/course_progress_response.dart';
 import 'package:kelimio_api_client/src/model/course_summary.dart';
 import 'package:kelimio_api_client/src/model/create_enrollment_request.dart';
 import 'package:kelimio_api_client/src/model/energy_response.dart';
 import 'package:kelimio_api_client/src/model/enrollment_response.dart';
 import 'package:kelimio_api_client/src/model/finish_attempt_response.dart';
+import 'package:kelimio_api_client/src/model/local_starter_course_response.dart';
 import 'package:kelimio_api_client/src/model/me_response.dart';
 import 'package:kelimio_api_client/src/model/problem.dart';
 import 'package:kelimio_api_client/src/model/question_payload.dart';
@@ -49,6 +51,9 @@ ReturnType deserialize<ReturnType, BaseType>(
       return CourseDetail.fromJson(value as Map<String, dynamic>) as ReturnType;
     case 'CoursePage':
       return CoursePage.fromJson(value as Map<String, dynamic>) as ReturnType;
+    case 'CourseProgressResponse':
+      return CourseProgressResponse.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
     case 'CourseSummary':
       return CourseSummary.fromJson(value as Map<String, dynamic>)
           as ReturnType;
@@ -63,6 +68,9 @@ ReturnType deserialize<ReturnType, BaseType>(
           as ReturnType;
     case 'FinishAttemptResponse':
       return FinishAttemptResponse.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'LocalStarterCourseResponse':
+      return LocalStarterCourseResponse.fromJson(value as Map<String, dynamic>)
           as ReturnType;
     case 'MeResponse':
       return MeResponse.fromJson(value as Map<String, dynamic>) as ReturnType;

@@ -68,9 +68,11 @@ Class | Method | HTTP request | Description
 ------------ | ------------- | ------------- | -------------
 [*CatalogApi*](doc/CatalogApi.md) | [**getCourse**](doc/CatalogApi.md#getcourse) | **GET** /v1/courses/{courseId} | Return course details visible to the authenticated user
 [*CatalogApi*](doc/CatalogApi.md) | [**listCatalogCourses**](doc/CatalogApi.md#listcatalogcourses) | **GET** /v1/catalog/courses | List public, published courses
+[*DevelopmentApi*](doc/DevelopmentApi.md) | [**installLocalStarterCourse**](doc/DevelopmentApi.md#installlocalstartercourse) | **POST** /v1/development/starter-course | Install the authenticated owner&#39;s local starter course idempotently
 [*EnergyApi*](doc/EnergyApi.md) | [**getEnergy**](doc/EnergyApi.md#getenergy) | **GET** /v1/energy | Return the lazily regenerated free-course energy account
 [*EnrollmentApi*](doc/EnrollmentApi.md) | [**enrollInCourse**](doc/EnrollmentApi.md#enrollincourse) | **POST** /v1/courses/{courseId}/enrollments | Enroll the authenticated user in a free public course
 [*LearningApi*](doc/LearningApi.md) | [**finishAttempt**](doc/LearningApi.md#finishattempt) | **POST** /v1/attempts/{attemptId}/finish | Finish an attempt after all planned questions are answered
+[*LearningApi*](doc/LearningApi.md) | [**getCourseProgress**](doc/LearningApi.md#getcourseprogress) | **GET** /v1/courses/{courseId}/progress | Return the authenticated learner&#39;s rebuildable course progress projection
 [*LearningApi*](doc/LearningApi.md) | [**startAttempt**](doc/LearningApi.md#startattempt) | **POST** /v1/tests/{testId}/attempts | Start an online attempt for the current test revision
 [*LearningApi*](doc/LearningApi.md) | [**submitAnswer**](doc/LearningApi.md#submitanswer) | **POST** /v1/attempts/{attemptId}/answers | Record and evaluate one online answer exactly once
 [*ProfileApi*](doc/ProfileApi.md) | [**getMe**](doc/ProfileApi.md#getme) | **GET** /v1/me | Return the authenticated user&#39;s profile and language preferences
@@ -84,11 +86,13 @@ Class | Method | HTTP request | Description
  - [AttemptState](doc/AttemptState.md)
  - [CourseDetail](doc/CourseDetail.md)
  - [CoursePage](doc/CoursePage.md)
+ - [CourseProgressResponse](doc/CourseProgressResponse.md)
  - [CourseSummary](doc/CourseSummary.md)
  - [CreateEnrollmentRequest](doc/CreateEnrollmentRequest.md)
  - [EnergyResponse](doc/EnergyResponse.md)
  - [EnrollmentResponse](doc/EnrollmentResponse.md)
  - [FinishAttemptResponse](doc/FinishAttemptResponse.md)
+ - [LocalStarterCourseResponse](doc/LocalStarterCourseResponse.md)
  - [MeResponse](doc/MeResponse.md)
  - [Problem](doc/Problem.md)
  - [QuestionPayload](doc/QuestionPayload.md)

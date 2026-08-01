@@ -240,6 +240,12 @@ object OutboxEvents {
     val OCCURRED_AT = field(name("outbox_event", "occurred_at"), OffsetDateTime::class.java)
 }
 
+object OutboxDeliveries {
+    val TABLE = table(name("outbox_delivery"))
+    val EVENT_ID = field(name("outbox_delivery", "event_id"), UUID::class.java)
+    val ATTEMPT_COUNT = field(name("outbox_delivery", "attempt_count"), Int::class.java)
+}
+
 object CommandIdempotency {
     val TABLE = table(name("command_idempotency"))
     val USER_ID = field(name("command_idempotency", "user_id"), UUID::class.java)

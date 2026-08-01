@@ -4,6 +4,7 @@
 README.md
 package.json
 src/apis/CatalogApi.ts
+src/apis/DevelopmentApi.ts
 src/apis/EnergyApi.ts
 src/apis/EnrollmentApi.ts
 src/apis/LearningApi.ts
@@ -16,11 +17,13 @@ src/models/AttemptResponse.ts
 src/models/AttemptState.ts
 src/models/CourseDetail.ts
 src/models/CoursePage.ts
+src/models/CourseProgressResponse.ts
 src/models/CourseSummary.ts
 src/models/CreateEnrollmentRequest.ts
 src/models/EnergyResponse.ts
 src/models/EnrollmentResponse.ts
 src/models/FinishAttemptResponse.ts
+src/models/LocalStarterCourseResponse.ts
 src/models/MeResponse.ts
 src/models/Problem.ts
 src/models/QuestionPayload.ts

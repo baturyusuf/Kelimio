@@ -62,6 +62,32 @@ final class CatalogPage {
   final String? nextCursor;
 }
 
+final class CourseProgress {
+  const CourseProgress({
+    required this.courseId,
+    required this.answeredQuestions,
+    required this.correctAnswers,
+    required this.completedAttempts,
+    required this.passedAttempts,
+    required this.activeScore,
+    required this.lifetimeScore,
+    required this.projectionVersion,
+    required this.updating,
+    required this.updatedAt,
+  });
+
+  final String courseId;
+  final int answeredQuestions;
+  final int correctAnswers;
+  final int completedAttempts;
+  final int passedAttempts;
+  final int activeScore;
+  final int lifetimeScore;
+  final int projectionVersion;
+  final bool updating;
+  final DateTime? updatedAt;
+}
+
 final class Enrollment {
   const Enrollment({
     required this.id,
@@ -84,6 +110,8 @@ abstract interface class CatalogRepository {
   Future<CatalogPage> listCourses({String? cursor, int limit = 20});
 
   Future<CourseDetail> getCourse(String courseId);
+
+  Future<CourseProgress> getProgress(String courseId);
 
   Future<Enrollment> enroll({
     required String courseId,

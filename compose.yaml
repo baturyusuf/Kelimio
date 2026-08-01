@@ -9,6 +9,7 @@ x-local-only-environment: &local-only-environment
   KELIMIO_OIDC_ISSUER: ${KELIMIO_LOCAL_OIDC_ISSUER:-http://localhost:8081/realms/kelimio}
   KELIMIO_OIDC_JWK_SET_URI: http://keycloak:8080/realms/kelimio/protocol/openid-connect/certs
   KELIMIO_OIDC_AUDIENCE: kelimio-api
+  KELIMIO_LOCAL_STARTER_COURSE_ENABLED: "true"
   AWS_REGION: eu-central-1
   AWS_ACCESS_KEY_ID: localstack
   AWS_SECRET_ACCESS_KEY: localstack

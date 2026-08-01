@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:kelimio_mobile/domain/auth/auth.dart';
+import 'package:kelimio_mobile/domain/catalog/catalog.dart';
+import 'package:kelimio_mobile/domain/development/development.dart';
 import 'package:kelimio_mobile/domain/identifiers.dart';
 import 'package:kelimio_mobile/domain/learning/learning.dart';
 
@@ -95,4 +97,64 @@ final class SequenceIdentifierFactory implements IdentifierFactory {
 
   @override
   String create() => _values[_index++];
+}
+
+final class RecordingCatalogRepository implements CatalogRepository {
+  int listCalls = 0;
+
+  @override
+  Future<CatalogPage> listCourses({String? cursor, int limit = 20}) async {
+    listCalls += 1;
+    return CatalogPage(
+      items: listCalls == 1
+          ? []
+          : [
+              CourseSummary(
+                id: '00000000-0000-4000-8000-000000000101',
+                name: 'Starter',
+                targetLanguage: 'tr',
+                supportLanguages: const ['en'],
+                accessType: CourseAccessType.free,
+                visibility: CourseVisibility.public,
+                enrolled: false,
+              ),
+            ],
+    );
+  }
+
+  @override
+  Future<Enrollment> enroll({
+    required String courseId,
+    required String supportLanguage,
+    required String commandId,
+  }) {
+    throw UnimplementedError('Not used by this focused test');
+  }
+
+  @override
+  Future<CourseDetail> getCourse(String courseId) {
+    throw UnimplementedError('Not used by this focused test');
+  }
+
+  @override
+  Future<CourseProgress> getProgress(String courseId) {
+    throw UnimplementedError('Not used by this focused test');
+  }
+}
+
+final class RecordingDevelopmentRepository implements DevelopmentRepository {
+  final List<String> commandIds = [];
+
+  @override
+  Future<LocalStarterCourseInstall> installStarterCourse({
+    required String commandId,
+  }) async {
+    commandIds.add(commandId);
+    return const LocalStarterCourseInstall(
+      courseId: '00000000-0000-4000-8000-000000000101',
+      created: true,
+      sourceWorkbookSha256:
+          '9fb87f680505e949304257e43e09ab0ce7f71324b4a06bcfae919260ab9f889e',
+    );
+  }
 }

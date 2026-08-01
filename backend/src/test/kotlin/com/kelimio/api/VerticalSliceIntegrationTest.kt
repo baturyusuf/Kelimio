@@ -1,6 +1,7 @@
 package com.kelimio.api
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.kelimio.api.progress.LearningProgressProjectionWorker
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -39,6 +40,66 @@ class VerticalSliceIntegrationTest {
     @Autowired
     private lateinit var transactionTemplate: TransactionTemplate
 
+    @Autowired
+    private lateinit var projectionWorker: LearningProgressProjectionWorker
+
+    @Test
+    fun `local starter course installs one immutable release idempotently`() {
+        val ownerJwt = jwt().jwt {
+            it.subject("local-starter-owner")
+                .claim("email", "starter-owner@integration.invalid")
+                .claim("preferred_username", "starter-owner")
+                .audience(listOf("kelimio-mobile"))
+        }
+        val firstKey = UUID.randomUUID()
+        val firstBody = mockMvc.post("/v1/development/starter-course") {
+            with(ownerJwt)
+            header("Idempotency-Key", firstKey.toString())
+        }.andExpect {
+            status { isCreated() }
+            jsonPath("$.created") { value(true) }
+            jsonPath("$.sourceWorkbookSha256") {
+                value("9fb87f680505e949304257e43e09ab0ce7f71324b4a06bcfae919260ab9f889e")
+            }
+        }.andReturn().response.contentAsString
+        val courseId = UUID.fromString(objectMapper.readTree(firstBody)["courseId"].asText())
+
+        mockMvc.post("/v1/development/starter-course") {
+            with(ownerJwt)
+            header("Idempotency-Key", firstKey.toString())
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$.courseId") { value(courseId.toString()) }
+            jsonPath("$.created") { value(false) }
+        }
+
+        mockMvc.post("/v1/development/starter-course") {
+            with(ownerJwt)
+            header("Idempotency-Key", UUID.randomUUID().toString())
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$.courseId") { value(courseId.toString()) }
+            jsonPath("$.created") { value(false) }
+        }
+
+        mockMvc.get("/v1/courses/$courseId") { with(ownerJwt) }
+            .andExpect {
+                status { isOk() }
+                jsonPath("$.name") { value("Örnek Türkçe Kelime Kursu") }
+                jsonPath("$.supportLanguages[0]") { value("en") }
+                jsonPath("$.tests[0].questionCount") { value(6) }
+            }
+
+        assertThat(count("course_origin", "course_id", courseId)).isEqualTo(1)
+        assertThat(
+            jdbcTemplate.queryForObject(
+                "select count(*) from outbox_event where aggregate_id = ? and event_type = 'content.release-published.v1'",
+                Int::class.java,
+                courseId,
+            ),
+        ).isEqualTo(1)
+    }
+
     @Test
     fun `authenticated learner completes a real server-scored attempt idempotently`() {
         val fixture = createCourseFixture()
@@ -56,9 +117,12 @@ class VerticalSliceIntegrationTest {
         mockMvc.get("/v1/catalog/courses")
             .andExpect { status { isUnauthorized() } }
 
-        mockMvc.get("/v1/catalog/courses") { with(learnerJwt) }
+        val catalogBody = mockMvc.get("/v1/catalog/courses") { with(learnerJwt) }
             .andExpect { status { isOk() } }
-            .andExpect { jsonPath("$.items[0].id") { value(fixture.courseId.toString()) } }
+            .andReturn().response.contentAsString
+        assertThat(
+            objectMapper.readTree(catalogBody)["items"].map { it["id"].asText() },
+        ).contains(fixture.courseId.toString())
 
         mockMvc.post("/v1/courses/${fixture.courseId}/enrollments") {
             with(learnerJwt)
@@ -124,9 +188,27 @@ class VerticalSliceIntegrationTest {
                 jsonPath("$.correctRatio") { value(1.0) }
             }
 
+        while (projectionWorker.processAvailable() > 0) {
+            // Drain every currently available projection event deterministically.
+        }
+        mockMvc.get("/v1/courses/${fixture.courseId}/progress") { with(learnerJwt) }
+            .andExpect {
+                status { isOk() }
+                jsonPath("$.answeredQuestions") { value(1) }
+                jsonPath("$.correctAnswers") { value(1) }
+                jsonPath("$.completedAttempts") { value(1) }
+                jsonPath("$.passedAttempts") { value(1) }
+                jsonPath("$.activeScore") { value(60) }
+                jsonPath("$.lifetimeScore") { value(60) }
+                jsonPath("$.updating") { value(false) }
+            }
+
         assertThat(count("score_event", "submission_id", submissionId)).isEqualTo(1)
         assertThat(count("answer_submission", "submission_id", submissionId)).isEqualTo(1)
         assertThat(jdbcTemplate.queryForObject("select count(*) from outbox_event", Int::class.java)).isGreaterThanOrEqualTo(3)
+        assertThat(
+            jdbcTemplate.queryForObject("select count(*) from outbox_delivery", Int::class.java),
+        ).isEqualTo(jdbcTemplate.queryForObject("select count(*) from outbox_event", Int::class.java))
     }
 
     private fun createCourseFixture(): Fixture {
@@ -279,7 +361,8 @@ class VerticalSliceIntegrationTest {
             registry.add("KELIMIO_DB_URL", postgres::getJdbcUrl)
             registry.add("KELIMIO_DB_USER", postgres::getUsername)
             registry.add("KELIMIO_DB_PASSWORD", postgres::getPassword)
-            registry.add("KELIMIO_ENVIRONMENT") { "test" }
+            registry.add("KELIMIO_ENVIRONMENT") { "local" }
+            registry.add("KELIMIO_LOCAL_STARTER_COURSE_ENABLED") { "true" }
             registry.add("KELIMIO_OIDC_ISSUER") { "https://issuer.integration.invalid" }
             registry.add("KELIMIO_OIDC_AUDIENCE") { "kelimio-mobile" }
             registry.add("KELIMIO_OIDC_JWK_SET_URI") { "https://127.0.0.1:9/jwks" }

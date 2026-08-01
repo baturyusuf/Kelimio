@@ -6,6 +6,7 @@ final class AppConfig {
     required this.redirectUri,
     required this.postLogoutRedirectUri,
     required this.isProduction,
+    this.localDevelopmentToolsEnabled = false,
   });
 
   final Uri apiBaseUri;
@@ -14,6 +15,7 @@ final class AppConfig {
   final String redirectUri;
   final String postLogoutRedirectUri;
   final bool isProduction;
+  final bool localDevelopmentToolsEnabled;
 
   static AppConfigResult fromEnvironment() {
     const apiValue = String.fromEnvironment('KELIMIO_API_BASE_URL');
@@ -28,6 +30,9 @@ final class AppConfig {
       defaultValue: 'com.kelimio.app:/logout',
     );
     const isProduction = bool.fromEnvironment('dart.vm.product');
+    const localDevelopmentToolsEnabled = bool.fromEnvironment(
+      'KELIMIO_LOCAL_DEVELOPMENT_TOOLS',
+    );
 
     final issues = <ConfigurationIssue>[];
     final apiUri = Uri.tryParse(apiValue);
@@ -58,6 +63,9 @@ final class AppConfig {
         const ConfigurationIssue('KELIMIO_OIDC_ISSUER', requiresHttps: true),
       );
     }
+    if (isProduction && localDevelopmentToolsEnabled) {
+      issues.add(const ConfigurationIssue('KELIMIO_LOCAL_DEVELOPMENT_TOOLS'));
+    }
 
     if (issues.isNotEmpty || apiUri == null || issuerUri == null) {
       return AppConfigInvalid(List.unmodifiable(issues));
@@ -76,6 +84,7 @@ final class AppConfig {
         redirectUri: redirect,
         postLogoutRedirectUri: logoutRedirect,
         isProduction: isProduction,
+        localDevelopmentToolsEnabled: localDevelopmentToolsEnabled,
       ),
     );
   }

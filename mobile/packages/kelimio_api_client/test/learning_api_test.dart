@@ -13,6 +13,15 @@ void main() {
       // TODO
     });
 
+    // Return the authenticated learner's rebuildable course progress projection
+    //
+    // Counts and scores are projected only from server-authoritative PostgreSQL facts. When updating is true, the last completed projection is returned while pending outbox facts are processed.
+    //
+    //Future<CourseProgressResponse> getCourseProgress(String courseId) async
+    test('test getCourseProgress', () async {
+      // TODO
+    });
+
     // Start an online attempt for the current test revision
     //
     //Future<AttemptResponse> startAttempt(String testId, String idempotencyKey) async

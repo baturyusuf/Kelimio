@@ -89,12 +89,14 @@ cd mobile
 flutter run -d emulator-5554 `
   --dart-define=KELIMIO_API_BASE_URL=http://localhost:8080 `
   --dart-define=KELIMIO_OIDC_ISSUER=http://localhost:8081/realms/kelimio `
-  --dart-define=KELIMIO_OIDC_CLIENT_ID=kelimio-mobile
+  --dart-define=KELIMIO_OIDC_CLIENT_ID=kelimio-mobile `
+  --dart-define=KELIMIO_LOCAL_DEVELOPMENT_TOOLS=true
 
 flutter test integration_test -d emulator-5554 `
   --dart-define=KELIMIO_API_BASE_URL=http://localhost:8080 `
   --dart-define=KELIMIO_OIDC_ISSUER=http://localhost:8081/realms/kelimio `
-  --dart-define=KELIMIO_OIDC_CLIENT_ID=kelimio-mobile
+  --dart-define=KELIMIO_OIDC_CLIENT_ID=kelimio-mobile `
+  --dart-define=KELIMIO_LOCAL_DEVELOPMENT_TOOLS=true
 ```
 
 Each Node workspace uses its committed `pnpm-lock.yaml`:

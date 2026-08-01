@@ -8,6 +8,7 @@ import 'package:uuid/uuid.dart';
 import '../core/config/app_config.dart';
 import '../domain/auth/auth.dart';
 import '../domain/catalog/catalog.dart';
+import '../domain/development/development.dart';
 import '../domain/energy/energy.dart';
 import '../domain/identifiers.dart';
 import '../domain/learning/learning.dart';
@@ -71,6 +72,7 @@ final catalogRepositoryProvider = Provider<CatalogRepository>((ref) {
   return GeneratedCatalogRepository(
     client.getCatalogApi(),
     client.getEnrollmentApi(),
+    client.getLearningApi(),
     const DioFailureMapper(),
   );
 });
@@ -78,6 +80,13 @@ final catalogRepositoryProvider = Provider<CatalogRepository>((ref) {
 final learningRepositoryProvider = Provider<LearningRepository>((ref) {
   return GeneratedLearningRepository(
     ref.watch(apiClientProvider).getLearningApi(),
+    const DioFailureMapper(),
+  );
+});
+
+final developmentRepositoryProvider = Provider<DevelopmentRepository>((ref) {
+  return GeneratedDevelopmentRepository(
+    ref.watch(apiClientProvider).getDevelopmentApi(),
     const DioFailureMapper(),
   );
 });
@@ -101,6 +110,13 @@ final courseDetailProvider = FutureProvider.family<CourseDetail, String>((
   id,
 ) {
   return ref.watch(catalogRepositoryProvider).getCourse(id);
+});
+
+final courseProgressProvider = FutureProvider.family<CourseProgress, String>((
+  ref,
+  id,
+) {
+  return ref.watch(catalogRepositoryProvider).getProgress(id);
 });
 
 final class UuidIdentifierFactory implements IdentifierFactory {

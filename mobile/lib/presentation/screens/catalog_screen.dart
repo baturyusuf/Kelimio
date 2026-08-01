@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../application/auth_controller.dart';
 import '../../application/catalog_controller.dart';
+import '../../application/providers.dart';
 import '../../domain/catalog/catalog.dart';
 import '../widgets/async_error_view.dart';
 import '../widgets/localization.dart';
@@ -37,6 +38,9 @@ final class CatalogScreen extends ConsumerWidget {
         ),
         data: (page) {
           if (page.items.isEmpty) {
+            final localToolsEnabled = ref
+                .watch(appConfigProvider)
+                .localDevelopmentToolsEnabled;
             return RefreshIndicator(
               onRefresh: ref.read(catalogControllerProvider.notifier).refresh,
               child: ListView(
@@ -44,7 +48,39 @@ final class CatalogScreen extends ConsumerWidget {
                 children: [
                   SizedBox(
                     height: MediaQuery.sizeOf(context).height * 0.6,
-                    child: Center(child: Text(context.l10n.emptyCatalog)),
+                    child: Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              context.l10n.emptyCatalog,
+                              textAlign: TextAlign.center,
+                            ),
+                            if (localToolsEnabled) ...[
+                              const SizedBox(height: 16),
+                              Text(
+                                context.l10n.localStarterCourseBody,
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: 16),
+                              FilledButton.icon(
+                                onPressed: () => unawaited(
+                                  ref
+                                      .read(catalogControllerProvider.notifier)
+                                      .installLocalStarterCourse(),
+                                ),
+                                icon: const Icon(Icons.add_circle_outline),
+                                label: Text(
+                                  context.l10n.installLocalStarterCourse,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
                   ),
                 ],
               ),

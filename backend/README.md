@@ -32,8 +32,12 @@ healthy, run the API directly with:
 
 Flyway applies the schema on startup. Readiness is exposed at
 `/actuator/health/readiness`; application routes require a valid bearer token.
-No course is seeded. Until the supported import path exists, the complete
-learner flow is exercised only by the isolated PostgreSQL integration fixture.
+No course or user is seeded on startup. When Compose explicitly enables
+`KELIMIO_LOCAL_STARTER_COURSE_ENABLED`, an authenticated local user can invoke
+`POST /v1/development/starter-course` to install one idempotent immutable
+Type-A course derived from the reviewed workbook's English subset. The route
+returns not found outside enabled local mode. Full multi-language Excel import
+and unsupported question types remain blocked rather than being discarded.
 
 ## Verification
 

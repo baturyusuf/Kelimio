@@ -2,6 +2,7 @@ package com.kelimio.api.outbox
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.kelimio.api.persistence.OutboxEvents
+import com.kelimio.api.persistence.OutboxDeliveries
 import com.kelimio.api.web.CorrelationIdProvider
 import org.jooq.DSLContext
 import org.jooq.JSONB
@@ -46,6 +47,13 @@ class OutboxRepository(
                 correlationIdProvider.current(),
                 OffsetDateTime.ofInstant(clock.instant(), ZoneOffset.UTC),
             )
+            .execute()
+        dsl.insertInto(OutboxDeliveries.TABLE)
+            .columns(
+                OutboxDeliveries.EVENT_ID,
+                OutboxDeliveries.ATTEMPT_COUNT,
+            )
+            .values(eventId, 0)
             .execute()
         return eventId
     }

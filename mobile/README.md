@@ -16,7 +16,13 @@ Optional configuration:
 ```text
 --dart-define=KELIMIO_OIDC_REDIRECT_URI=com.kelimio.app:/oauthredirect
 --dart-define=KELIMIO_OIDC_POST_LOGOUT_REDIRECT_URI=com.kelimio.app:/logout
+--dart-define=KELIMIO_LOCAL_DEVELOPMENT_TOOLS=true
 ```
+
+`KELIMIO_LOCAL_DEVELOPMENT_TOOLS` is accepted only by non-production builds.
+It reveals an explicit empty-catalog action that installs the reviewed Type-A
+starter course through the local backend; it never creates users or learning
+results, and the backend rejects the command outside its enabled local mode.
 
 Missing or unsafe production values render an explicit configuration error;
 they never select a fake backend. Generate localizations, format, analyze, and
@@ -39,12 +45,14 @@ cd mobile
 flutter run -d emulator-5554 `
   --dart-define=KELIMIO_API_BASE_URL=http://localhost:8080 `
   --dart-define=KELIMIO_OIDC_ISSUER=http://localhost:8081/realms/kelimio `
-  --dart-define=KELIMIO_OIDC_CLIENT_ID=kelimio-mobile
+  --dart-define=KELIMIO_OIDC_CLIENT_ID=kelimio-mobile `
+  --dart-define=KELIMIO_LOCAL_DEVELOPMENT_TOOLS=true
 
 flutter test integration_test -d emulator-5554 `
   --dart-define=KELIMIO_API_BASE_URL=http://localhost:8080 `
   --dart-define=KELIMIO_OIDC_ISSUER=http://localhost:8081/realms/kelimio `
-  --dart-define=KELIMIO_OIDC_CLIENT_ID=kelimio-mobile
+  --dart-define=KELIMIO_OIDC_CLIENT_ID=kelimio-mobile `
+  --dart-define=KELIMIO_LOCAL_DEVELOPMENT_TOOLS=true
 ```
 
 The script configures ADB reverse mappings for the API and Keycloak ports. The

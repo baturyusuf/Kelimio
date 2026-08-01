@@ -259,6 +259,7 @@ final class AttemptController extends Notifier<AttemptState> {
         AttemptSubmissionRecorded(feedback),
       );
       ref.invalidate(energyControllerProvider);
+      ref.invalidate(courseProgressProvider);
       if (state is AttemptInterrupted || state is AttemptFatal) {
         await _clearRecovery();
       }
@@ -290,6 +291,7 @@ final class AttemptController extends Notifier<AttemptState> {
       state = AttemptMachine.reduce(finishing, AttemptFinishRecorded(result));
       await _clearRecovery();
       ref.invalidate(energyControllerProvider);
+      ref.invalidate(courseProgressProvider);
     } on Object catch (error) {
       state = AttemptMachine.reduce(
         finishing,

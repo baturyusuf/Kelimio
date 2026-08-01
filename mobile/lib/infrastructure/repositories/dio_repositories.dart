@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:kelimio_api_client/kelimio_api_client.dart' as api;
 
 import '../../domain/catalog/catalog.dart';
+import '../../domain/development/development.dart';
 import '../../domain/energy/energy.dart';
 import '../../domain/failures.dart';
 import '../../domain/learning/learning.dart';
@@ -13,11 +14,13 @@ final class GeneratedCatalogRepository implements CatalogRepository {
   const GeneratedCatalogRepository(
     this._catalog,
     this._enrollment,
+    this._learning,
     this._failures,
   );
 
   final api.CatalogApi _catalog;
   final api.EnrollmentApi _enrollment;
+  final api.LearningApi _learning;
   final DioFailureMapper _failures;
 
   @override
@@ -42,6 +45,27 @@ final class GeneratedCatalogRepository implements CatalogRepository {
       throw const ProtocolFailure('Course response body was empty');
     }
     return mapCourseDetail(data);
+  });
+
+  @override
+  Future<CourseProgress> getProgress(String courseId) => _guard(() async {
+    final response = await _learning.getCourseProgress(courseId: courseId);
+    final data = response.data;
+    if (data == null) {
+      throw const ProtocolFailure('Course progress response body was empty');
+    }
+    return CourseProgress(
+      courseId: data.courseId,
+      answeredQuestions: data.answeredQuestions,
+      correctAnswers: data.correctAnswers,
+      completedAttempts: data.completedAttempts,
+      passedAttempts: data.passedAttempts,
+      activeScore: data.activeScore,
+      lifetimeScore: data.lifetimeScore,
+      projectionVersion: data.projectionVersion,
+      updating: data.updating,
+      updatedAt: data.updatedAt,
+    );
   });
 
   @override
@@ -140,6 +164,44 @@ final class GeneratedLearningRepository implements LearningRepository {
       throw const ProtocolFailure('Finish response body was empty');
     }
     return mapAttemptResult(data);
+  });
+
+  Future<T> _guard<T>(Future<T> Function() request) async {
+    try {
+      return await request();
+    } on DioException catch (error) {
+      throw _failures.map(error);
+    } on AppFailure {
+      rethrow;
+    } on Object catch (error) {
+      throw UnknownFailure(cause: error);
+    }
+  }
+}
+
+final class GeneratedDevelopmentRepository implements DevelopmentRepository {
+  const GeneratedDevelopmentRepository(this._api, this._failures);
+
+  final api.DevelopmentApi _api;
+  final DioFailureMapper _failures;
+
+  @override
+  Future<LocalStarterCourseInstall> installStarterCourse({
+    required String commandId,
+  }) => _guard(() async {
+    final response = await _api.installLocalStarterCourse(
+      idempotencyKey: commandId,
+      extra: {RequestMetadata.idempotencyKey: commandId},
+    );
+    final data = response.data;
+    if (data == null) {
+      throw const ProtocolFailure('Starter-course response body was empty');
+    }
+    return LocalStarterCourseInstall(
+      courseId: data.courseId,
+      created: data.created,
+      sourceWorkbookSha256: data.sourceWorkbookSha256,
+    );
   });
 
   Future<T> _guard<T>(Future<T> Function() request) async {

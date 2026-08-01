@@ -55,6 +55,34 @@ class AppLocalizationsAr extends AppLocalizations {
   String get emptyCatalog => 'لا توجد دورات متاحة الآن.';
 
   @override
+  String get localStarterCourseBody =>
+      'للاختبار المحلي، ثبّت دورة البداية من النوع A التي تمت مراجعتها. لا ينشئ هذا مستخدمين أو نتائج تعلم.';
+
+  @override
+  String get installLocalStarterCourse => 'تثبيت دورة البداية المحلية';
+
+  @override
+  String get yourProgress => 'تقدمك';
+
+  @override
+  String progressAnswers(Object answered, Object correct) {
+    return '$correct إجابات صحيحة من أصل $answered';
+  }
+
+  @override
+  String progressAttempts(Object completed, Object passed) {
+    return 'نجحت في $passed من أصل $completed محاولات مكتملة';
+  }
+
+  @override
+  String progressScores(Object active, Object lifetime) {
+    return 'النقاط النشطة: $active · نقاط مدى الحياة: $lifetime';
+  }
+
+  @override
+  String get progressUpdating => 'يتم تحديث التقدم من أحداث الخادم الموثقة.';
+
+  @override
   String get courseDetails => 'تفاصيل الدورة';
 
   @override

@@ -56,6 +56,35 @@ class AppLocalizationsEn extends AppLocalizations {
   String get emptyCatalog => 'No courses are available right now.';
 
   @override
+  String get localStarterCourseBody =>
+      'For local testing, install the reviewed Type-A starter course. This does not create users or learning results.';
+
+  @override
+  String get installLocalStarterCourse => 'Install local starter course';
+
+  @override
+  String get yourProgress => 'Your progress';
+
+  @override
+  String progressAnswers(Object answered, Object correct) {
+    return '$correct of $answered answers correct';
+  }
+
+  @override
+  String progressAttempts(Object completed, Object passed) {
+    return '$passed of $completed completed attempts passed';
+  }
+
+  @override
+  String progressScores(Object active, Object lifetime) {
+    return 'Active score: $active · Lifetime score: $lifetime';
+  }
+
+  @override
+  String get progressUpdating =>
+      'Progress is updating from verified server events.';
+
+  @override
   String get courseDetails => 'Course details';
 
   @override

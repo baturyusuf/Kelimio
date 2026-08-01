@@ -190,6 +190,48 @@ abstract class AppLocalizations {
   /// **'No courses are available right now.'**
   String get emptyCatalog;
 
+  /// No description provided for @localStarterCourseBody.
+  ///
+  /// In en, this message translates to:
+  /// **'For local testing, install the reviewed Type-A starter course. This does not create users or learning results.'**
+  String get localStarterCourseBody;
+
+  /// No description provided for @installLocalStarterCourse.
+  ///
+  /// In en, this message translates to:
+  /// **'Install local starter course'**
+  String get installLocalStarterCourse;
+
+  /// No description provided for @yourProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Your progress'**
+  String get yourProgress;
+
+  /// No description provided for @progressAnswers.
+  ///
+  /// In en, this message translates to:
+  /// **'{correct} of {answered} answers correct'**
+  String progressAnswers(Object answered, Object correct);
+
+  /// No description provided for @progressAttempts.
+  ///
+  /// In en, this message translates to:
+  /// **'{passed} of {completed} completed attempts passed'**
+  String progressAttempts(Object completed, Object passed);
+
+  /// No description provided for @progressScores.
+  ///
+  /// In en, this message translates to:
+  /// **'Active score: {active} · Lifetime score: {lifetime}'**
+  String progressScores(Object active, Object lifetime);
+
+  /// No description provided for @progressUpdating.
+  ///
+  /// In en, this message translates to:
+  /// **'Progress is updating from verified server events.'**
+  String get progressUpdating;
+
   /// No description provided for @courseDetails.
   ///
   /// In en, this message translates to:

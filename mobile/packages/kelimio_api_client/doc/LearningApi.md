@@ -10,6 +10,7 @@ All URIs are relative to *http://localhost*
 Method | HTTP request | Description
 ------------- | ------------- | -------------
 [**finishAttempt**](LearningApi.md#finishattempt) | **POST** /v1/attempts/{attemptId}/finish | Finish an attempt after all planned questions are answered
+[**getCourseProgress**](LearningApi.md#getcourseprogress) | **GET** /v1/courses/{courseId}/progress | Return the authenticated learner&#39;s rebuildable course progress projection
 [**startAttempt**](LearningApi.md#startattempt) | **POST** /v1/tests/{testId}/attempts | Start an online attempt for the current test revision
 [**submitAnswer**](LearningApi.md#submitanswer) | **POST** /v1/attempts/{attemptId}/answers | Record and evaluate one online answer exactly once
 
@@ -45,6 +46,49 @@ Name | Type | Description  | Notes
 ### Return type
 
 [**FinishAttemptResponse**](FinishAttemptResponse.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json, application/problem+json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **getCourseProgress**
+> CourseProgressResponse getCourseProgress(courseId)
+
+Return the authenticated learner's rebuildable course progress projection
+
+Counts and scores are projected only from server-authoritative PostgreSQL facts. When updating is true, the last completed projection is returned while pending outbox facts are processed.
+
+### Example
+```dart
+import 'package:kelimio_api_client/api.dart';
+
+final api = KelimioApiClient().getLearningApi();
+final String courseId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+
+try {
+    final response = api.getCourseProgress(courseId);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling LearningApi->getCourseProgress: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **courseId** | **String**|  |
+
+### Return type
+
+[**CourseProgressResponse**](CourseProgressResponse.md)
 
 ### Authorization
 

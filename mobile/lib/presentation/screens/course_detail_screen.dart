@@ -28,6 +28,7 @@ final class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final detail = ref.watch(courseDetailProvider(widget.courseId));
+    final progress = ref.watch(courseProgressProvider(widget.courseId));
     return Scaffold(
       appBar: AppBar(title: Text(context.l10n.courseDetails)),
       body: detail.when(
@@ -36,12 +37,15 @@ final class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
           error: error,
           onRetry: () => ref.invalidate(courseDetailProvider(widget.courseId)),
         ),
-        data: _buildCourse,
+        data: (course) => _buildCourse(course, progress),
       ),
     );
   }
 
-  Widget _buildCourse(CourseDetail course) {
+  Widget _buildCourse(
+    CourseDetail course,
+    AsyncValue<CourseProgress> progress,
+  ) {
     final summary = course.summary;
     final description = summary.description;
     final languages = summary.supportLanguages;
@@ -114,6 +118,65 @@ final class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
           Chip(
             avatar: const Icon(Icons.check, size: 18),
             label: Text(context.l10n.enrolled),
+          ),
+          const SizedBox(height: 20),
+        ],
+        if (summary.enrolled) ...[
+          Text(
+            context.l10n.yourProgress,
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          const SizedBox(height: 10),
+          progress.when(
+            loading: () => const LinearProgressIndicator(),
+            error: (error, stackTrace) => AsyncErrorView(
+              error: error,
+              onRetry: () =>
+                  ref.invalidate(courseProgressProvider(widget.courseId)),
+            ),
+            data: (value) => Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      context.l10n.progressAnswers(
+                        value.correctAnswers,
+                        value.answeredQuestions,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      context.l10n.progressAttempts(
+                        value.passedAttempts,
+                        value.completedAttempts,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      context.l10n.progressScores(
+                        value.activeScore,
+                        value.lifetimeScore,
+                      ),
+                    ),
+                    if (value.updating) ...[
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          const SizedBox.square(
+                            dimension: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(child: Text(context.l10n.progressUpdating)),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
           ),
           const SizedBox(height: 20),
         ],

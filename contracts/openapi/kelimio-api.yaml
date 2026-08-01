@@ -24,6 +24,8 @@ tags:
     description: Authoritative online attempts and answer evaluation.
   - name: Energy
     description: Free-course energy state managed by the server.
+  - name: Development
+    description: Explicit local-only utilities that are unavailable outside the local environment.
 security:
   - bearerAuth: []
 paths:
@@ -87,6 +89,28 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/CourseDetail"
+        "401":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/courses/{courseId}/progress:
+    get:
+      operationId: getCourseProgress
+      tags: [Learning]
+      summary: Return the authenticated learner's rebuildable course progress projection
+      description: >-
+        Counts and scores are projected only from server-authoritative PostgreSQL
+        facts. When updating is true, the last completed projection is returned
+        while pending outbox facts are processed.
+      parameters:
+        - $ref: "#/components/parameters/CourseId"
+      responses:
+        "200":
+          description: Current course progress projection
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CourseProgressResponse"
         "401":
           $ref: "#/components/responses/Problem"
         default:
@@ -205,6 +229,37 @@ paths:
               schema:
                 $ref: "#/components/schemas/EnergyResponse"
         "401":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/development/starter-course:
+    post:
+      operationId: installLocalStarterCourse
+      tags: [Development]
+      summary: Install the authenticated owner's local starter course idempotently
+      description: >-
+        Available only when the backend is explicitly running in the local
+        environment with starter-course installation enabled. It creates one
+        immutable Type-A English-support release derived from the reviewed
+        workbook subset and never creates users or learning results.
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "201":
+          description: Starter course created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LocalStarterCourseResponse"
+        "200":
+          description: Existing starter course returned for an idempotent retry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LocalStarterCourseResponse"
+        "401":
+          $ref: "#/components/responses/Problem"
+        "404":
           $ref: "#/components/responses/Problem"
         default:
           $ref: "#/components/responses/Problem"
@@ -377,6 +432,52 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/TestSummary"
+    CourseProgressResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - courseId
+        - answeredQuestions
+        - correctAnswers
+        - completedAttempts
+        - passedAttempts
+        - activeScore
+        - lifetimeScore
+        - projectionVersion
+        - updating
+        - updatedAt
+      properties:
+        courseId:
+          $ref: "#/components/schemas/Id"
+        answeredQuestions:
+          type: integer
+          minimum: 0
+        correctAnswers:
+          type: integer
+          minimum: 0
+        completedAttempts:
+          type: integer
+          minimum: 0
+        passedAttempts:
+          type: integer
+          minimum: 0
+        activeScore:
+          type: integer
+          format: int64
+          minimum: 0
+        lifetimeScore:
+          type: integer
+          format: int64
+          minimum: 0
+        projectionVersion:
+          type: integer
+          format: int64
+          minimum: 0
+        updating:
+          type: boolean
+        updatedAt:
+          type: [string, "null"]
+          format: date-time
     TestSummary:
       type: object
       additionalProperties: false
@@ -582,6 +683,18 @@ components:
         asOf:
           type: string
           format: date-time
+    LocalStarterCourseResponse:
+      type: object
+      additionalProperties: false
+      required: [courseId, created, sourceWorkbookSha256]
+      properties:
+        courseId:
+          $ref: "#/components/schemas/Id"
+        created:
+          type: boolean
+        sourceWorkbookSha256:
+          type: string
+          pattern: "^[0-9a-f]{64}$"
     Problem:
       type: object
       additionalProperties: true

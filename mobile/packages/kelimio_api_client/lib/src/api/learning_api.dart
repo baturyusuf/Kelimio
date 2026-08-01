@@ -11,6 +11,7 @@ import 'package:dio/dio.dart';
 
 import 'package:kelimio_api_client/src/model/answer_recorded_response.dart';
 import 'package:kelimio_api_client/src/model/attempt_response.dart';
+import 'package:kelimio_api_client/src/model/course_progress_response.dart';
 import 'package:kelimio_api_client/src/model/finish_attempt_response.dart';
 import 'package:kelimio_api_client/src/model/problem.dart';
 import 'package:kelimio_api_client/src/model/submit_answer_request.dart';
@@ -96,6 +97,88 @@ class LearningApi {
     }
 
     return Response<FinishAttemptResponse>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// Return the authenticated learner&#39;s rebuildable course progress projection
+  /// Counts and scores are projected only from server-authoritative PostgreSQL facts. When updating is true, the last completed projection is returned while pending outbox facts are processed.
+  ///
+  /// Parameters:
+  /// * [courseId]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [CourseProgressResponse] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<CourseProgressResponse>> getCourseProgress({
+    required String courseId,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/v1/courses/{courseId}/progress'.replaceAll(
+      '{'
+      r'courseId'
+      '}',
+      courseId.toString(),
+    );
+    final _options = Options(
+      method: r'GET',
+      headers: <String, dynamic>{...?headers},
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearerAuth'},
+        ],
+        ...?extra,
+      },
+      validateStatus: validateStatus,
+    );
+
+    final _response = await _dio.request<Object>(
+      _path,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    CourseProgressResponse? _responseData;
+
+    try {
+      final rawData = _response.data;
+      _responseData = rawData == null
+          ? null
+          : deserialize<CourseProgressResponse, CourseProgressResponse>(
+              rawData,
+              'CourseProgressResponse',
+              growable: true,
+            );
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<CourseProgressResponse>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,

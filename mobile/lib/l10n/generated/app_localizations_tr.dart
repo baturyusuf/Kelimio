@@ -56,6 +56,35 @@ class AppLocalizationsTr extends AppLocalizations {
   String get emptyCatalog => 'Şu anda kullanılabilir kurs yok.';
 
   @override
+  String get localStarterCourseBody =>
+      'Yerel test için incelenmiş Type-A başlangıç kursunu kur. Bu işlem kullanıcı veya öğrenme sonucu oluşturmaz.';
+
+  @override
+  String get installLocalStarterCourse => 'Yerel başlangıç kursunu kur';
+
+  @override
+  String get yourProgress => 'İlerlemen';
+
+  @override
+  String progressAnswers(Object answered, Object correct) {
+    return '$answered cevabın $correct tanesi doğru';
+  }
+
+  @override
+  String progressAttempts(Object completed, Object passed) {
+    return 'Tamamlanan $completed denemenin $passed tanesi başarılı';
+  }
+
+  @override
+  String progressScores(Object active, Object lifetime) {
+    return 'Aktif skor: $active · Yaşam boyu skor: $lifetime';
+  }
+
+  @override
+  String get progressUpdating =>
+      'İlerleme, doğrulanmış sunucu olaylarından güncelleniyor.';
+
+  @override
   String get courseDetails => 'Kurs ayrıntıları';
 
   @override

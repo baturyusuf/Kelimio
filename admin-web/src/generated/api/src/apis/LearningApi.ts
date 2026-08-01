@@ -17,6 +17,7 @@ import * as runtime from '../runtime';
 import type {
   AnswerRecordedResponse,
   AttemptResponse,
+  CourseProgressResponse,
   FinishAttemptResponse,
   Problem,
   SubmitAnswerRequest,
@@ -26,6 +27,8 @@ import {
     AnswerRecordedResponseToJSON,
     AttemptResponseFromJSON,
     AttemptResponseToJSON,
+    CourseProgressResponseFromJSON,
+    CourseProgressResponseToJSON,
     FinishAttemptResponseFromJSON,
     FinishAttemptResponseToJSON,
     ProblemFromJSON,
@@ -37,6 +40,10 @@ import {
 export interface FinishAttemptRequest {
     attemptId: string;
     idempotencyKey: string;
+}
+
+export interface GetCourseProgressRequest {
+    courseId: string;
 }
 
 export interface StartAttemptRequest {
@@ -72,6 +79,22 @@ export interface LearningApiInterface {
      * Finish an attempt after all planned questions are answered
      */
     finishAttempt(requestParameters: FinishAttemptRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<FinishAttemptResponse>;
+
+    /**
+     * Counts and scores are projected only from server-authoritative PostgreSQL facts. When updating is true, the last completed projection is returned while pending outbox facts are processed.
+     * @summary Return the authenticated learner\'s rebuildable course progress projection
+     * @param {string} courseId
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof LearningApiInterface
+     */
+    getCourseProgressRaw(requestParameters: GetCourseProgressRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<CourseProgressResponse>>;
+
+    /**
+     * Counts and scores are projected only from server-authoritative PostgreSQL facts. When updating is true, the last completed projection is returned while pending outbox facts are processed.
+     * Return the authenticated learner\'s rebuildable course progress projection
+     */
+    getCourseProgress(requestParameters: GetCourseProgressRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<CourseProgressResponse>;
 
     /**
      *
@@ -167,6 +190,53 @@ export class LearningApi extends runtime.BaseAPI implements LearningApiInterface
      */
     async finishAttempt(requestParameters: FinishAttemptRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<FinishAttemptResponse> {
         const response = await this.finishAttemptRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Counts and scores are projected only from server-authoritative PostgreSQL facts. When updating is true, the last completed projection is returned while pending outbox facts are processed.
+     * Return the authenticated learner\'s rebuildable course progress projection
+     */
+    async getCourseProgressRaw(requestParameters: GetCourseProgressRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<CourseProgressResponse>> {
+        if (requestParameters['courseId'] == null) {
+            throw new runtime.RequiredError(
+                'courseId',
+                'Required parameter "courseId" was null or undefined when calling getCourseProgress().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("bearerAuth", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/v1/courses/{courseId}/progress`;
+        urlPath = urlPath.replace(`{${"courseId"}}`, encodeURIComponent(String(requestParameters['courseId'])));
+
+        const response = await this.request({
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => CourseProgressResponseFromJSON(jsonValue));
+    }
+
+    /**
+     * Counts and scores are projected only from server-authoritative PostgreSQL facts. When updating is true, the last completed projection is returned while pending outbox facts are processed.
+     * Return the authenticated learner\'s rebuildable course progress projection
+     */
+    async getCourseProgress(requestParameters: GetCourseProgressRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<CourseProgressResponse> {
+        const response = await this.getCourseProgressRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
