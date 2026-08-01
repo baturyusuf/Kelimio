@@ -5,6 +5,7 @@ import 'package:kelimio_mobile/domain/catalog/catalog.dart';
 import 'package:kelimio_mobile/domain/development/development.dart';
 import 'package:kelimio_mobile/domain/identifiers.dart';
 import 'package:kelimio_mobile/domain/learning/learning.dart';
+import 'package:kelimio_mobile/domain/profile/profile.dart';
 
 import 'fixtures.dart';
 
@@ -155,6 +156,54 @@ final class RecordingDevelopmentRepository implements DevelopmentRepository {
       created: true,
       sourceWorkbookSha256:
           '9fb87f680505e949304257e43e09ab0ce7f71324b4a06bcfae919260ab9f889e',
+    );
+  }
+}
+
+final class RecordingProfileRepository implements ProfileRepository {
+  RecordingProfileRepository({this.failFirstCompletion = false});
+
+  final bool failFirstCompletion;
+  final List<String> commandIds = [];
+  int getCalls = 0;
+  int completionCalls = 0;
+
+  static const requiredProfile = UserProfile(
+    id: '00000000-0000-4000-8000-000000000901',
+    displayName: 'Profile User',
+    appLocale: 'en',
+    activeTargetLanguage: 'tr',
+    preferredSupportLanguage: null,
+    timeZone: 'UTC',
+    profileVersion: 0,
+    setupStatus: ProfileSetupStatus.required,
+  );
+
+  @override
+  Future<UserProfile> getMe() async {
+    getCalls += 1;
+    return requiredProfile;
+  }
+
+  @override
+  Future<UserProfile> completeSetup({
+    required ProfileSetupInput input,
+    required String commandId,
+  }) async {
+    completionCalls += 1;
+    commandIds.add(commandId);
+    if (failFirstCompletion && completionCalls == 1) {
+      throw StateError('simulated uncertain network result');
+    }
+    return UserProfile(
+      id: requiredProfile.id,
+      displayName: input.displayName.trim(),
+      appLocale: input.appLocale,
+      activeTargetLanguage: input.activeTargetLanguage,
+      preferredSupportLanguage: input.preferredSupportLanguage,
+      timeZone: input.timeZone,
+      profileVersion: 1,
+      setupStatus: ProfileSetupStatus.complete,
     );
   }
 }

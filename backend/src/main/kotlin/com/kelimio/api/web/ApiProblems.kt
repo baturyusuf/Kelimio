@@ -28,6 +28,9 @@ class ForbiddenProblem(message: String) : ApiProblem(HttpStatus.FORBIDDEN, "forb
 
 class ConflictProblem(message: String) : ApiProblem(HttpStatus.CONFLICT, "conflict", message)
 
+class ProfileSetupRequiredProblem :
+    ApiProblem(HttpStatus.CONFLICT, "profile-setup-required", "Profile setup must be completed first.")
+
 class UnprocessableProblem(message: String) :
     ApiProblem(HttpStatus.UNPROCESSABLE_ENTITY, "unprocessable-entity", message)
 

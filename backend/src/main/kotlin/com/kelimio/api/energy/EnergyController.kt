@@ -15,5 +15,5 @@ class EnergyController(
 ) {
     @GetMapping
     fun energy(@AuthenticationPrincipal jwt: Jwt): EnergySnapshot =
-        energyService.current(currentUserService.resolve(jwt).id)
+        energyService.current(currentUserService.requireCompleted(jwt).id)
 }

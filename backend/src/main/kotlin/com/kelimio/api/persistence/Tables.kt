@@ -18,9 +18,23 @@ object Users {
     val USERNAME = field(name("app_user", "username"), String::class.java)
     val APP_LOCALE = field(name("app_user", "app_locale"), String::class.java)
     val ACTIVE_TARGET_LANGUAGE = field(name("app_user", "active_target_language"), String::class.java)
+    val PREFERRED_SUPPORT_LANGUAGE = field(name("app_user", "preferred_support_language"), String::class.java)
     val TIME_ZONE = field(name("app_user", "time_zone"), String::class.java)
+    val PROFILE_SETUP_COMPLETED_AT = field(name("app_user", "profile_setup_completed_at"), OffsetDateTime::class.java)
+    val PROFILE_VERSION = field(name("app_user", "profile_version"), Long::class.java)
     val CREATED_AT = field(name("app_user", "created_at"), OffsetDateTime::class.java)
     val UPDATED_AT = field(name("app_user", "updated_at"), OffsetDateTime::class.java)
+}
+
+object IdentityProfileEvents {
+    val TABLE = table(name("identity_profile_event"))
+    val ID = field(name("identity_profile_event", "id"), UUID::class.java)
+    val USER_ID = field(name("identity_profile_event", "user_id"), UUID::class.java)
+    val EVENT_TYPE = field(name("identity_profile_event", "event_type"), String::class.java)
+    val PROFILE_VERSION = field(name("identity_profile_event", "profile_version"), Long::class.java)
+    val CHANGED_FIELDS = field(name("identity_profile_event", "changed_fields"), Array<String>::class.java)
+    val OCCURRED_AT = field(name("identity_profile_event", "occurred_at"), OffsetDateTime::class.java)
+    val CORRELATION_ID = field(name("identity_profile_event", "correlation_id"), String::class.java)
 }
 
 object Courses {

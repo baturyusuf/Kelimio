@@ -15,6 +15,7 @@ export * from './FinishAttemptResponse';
 export * from './LocalStarterCourseResponse';
 export * from './MeResponse';
 export * from './Problem';
+export * from './ProfileSetupRequest';
 export * from './QuestionPayload';
 export * from './SubmitAnswerRequest';
 export * from './TestSummary';

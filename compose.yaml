@@ -93,6 +93,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      mailpit:
+        condition: service_started
     healthcheck:
       test:
         ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/9000; printf 'GET /health/ready HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3; grep -q '200 OK' <&3"]
@@ -100,6 +102,34 @@ services:
       timeout: 5s
       retries: 30
     restart: unless-stopped
+
+  keycloak-config:
+    image: quay.io/keycloak/keycloak:26.2.5@sha256:4883630ef9db14031cde3e60700c9a9a8eaf1b5c24db1589d6a2d43de38ba2a9
+    entrypoint: ["/bin/sh", "-ec"]
+    command:
+      - |
+        /opt/keycloak/bin/kcadm.sh config credentials \
+          --config /tmp/kelimio-kcadm.config \
+          --server http://keycloak:8080 \
+          --realm master \
+          --user "$$KELIMIO_KEYCLOAK_ADMIN" \
+          --password "$$KELIMIO_KEYCLOAK_PASSWORD" >/dev/null 2>&1
+        /opt/keycloak/bin/kcadm.sh update realms/kelimio \
+          --config /tmp/kelimio-kcadm.config \
+          -s registrationAllowed=true \
+          -s loginWithEmailAllowed=true \
+          -s duplicateEmailsAllowed=false \
+          -s verifyEmail=true \
+          -s 'smtpServer={"host":"mailpit","port":"1025","from":"no-reply@kelimio.local","fromDisplayName":"Kelimio Local","ssl":"false","starttls":"false","auth":"false"}'
+    environment:
+      KELIMIO_KEYCLOAK_ADMIN: ${KELIMIO_LOCAL_KEYCLOAK_ADMIN:-local-admin}
+      KELIMIO_KEYCLOAK_PASSWORD: ${KELIMIO_LOCAL_KEYCLOAK_PASSWORD:-local-admin-change-me}
+    depends_on:
+      keycloak:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+    restart: "no"
 
   mailpit:
     image: axllent/mailpit:v1.24.1@sha256:4873e5a441ed368f1e98a832f61257a033859f5e829542cd03fb772d2282ea4e
@@ -149,6 +179,8 @@ services:
         condition: service_healthy
       keycloak:
         condition: service_healthy
+      keycloak-config:
+        condition: service_completed_successfully
       localstack:
         condition: service_healthy
     healthcheck:

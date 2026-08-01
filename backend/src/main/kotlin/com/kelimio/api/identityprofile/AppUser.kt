@@ -10,5 +10,8 @@ data class AppUser(
     val username: String?,
     val appLocale: String,
     val activeTargetLanguage: String,
+    val preferredSupportLanguage: String?,
     val timeZone: String,
+    val profileVersion: Long,
+    val profileSetupComplete: Boolean,
 )

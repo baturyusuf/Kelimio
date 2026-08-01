@@ -38,4 +38,116 @@ assert.equal(validateCourseDetail(unexpectedField), false, "unexpected response 
 const nonCanonicalLanguage = { ...fixture, targetLanguage: "PT-br" };
 assert.equal(validateCourseDetail(nonCanonicalLanguage), false, "language tags must use canonical casing");
 
-console.log("CourseDetail response schema accepts the valid fixture and rejects unsafe drift.");
+const compileSchema = (name) => ajv.compile({
+  $schema: "https://json-schema.org/draft/2020-12/schema",
+  components: contract.components,
+  $ref: `#/components/schemas/${name}`,
+});
+
+const validateMeResponse = compileSchema("MeResponse");
+const provisionalProfile = {
+  id: "00000000-0000-4000-8000-000000000901",
+  displayName: "Profile User",
+  appLocale: "tr",
+  activeTargetLanguage: "en",
+  preferredSupportLanguage: null,
+  timeZone: "UTC",
+  profileVersion: 0,
+  profileSetupStatus: "REQUIRED",
+};
+assert.equal(
+  validateMeResponse(provisionalProfile),
+  true,
+  `Provisional MeResponse must satisfy the response schema: ${ajv.errorsText(validateMeResponse.errors)}`,
+);
+assert.equal(
+  validateMeResponse({
+    ...provisionalProfile,
+    preferredSupportLanguage: "ar",
+    timeZone: "Europe/Istanbul",
+    profileVersion: 1,
+    profileSetupStatus: "COMPLETE",
+  }),
+  true,
+  `Completed MeResponse must satisfy the response schema: ${ajv.errorsText(validateMeResponse.errors)}`,
+);
+const hasValidProfileState = (profile) =>
+  (profile.profileSetupStatus === "REQUIRED" &&
+    profile.profileVersion === 0 &&
+    profile.preferredSupportLanguage == null) ||
+  (profile.profileSetupStatus === "COMPLETE" &&
+    profile.profileVersion >= 1 &&
+    typeof profile.preferredSupportLanguage === "string");
+assert.equal(hasValidProfileState(provisionalProfile), true);
+assert.equal(
+  hasValidProfileState({
+    ...provisionalProfile,
+    preferredSupportLanguage: "ar",
+    profileVersion: 1,
+    profileSetupStatus: "COMPLETE",
+  }),
+  true,
+);
+assert.equal(
+  hasValidProfileState({ ...provisionalProfile, profileVersion: 1 }),
+  false,
+  "a setup-required profile cannot claim a committed profile version",
+);
+assert.equal(
+  hasValidProfileState({
+    ...provisionalProfile,
+    profileSetupStatus: "COMPLETE",
+    profileVersion: 1,
+  }),
+  false,
+  "a completed profile must include a support language",
+);
+assert.equal(
+  hasValidProfileState({
+    ...provisionalProfile,
+    preferredSupportLanguage: "en",
+  }),
+  false,
+  "a setup-required profile cannot expose completed preferences",
+);
+assert.equal(
+  validateMeResponse({ ...provisionalProfile, subject: "oidc-subject" }),
+  false,
+  "MeResponse must not expose the identity-provider subject",
+);
+assert.equal(
+  validateMeResponse({ ...provisionalProfile, email: "private@example.invalid" }),
+  false,
+  "MeResponse must reject undeclared identity data",
+);
+assert.equal(
+  validateMeResponse({ ...provisionalProfile, username: "provider-name" }),
+  false,
+  "MeResponse must not expose the identity-provider username",
+);
+
+const validateProfileSetupRequest = compileSchema("ProfileSetupRequest");
+const profileSetupRequest = {
+  displayName: "Profile User",
+  appLocale: "ar",
+  activeTargetLanguage: "tr",
+  preferredSupportLanguage: "en",
+  timeZone: "Europe/Istanbul",
+};
+assert.equal(
+  validateProfileSetupRequest(profileSetupRequest),
+  true,
+  `ProfileSetupRequest must satisfy the request schema: ${ajv.errorsText(validateProfileSetupRequest.errors)}`,
+);
+assert.equal(
+  validateProfileSetupRequest({ ...profileSetupRequest, appLocale: "fr" }),
+  false,
+  "unsupported application locales must be rejected",
+);
+assert.equal(
+  validateProfileSetupRequest({ ...profileSetupRequest, userId: provisionalProfile.id }),
+  false,
+  "profile setup must reject client-asserted identity fields",
+);
+
+console.log("Course and profile schemas accept valid fixtures and reject unsafe drift.");

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../application/catalog_controller.dart';
+import '../../application/profile_controller.dart';
 import '../../application/providers.dart';
 import '../../domain/catalog/catalog.dart';
 import '../widgets/async_error_view.dart';
@@ -29,6 +30,10 @@ final class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
   Widget build(BuildContext context) {
     final detail = ref.watch(courseDetailProvider(widget.courseId));
     final progress = ref.watch(courseProgressProvider(widget.courseId));
+    final profile = ref.watch(profileControllerProvider);
+    final preferredSupportLanguage = profile.hasValue
+        ? profile.requireValue?.preferredSupportLanguage
+        : null;
     return Scaffold(
       appBar: AppBar(title: Text(context.l10n.courseDetails)),
       body: detail.when(
@@ -37,7 +42,8 @@ final class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
           error: error,
           onRetry: () => ref.invalidate(courseDetailProvider(widget.courseId)),
         ),
-        data: (course) => _buildCourse(course, progress),
+        data: (course) =>
+            _buildCourse(course, progress, preferredSupportLanguage),
       ),
     );
   }
@@ -45,12 +51,19 @@ final class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
   Widget _buildCourse(
     CourseDetail course,
     AsyncValue<CourseProgress> progress,
+    String? preferredSupportLanguage,
   ) {
     final summary = course.summary;
     final description = summary.description;
     final languages = summary.supportLanguages;
     final selected =
-        _supportLanguage ?? (languages.isEmpty ? null : languages.first);
+        (_supportLanguage != null && languages.contains(_supportLanguage)
+            ? _supportLanguage
+            : null) ??
+        (preferredSupportLanguage != null &&
+                languages.contains(preferredSupportLanguage)
+            ? preferredSupportLanguage
+            : (languages.isEmpty ? null : languages.first));
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [

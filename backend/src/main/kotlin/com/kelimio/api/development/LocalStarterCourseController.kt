@@ -22,7 +22,7 @@ class LocalStarterCourseController(
         @AuthenticationPrincipal jwt: Jwt,
         @RequestHeader("Idempotency-Key") idempotencyKey: UUID,
     ): ResponseEntity<LocalStarterCourseResponse> {
-        val result = service.install(currentUserService.resolve(jwt), idempotencyKey)
+        val result = service.install(currentUserService.requireCompleted(jwt), idempotencyKey)
         val status = if (result.created) HttpStatus.CREATED else HttpStatus.OK
         return ResponseEntity.status(status).body(
             LocalStarterCourseResponse(

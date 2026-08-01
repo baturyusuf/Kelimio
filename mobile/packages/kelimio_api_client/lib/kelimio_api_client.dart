@@ -30,6 +30,7 @@ export 'package:kelimio_api_client/src/model/finish_attempt_response.dart';
 export 'package:kelimio_api_client/src/model/local_starter_course_response.dart';
 export 'package:kelimio_api_client/src/model/me_response.dart';
 export 'package:kelimio_api_client/src/model/problem.dart';
+export 'package:kelimio_api_client/src/model/profile_setup_request.dart';
 export 'package:kelimio_api_client/src/model/question_payload.dart';
 export 'package:kelimio_api_client/src/model/submit_answer_request.dart';
 export 'package:kelimio_api_client/src/model/test_summary.dart';

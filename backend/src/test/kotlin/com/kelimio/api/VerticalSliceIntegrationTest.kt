@@ -13,6 +13,7 @@ import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequ
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
 import org.springframework.test.web.servlet.MockMvc
+import org.springframework.test.web.servlet.request.RequestPostProcessor
 import org.springframework.test.web.servlet.get
 import org.springframework.test.web.servlet.post
 import org.springframework.transaction.support.TransactionTemplate
@@ -23,6 +24,9 @@ import org.testcontainers.utility.DockerImageName
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
 import java.util.UUID
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -44,6 +48,227 @@ class VerticalSliceIntegrationTest {
     private lateinit var projectionWorker: LearningProgressProjectionWorker
 
     @Test
+    fun `authenticated user completes first login profile setup idempotently`() {
+        val subject = "profile-setup-${UUID.randomUUID()}"
+        val profileJwt = jwt().jwt {
+            it.subject(subject)
+                .claim("email", "profile@integration.invalid")
+                .claim("email_verified", true)
+                .claim("preferred_username", "profile-user")
+                .audience(listOf("kelimio-mobile"))
+        }
+
+        mockMvc.get("/v1/me") { with(profileJwt) }
+            .andExpect {
+                status { isOk() }
+                jsonPath("$.profileSetupStatus") { value("REQUIRED") }
+                jsonPath("$.profileVersion") { value(0) }
+                jsonPath("$.preferredSupportLanguage") { doesNotExist() }
+                jsonPath("$.timeZone") { value("UTC") }
+                jsonPath("$.subject") { doesNotExist() }
+                jsonPath("$.email") { doesNotExist() }
+                jsonPath("$.username") { doesNotExist() }
+            }
+
+        mockMvc.get("/v1/catalog/courses") { with(profileJwt) }
+            .andExpect {
+                status { isConflict() }
+                jsonPath("$.type") { value("https://api.kelimio.invalid/problems/profile-setup-required") }
+            }
+
+        mockMvc.post("/v1/development/starter-course") {
+            with(profileJwt)
+            header("Idempotency-Key", UUID.randomUUID().toString())
+        }.andExpect {
+            status { isConflict() }
+            jsonPath("$.type") { value("https://api.kelimio.invalid/problems/profile-setup-required") }
+        }
+
+        mockMvc.post("/v1/me/profile-setup") {
+            with(profileJwt)
+            header("Idempotency-Key", UUID.randomUUID().toString())
+            contentType = MediaType.APPLICATION_JSON
+            content = profileSetupRequest().dropLast(1) + ",\"userId\":\"${UUID.randomUUID()}\"}"
+        }.andExpect { status { isBadRequest() } }
+
+        mockMvc.post("/v1/me/profile-setup") {
+            with(profileJwt)
+            header("Idempotency-Key", UUID.randomUUID().toString())
+            contentType = MediaType.APPLICATION_JSON
+            content = profileSetupRequest(displayName = "Unsafe\u202EName")
+        }.andExpect { status { isUnprocessableEntity() } }
+
+        mockMvc.post("/v1/me/profile-setup") {
+            with(profileJwt)
+            header("Idempotency-Key", UUID.randomUUID().toString())
+            contentType = MediaType.APPLICATION_JSON
+            content = profileSetupRequest(targetLanguage = "tr", supportLanguage = "tr")
+        }.andExpect { status { isUnprocessableEntity() } }
+
+        mockMvc.post("/v1/me/profile-setup") {
+            with(profileJwt)
+            header("Idempotency-Key", UUID.randomUUID().toString())
+            contentType = MediaType.APPLICATION_JSON
+            content = profileSetupRequest(timeZone = "+03:00")
+        }.andExpect { status { isUnprocessableEntity() } }
+
+        val firstKey = UUID.randomUUID()
+        val request = profileSetupRequest(displayName = "  Ｐrofile   User  ")
+        repeat(2) {
+            mockMvc.post("/v1/me/profile-setup") {
+                with(profileJwt)
+                header("Idempotency-Key", firstKey.toString())
+                contentType = MediaType.APPLICATION_JSON
+                content = request
+            }.andExpect {
+                status { isOk() }
+                jsonPath("$.displayName") { value("Profile User") }
+                jsonPath("$.appLocale") { value("ar") }
+                jsonPath("$.activeTargetLanguage") { value("tr") }
+                jsonPath("$.preferredSupportLanguage") { value("en") }
+                jsonPath("$.timeZone") { value("Europe/Istanbul") }
+                jsonPath("$.profileVersion") { value(1) }
+                jsonPath("$.profileSetupStatus") { value("COMPLETE") }
+            }
+        }
+
+        mockMvc.post("/v1/me/profile-setup") {
+            with(profileJwt)
+            header("Idempotency-Key", firstKey.toString())
+            contentType = MediaType.APPLICATION_JSON
+            content = profileSetupRequest(displayName = "Changed Name")
+        }.andExpect { status { isConflict() } }
+
+        mockMvc.post("/v1/me/profile-setup") {
+            with(profileJwt)
+            header("Idempotency-Key", UUID.randomUUID().toString())
+            contentType = MediaType.APPLICATION_JSON
+            content = request
+        }.andExpect { status { isConflict() } }
+
+        val userId = jdbcTemplate.queryForObject(
+            "select id from app_user where oidc_subject = ?",
+            UUID::class.java,
+            subject,
+        )!!
+        assertThat(
+            jdbcTemplate.queryForObject(
+                "select count(*) from outbox_event where aggregate_id = ? and event_type = 'identity.profile-setup-completed.v1'",
+                Int::class.java,
+                userId,
+            ),
+        ).isEqualTo(1)
+        assertThat(count("identity_profile_event", "user_id", userId)).isEqualTo(1)
+        assertThat(count("course", "owner_user_id", userId)).isZero()
+        assertThat(
+            jdbcTemplate.queryForObject(
+                "select count(*) from command_idempotency where user_id = ? and operation = 'identity.complete-profile-setup'",
+                Int::class.java,
+                userId,
+            ),
+        ).isEqualTo(1)
+    }
+
+    @Test
+    fun `matching verified emails never link distinct oidc subjects`() {
+        val sharedEmail = "shared-${UUID.randomUUID()}@integration.invalid"
+        listOf("first", "second").forEach { suffix ->
+            val subjectJwt = jwt().jwt {
+                it.subject("$suffix-${UUID.randomUUID()}")
+                    .claim("email", sharedEmail)
+                    .claim("email_verified", true)
+                    .audience(listOf("kelimio-mobile"))
+            }
+            mockMvc.get("/v1/me") { with(subjectJwt) }
+                .andExpect { status { isOk() } }
+        }
+        assertThat(
+            jdbcTemplate.queryForObject(
+                "select count(*) from app_user where email = ?",
+                Int::class.java,
+                sharedEmail,
+            ),
+        ).isEqualTo(2)
+
+        val unverifiedSubject = "unverified-${UUID.randomUUID()}"
+        mockMvc.get("/v1/me") {
+            with(
+                jwt().jwt {
+                    it.subject(unverifiedSubject)
+                        .claim("email", sharedEmail)
+                        .claim("email_verified", false)
+                        .claim("name", "Unsafe\u202EName")
+                        .claim("preferred_username", sharedEmail)
+                        .audience(listOf("kelimio-mobile"))
+                },
+            )
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$.displayName") { value("Kelimio User") }
+        }
+        assertThat(
+            jdbcTemplate.queryForObject(
+                "select count(*) from app_user where oidc_subject = ? and email is null and username is null and display_name = 'Kelimio User'",
+                Int::class.java,
+                unverifiedSubject,
+            ),
+        ).isEqualTo(1)
+    }
+
+    @Test
+    fun `concurrent profile setup commands commit exactly one profile fact`() {
+        val subject = "concurrent-profile-${UUID.randomUUID()}"
+        fun subjectJwt() = jwt().jwt {
+            it.subject(subject)
+                .claim("email", "concurrent-${UUID.randomUUID()}@integration.invalid")
+                .claim("email_verified", true)
+                .audience(listOf("kelimio-mobile"))
+        }
+
+        mockMvc.get("/v1/me") { with(subjectJwt()) }
+            .andExpect { status { isOk() } }
+
+        val ready = CountDownLatch(2)
+        val start = CountDownLatch(1)
+        val executor = Executors.newFixedThreadPool(2)
+        try {
+            val responses = List(2) {
+                executor.submit<Int> {
+                    ready.countDown()
+                    check(start.await(10, TimeUnit.SECONDS))
+                    mockMvc.post("/v1/me/profile-setup") {
+                        with(subjectJwt())
+                        header("Idempotency-Key", UUID.randomUUID().toString())
+                        contentType = MediaType.APPLICATION_JSON
+                        content = profileSetupRequest(displayName = "Concurrent User")
+                    }.andReturn().response.status
+                }
+            }
+            check(ready.await(10, TimeUnit.SECONDS))
+            start.countDown()
+            assertThat(responses.map { it.get(30, TimeUnit.SECONDS) })
+                .containsExactlyInAnyOrder(200, 409)
+        } finally {
+            start.countDown()
+            executor.shutdownNow()
+        }
+
+        val userId = jdbcTemplate.queryForObject(
+            "select id from app_user where oidc_subject = ?",
+            UUID::class.java,
+            subject,
+        )!!
+        assertThat(count("identity_profile_event", "user_id", userId)).isEqualTo(1)
+        assertThat(
+            jdbcTemplate.queryForObject(
+                "select count(*) from command_idempotency where user_id = ? and operation = 'identity.complete-profile-setup'",
+                Int::class.java,
+                userId,
+            ),
+        ).isEqualTo(1)
+    }
+
+    @Test
     fun `local starter course installs one immutable release idempotently`() {
         val ownerJwt = jwt().jwt {
             it.subject("local-starter-owner")
@@ -51,6 +276,7 @@ class VerticalSliceIntegrationTest {
                 .claim("preferred_username", "starter-owner")
                 .audience(listOf("kelimio-mobile"))
         }
+        completeProfileSetup(ownerJwt, displayName = "Starter Owner")
         val firstKey = UUID.randomUUID()
         val firstBody = mockMvc.post("/v1/development/starter-course") {
             with(ownerJwt)
@@ -113,6 +339,7 @@ class VerticalSliceIntegrationTest {
         mockMvc.get("/v1/me") { with(learnerJwt) }
             .andExpect { status { isOk() } }
             .andExpect { header { exists("X-Request-Id") } }
+        completeProfileSetup(learnerJwt, displayName = "Integration Learner")
 
         mockMvc.get("/v1/catalog/courses")
             .andExpect { status { isUnauthorized() } }
@@ -337,6 +564,36 @@ class VerticalSliceIntegrationTest {
         id: UUID,
     ): Int = jdbcTemplate.queryForObject("select count(*) from $table where $idColumn = ?", Int::class.java, id)!!
 
+    private fun completeProfileSetup(
+        authentication: RequestPostProcessor,
+        displayName: String,
+    ) {
+        mockMvc.post("/v1/me/profile-setup") {
+            with(authentication)
+            header("Idempotency-Key", UUID.randomUUID().toString())
+            contentType = MediaType.APPLICATION_JSON
+            content = profileSetupRequest(displayName = displayName)
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$.profileSetupStatus") { value("COMPLETE") }
+        }
+    }
+
+    private fun profileSetupRequest(
+        displayName: String = "  Profile   User  ",
+        targetLanguage: String = "tr",
+        supportLanguage: String = "en",
+        timeZone: String = "Europe/Istanbul",
+    ): String = """
+        {
+          "displayName":"$displayName",
+          "appLocale":"ar",
+          "activeTargetLanguage":"$targetLanguage",
+          "preferredSupportLanguage":"$supportLanguage",
+          "timeZone":"$timeZone"
+        }
+    """.trimIndent()
+
     data class Fixture(
         val courseId: UUID,
         val testId: UUID,
@@ -363,6 +620,7 @@ class VerticalSliceIntegrationTest {
             registry.add("KELIMIO_DB_PASSWORD", postgres::getPassword)
             registry.add("KELIMIO_ENVIRONMENT") { "local" }
             registry.add("KELIMIO_LOCAL_STARTER_COURSE_ENABLED") { "true" }
+            registry.add("KELIMIO_PROJECTION_ENABLED") { "false" }
             registry.add("KELIMIO_OIDC_ISSUER") { "https://issuer.integration.invalid" }
             registry.add("KELIMIO_OIDC_AUDIENCE") { "kelimio-mobile" }
             registry.add("KELIMIO_OIDC_JWK_SET_URI") { "https://127.0.0.1:9/jwks" }

@@ -30,19 +30,7 @@ export interface MeResponse {
      * @type {string}
      * @memberof MeResponse
      */
-    subject: string;
-    /**
-     *
-     * @type {string}
-     * @memberof MeResponse
-     */
     displayName: string;
-    /**
-     *
-     * @type {string}
-     * @memberof MeResponse
-     */
-    username?: string | null;
     /**
      * Canonically cased BCP 47 subset: lowercase primary language, optional title-case script, uppercase region, and lowercase variants. Extensions and private-use subtags are outside the initial API contract.
      * @type {string}
@@ -55,17 +43,54 @@ export interface MeResponse {
      * @memberof MeResponse
      */
     activeTargetLanguage: string;
+    /**
+     * Absent or null until first-login profile setup is complete.
+     * @type {string}
+     * @memberof MeResponse
+     */
+    preferredSupportLanguage?: string | null;
+    /**
+     * Named IANA time-zone identifier accepted by the backend runtime, or UTC. Raw numeric offsets and GMT-prefixed fixed offsets are rejected.
+     * @type {string}
+     * @memberof MeResponse
+     */
+    timeZone: string;
+    /**
+     *
+     * @type {number}
+     * @memberof MeResponse
+     */
+    profileVersion: number;
+    /**
+     * REQUIRED pairs with profileVersion 0 and no support language; COMPLETE pairs with profileVersion at least 1 and a support language.
+     * @type {string}
+     * @memberof MeResponse
+     */
+    profileSetupStatus: MeResponseProfileSetupStatusEnum;
 }
+
+
+/**
+ * @export
+ */
+export const MeResponseProfileSetupStatusEnum = {
+    Required: 'REQUIRED',
+    Complete: 'COMPLETE'
+} as const;
+export type MeResponseProfileSetupStatusEnum = typeof MeResponseProfileSetupStatusEnum[keyof typeof MeResponseProfileSetupStatusEnum];
+
 
 /**
  * Check if a given object implements the MeResponse interface.
  */
 export function instanceOfMeResponse(value: object): value is MeResponse {
     if (!('id' in value) || value['id'] === undefined) return false;
-    if (!('subject' in value) || value['subject'] === undefined) return false;
     if (!('displayName' in value) || value['displayName'] === undefined) return false;
     if (!('appLocale' in value) || value['appLocale'] === undefined) return false;
     if (!('activeTargetLanguage' in value) || value['activeTargetLanguage'] === undefined) return false;
+    if (!('timeZone' in value) || value['timeZone'] === undefined) return false;
+    if (!('profileVersion' in value) || value['profileVersion'] === undefined) return false;
+    if (!('profileSetupStatus' in value) || value['profileSetupStatus'] === undefined) return false;
     return true;
 }
 
@@ -80,11 +105,13 @@ export function MeResponseFromJSONTyped(json: any, ignoreDiscriminator: boolean)
     return {
 
         'id': json['id'],
-        'subject': json['subject'],
         'displayName': json['displayName'],
-        'username': json['username'] == null ? undefined : json['username'],
         'appLocale': json['appLocale'],
         'activeTargetLanguage': json['activeTargetLanguage'],
+        'preferredSupportLanguage': json['preferredSupportLanguage'] == null ? undefined : json['preferredSupportLanguage'],
+        'timeZone': json['timeZone'],
+        'profileVersion': json['profileVersion'],
+        'profileSetupStatus': json['profileSetupStatus'],
     };
 }
 
@@ -100,10 +127,12 @@ export function MeResponseToJSONTyped(value?: MeResponse | null, ignoreDiscrimin
     return {
 
         'id': value['id'],
-        'subject': value['subject'],
         'displayName': value['displayName'],
-        'username': value['username'],
         'appLocale': value['appLocale'],
         'activeTargetLanguage': value['activeTargetLanguage'],
+        'preferredSupportLanguage': value['preferredSupportLanguage'],
+        'timeZone': value['timeZone'],
+        'profileVersion': value['profileVersion'],
+        'profileSetupStatus': value['profileSetupStatus'],
     };
 }

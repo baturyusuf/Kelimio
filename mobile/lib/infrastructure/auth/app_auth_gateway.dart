@@ -27,7 +27,12 @@ final class AppAuthGateway implements AuthRepository, AccessTokenProvider {
   static const _refreshTokenKey = 'oidc.refresh_token';
   static const _idTokenKey = 'oidc.id_token';
   static const _expiresAtKey = 'oidc.expires_at';
-  static const _scopes = <String>['openid', 'profile', 'offline_access'];
+  static const _scopes = <String>[
+    'openid',
+    'profile',
+    'email',
+    'offline_access',
+  ];
 
   @override
   Future<AuthSession?> restore() async {

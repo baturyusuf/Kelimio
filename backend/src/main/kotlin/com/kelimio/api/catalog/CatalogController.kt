@@ -38,7 +38,7 @@ class CatalogController(
         @RequestParam(required = false) @Pattern(regexp = CANONICAL_LANGUAGE_TAG_PATTERN)
         supportLanguage: String?,
     ): CoursePageResponse = catalogService.list(
-        currentUserService.resolve(jwt),
+        currentUserService.requireCompleted(jwt),
         cursor,
         targetLanguage,
         supportLanguage,
@@ -49,7 +49,7 @@ class CatalogController(
     fun courseDetails(
         @AuthenticationPrincipal jwt: Jwt,
         @PathVariable courseId: UUID,
-    ): CourseDetailResponse = catalogService.details(currentUserService.resolve(jwt), courseId).toResponse()
+    ): CourseDetailResponse = catalogService.details(currentUserService.requireCompleted(jwt), courseId).toResponse()
 
     @PostMapping("/courses/{courseId}/enrollments")
     fun enroll(
@@ -59,7 +59,7 @@ class CatalogController(
         @Valid @RequestBody request: EnrollmentRequest,
     ): ResponseEntity<EnrollmentResponse> {
         val result = catalogService.enroll(
-            user = currentUserService.resolve(jwt),
+            user = currentUserService.requireCompleted(jwt),
             courseId = courseId,
             supportLanguage = request.supportLanguage,
             idempotencyKey = idempotencyKey,

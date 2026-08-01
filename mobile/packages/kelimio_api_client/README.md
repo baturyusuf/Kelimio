@@ -75,6 +75,7 @@ Class | Method | HTTP request | Description
 [*LearningApi*](doc/LearningApi.md) | [**getCourseProgress**](doc/LearningApi.md#getcourseprogress) | **GET** /v1/courses/{courseId}/progress | Return the authenticated learner&#39;s rebuildable course progress projection
 [*LearningApi*](doc/LearningApi.md) | [**startAttempt**](doc/LearningApi.md#startattempt) | **POST** /v1/tests/{testId}/attempts | Start an online attempt for the current test revision
 [*LearningApi*](doc/LearningApi.md) | [**submitAnswer**](doc/LearningApi.md#submitanswer) | **POST** /v1/attempts/{attemptId}/answers | Record and evaluate one online answer exactly once
+[*ProfileApi*](doc/ProfileApi.md) | [**completeProfileSetup**](doc/ProfileApi.md#completeprofilesetup) | **POST** /v1/me/profile-setup | Complete the authenticated user&#39;s first-login profile setup
 [*ProfileApi*](doc/ProfileApi.md) | [**getMe**](doc/ProfileApi.md#getme) | **GET** /v1/me | Return the authenticated user&#39;s profile and language preferences
 
 
@@ -95,6 +96,7 @@ Class | Method | HTTP request | Description
  - [LocalStarterCourseResponse](doc/LocalStarterCourseResponse.md)
  - [MeResponse](doc/MeResponse.md)
  - [Problem](doc/Problem.md)
+ - [ProfileSetupRequest](doc/ProfileSetupRequest.md)
  - [QuestionPayload](doc/QuestionPayload.md)
  - [SubmitAnswerRequest](doc/SubmitAnswerRequest.md)
  - [TestSummary](doc/TestSummary.md)

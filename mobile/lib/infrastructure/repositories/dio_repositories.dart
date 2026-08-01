@@ -6,6 +6,7 @@ import '../../domain/development/development.dart';
 import '../../domain/energy/energy.dart';
 import '../../domain/failures.dart';
 import '../../domain/learning/learning.dart';
+import '../../domain/profile/profile.dart';
 import '../network/failure_mapper.dart';
 import '../network/request_metadata.dart';
 import 'api_decoders.dart';
@@ -203,6 +204,79 @@ final class GeneratedDevelopmentRepository implements DevelopmentRepository {
       sourceWorkbookSha256: data.sourceWorkbookSha256,
     );
   });
+
+  Future<T> _guard<T>(Future<T> Function() request) async {
+    try {
+      return await request();
+    } on DioException catch (error) {
+      throw _failures.map(error);
+    } on AppFailure {
+      rethrow;
+    } on Object catch (error) {
+      throw UnknownFailure(cause: error);
+    }
+  }
+}
+
+final class GeneratedProfileRepository implements ProfileRepository {
+  const GeneratedProfileRepository(this._api, this._failures);
+
+  final api.ProfileApi _api;
+  final DioFailureMapper _failures;
+
+  @override
+  Future<UserProfile> getMe() => _guard(() async {
+    final response = await _api.getMe();
+    final data = response.data;
+    if (data == null) {
+      throw const ProtocolFailure('Profile response body was empty');
+    }
+    return _mapProfile(data);
+  });
+
+  @override
+  Future<UserProfile> completeSetup({
+    required ProfileSetupInput input,
+    required String commandId,
+  }) => _guard(() async {
+    final appLocale = api.ProfileSetupRequestAppLocaleEnum.values.firstWhere(
+      (value) => value.value == input.appLocale,
+      orElse: () => throw const ProtocolFailure(
+        'Unsupported application locale reached the profile repository',
+      ),
+    );
+    final response = await _api.completeProfileSetup(
+      idempotencyKey: commandId,
+      profileSetupRequest: api.ProfileSetupRequest(
+        displayName: input.displayName,
+        appLocale: appLocale,
+        activeTargetLanguage: input.activeTargetLanguage,
+        preferredSupportLanguage: input.preferredSupportLanguage,
+        timeZone: input.timeZone,
+      ),
+      extra: {RequestMetadata.idempotencyKey: commandId},
+    );
+    final data = response.data;
+    if (data == null) {
+      throw const ProtocolFailure('Profile setup response body was empty');
+    }
+    return _mapProfile(data);
+  });
+
+  UserProfile _mapProfile(api.MeResponse value) => UserProfile(
+    id: value.id,
+    displayName: value.displayName,
+    appLocale: value.appLocale,
+    activeTargetLanguage: value.activeTargetLanguage,
+    preferredSupportLanguage: value.preferredSupportLanguage,
+    timeZone: value.timeZone,
+    profileVersion: value.profileVersion,
+    setupStatus:
+        value.profileSetupStatus ==
+            api.MeResponseProfileSetupStatusEnum.COMPLETE
+        ? ProfileSetupStatus.complete
+        : ProfileSetupStatus.required,
+  );
 
   Future<T> _guard<T>(Future<T> Function() request) async {
     try {

@@ -17,13 +17,21 @@ import * as runtime from '../runtime';
 import type {
   MeResponse,
   Problem,
+  ProfileSetupRequest,
 } from '../models/index';
 import {
     MeResponseFromJSON,
     MeResponseToJSON,
     ProblemFromJSON,
     ProblemToJSON,
+    ProfileSetupRequestFromJSON,
+    ProfileSetupRequestToJSON,
 } from '../models/index';
+
+export interface CompleteProfileSetupRequest {
+    idempotencyKey: string;
+    profileSetupRequest: ProfileSetupRequest;
+}
 
 /**
  * ProfileApi - interface
@@ -32,6 +40,23 @@ import {
  * @interface ProfileApiInterface
  */
 export interface ProfileApiInterface {
+    /**
+     * Completes the provisional subject-bound profile exactly once. Repeating the same Idempotency-Key and canonical request returns the original result without duplicate facts. This is not legal-terms acceptance, and identity-provider subject, email, and username are neither accepted by this command nor exposed by the profile response.
+     * @summary Complete the authenticated user\'s first-login profile setup
+     * @param {string} idempotencyKey Stable UUID generated once for the logical command.
+     * @param {ProfileSetupRequest} profileSetupRequest
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof ProfileApiInterface
+     */
+    completeProfileSetupRaw(requestParameters: CompleteProfileSetupRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<MeResponse>>;
+
+    /**
+     * Completes the provisional subject-bound profile exactly once. Repeating the same Idempotency-Key and canonical request returns the original result without duplicate facts. This is not legal-terms acceptance, and identity-provider subject, email, and username are neither accepted by this command nor exposed by the profile response.
+     * Complete the authenticated user\'s first-login profile setup
+     */
+    completeProfileSetup(requestParameters: CompleteProfileSetupRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<MeResponse>;
+
     /**
      *
      * @summary Return the authenticated user\'s profile and language preferences
@@ -52,6 +77,66 @@ export interface ProfileApiInterface {
  *
  */
 export class ProfileApi extends runtime.BaseAPI implements ProfileApiInterface {
+
+    /**
+     * Completes the provisional subject-bound profile exactly once. Repeating the same Idempotency-Key and canonical request returns the original result without duplicate facts. This is not legal-terms acceptance, and identity-provider subject, email, and username are neither accepted by this command nor exposed by the profile response.
+     * Complete the authenticated user\'s first-login profile setup
+     */
+    async completeProfileSetupRaw(requestParameters: CompleteProfileSetupRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<MeResponse>> {
+        if (requestParameters['idempotencyKey'] == null) {
+            throw new runtime.RequiredError(
+                'idempotencyKey',
+                'Required parameter "idempotencyKey" was null or undefined when calling completeProfileSetup().'
+            );
+        }
+
+        if (requestParameters['profileSetupRequest'] == null) {
+            throw new runtime.RequiredError(
+                'profileSetupRequest',
+                'Required parameter "profileSetupRequest" was null or undefined when calling completeProfileSetup().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (requestParameters['idempotencyKey'] != null) {
+            headerParameters['Idempotency-Key'] = String(requestParameters['idempotencyKey']);
+        }
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("bearerAuth", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/v1/me/profile-setup`;
+
+        const response = await this.request({
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: ProfileSetupRequestToJSON(requestParameters['profileSetupRequest']),
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => MeResponseFromJSON(jsonValue));
+    }
+
+    /**
+     * Completes the provisional subject-bound profile exactly once. Repeating the same Idempotency-Key and canonical request returns the original result without duplicate facts. This is not legal-terms acceptance, and identity-provider subject, email, and username are neither accepted by this command nor exposed by the profile response.
+     * Complete the authenticated user\'s first-login profile setup
+     */
+    async completeProfileSetup(requestParameters: CompleteProfileSetupRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<MeResponse> {
+        const response = await this.completeProfileSetupRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
 
     /**
      * Return the authenticated user\'s profile and language preferences

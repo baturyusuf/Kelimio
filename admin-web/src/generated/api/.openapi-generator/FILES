@@ -26,6 +26,7 @@ src/models/FinishAttemptResponse.ts
 src/models/LocalStarterCourseResponse.ts
 src/models/MeResponse.ts
 src/models/Problem.ts
+src/models/ProfileSetupRequest.ts
 src/models/QuestionPayload.ts
 src/models/SubmitAnswerRequest.ts
 src/models/TestSummary.ts

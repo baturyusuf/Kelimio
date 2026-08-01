@@ -14,9 +14,14 @@ docker compose --profile app up --build
 ```
 
 Keycloak starts without demo users. Register a real local user through the OIDC
-registration flow. The stack does not seed fake courses or learning results,
-and the supported course-import path is not implemented yet; only the isolated
-backend integration fixture currently creates controlled course data.
+registration flow. Realm imports require email verification and deliver the
+message to Mailpit at `http://localhost:8025`. The one-shot `keycloak-config`
+service also reconciles these non-secret local realm settings after Keycloak is
+healthy, so an existing development volume receives them without deleting its
+users. After verification, the app requires explicit profile/language/time-zone
+setup. The stack does not seed fake users or learning results. An explicitly
+enabled local-only API command can install the immutable reviewed Type-A starter
+course; it is not the production Excel-import path.
 
 External images and the LocalStack base are digest-pinned. LocalStack runs as
 its packaged non-root user. Updating a tag requires refreshing and reviewing

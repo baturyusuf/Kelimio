@@ -24,6 +24,13 @@ It reveals an explicit empty-catalog action that installs the reviewed Type-A
 starter course through the local backend; it never creates users or learning
 results, and the backend rejects the command outside its enabled local mode.
 
+After a valid OIDC session, the app loads `/v1/me`. Provisional users must
+complete the one-time app-language, target-language, support-language, and time-
+zone setup before any product API is available. This setup is not legal consent.
+The backend is the gate authority; mobile routing only mirrors its state. A
+saved support language becomes the enrollment default when the course supports
+it.
+
 Missing or unsafe production values render an explicit configuration error;
 they never select a fake backend. Generate localizations, format, analyze, and
 test with:

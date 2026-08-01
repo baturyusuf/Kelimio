@@ -96,6 +96,7 @@ This selects the transaction-specific feedback requirement over a literal readin
 | Answer flow writes score in the request transaction, while an event table implies an asynchronous Scoring consumer. | Durable score/energy facts are synchronous; projections and downstream effects are asynchronous. | ADR-002 |
 | `ContentChanged`, revisions, change sets, and course releases are not fully unified in the PDFs. | Publish an immutable course release from a validated change set and activate it atomically. | ADR-003 |
 | Payment diagrams suggest permanent entitlement, but refund/void/chargeback must revoke access. | Entitlement is a revocable state projection derived from immutable store events. | ADR-004 |
+| Matching email addresses suggest one person, but email text alone cannot safely authorize an account merge. | The managed OIDC broker links identities only after verified ownership; the backend keys users by stable subject and never auto-links by email. | ADR-005 |
 
 ## Consequences
 

@@ -56,7 +56,7 @@ OIDC provider through `localhost`. Check or stop it with `-Action status` and
 policy and does not change the workstation's persistent security settings.
 Google Play Console access is not required for this emulator.
 
-Keycloak is available at `http://localhost:8081`, the API at `http://localhost:8080`, Mailpit at `http://localhost:8025`, and LocalStack at `http://localhost:4566`. The realm has no demo user. Register through OIDC; do not seed fake learning results. The course-import workflow is not implemented yet, so a complete manual learner journey still requires real course data to be inserted by a future supported path.
+Keycloak is available at `http://localhost:8081`, the API at `http://localhost:8080`, Mailpit at `http://localhost:8025`, and LocalStack at `http://localhost:4566`. The realm has no demo user. Register through OIDC, verify the captured message in Mailpit on a fresh realm, and complete the in-app profile setup. When local development tools are enabled, an authenticated and profile-complete user can install the immutable reviewed Type-A starter course from the empty catalog. This is local test content, not the production Excel-import workflow, and it creates no learning results.
 
 Run the backend checks:
 

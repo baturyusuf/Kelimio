@@ -1,23 +1,17 @@
 import 'package:test/test.dart';
 import 'package:kelimio_api_client/kelimio_api_client.dart';
 
-// tests for MeResponse
+// tests for ProfileSetupRequest
 void main() {
-  final MeResponse? instance = /* MeResponse(...) */ null;
+  final ProfileSetupRequest? instance = /* ProfileSetupRequest(...) */ null;
   // TODO add properties to the entity
 
-  group(MeResponse, () {
-    // String id
-    test('to test the property `id`', () async {
-      // TODO
-    });
-
+  group(ProfileSetupRequest, () {
     // String displayName
     test('to test the property `displayName`', () async {
       // TODO
     });
 
-    // Canonically cased BCP 47 subset: lowercase primary language, optional title-case script, uppercase region, and lowercase variants. Extensions and private-use subtags are outside the initial API contract.
     // String appLocale
     test('to test the property `appLocale`', () async {
       // TODO
@@ -29,7 +23,7 @@ void main() {
       // TODO
     });
 
-    // Absent or null until first-login profile setup is complete.
+    // Canonically cased BCP 47 subset: lowercase primary language, optional title-case script, uppercase region, and lowercase variants. Extensions and private-use subtags are outside the initial API contract.
     // String preferredSupportLanguage
     test('to test the property `preferredSupportLanguage`', () async {
       // TODO
@@ -38,17 +32,6 @@ void main() {
     // Named IANA time-zone identifier accepted by the backend runtime, or UTC. Raw numeric offsets and GMT-prefixed fixed offsets are rejected.
     // String timeZone
     test('to test the property `timeZone`', () async {
-      // TODO
-    });
-
-    // int profileVersion
-    test('to test the property `profileVersion`', () async {
-      // TODO
-    });
-
-    // REQUIRED pairs with profileVersion 0 and no support language; COMPLETE pairs with profileVersion at least 1 and a support language.
-    // String profileSetupStatus
-    test('to test the property `profileSetupStatus`', () async {
       // TODO
     });
   });

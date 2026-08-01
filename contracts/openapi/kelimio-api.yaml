@@ -48,6 +48,42 @@ paths:
           $ref: "#/components/responses/Problem"
         default:
           $ref: "#/components/responses/Problem"
+  /v1/me/profile-setup:
+    post:
+      operationId: completeProfileSetup
+      tags: [Profile]
+      summary: Complete the authenticated user's first-login profile setup
+      description: >-
+        Completes the provisional subject-bound profile exactly once. Repeating
+        the same Idempotency-Key and canonical request returns the original
+        result without duplicate facts. This is not legal-terms acceptance,
+        and identity-provider subject, email, and username are neither accepted
+        by this command nor exposed by the profile response.
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProfileSetupRequest"
+      responses:
+        "200":
+          description: Completed authenticated profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MeResponse"
+        "400":
+          $ref: "#/components/responses/Problem"
+        "401":
+          $ref: "#/components/responses/Problem"
+        "409":
+          $ref: "#/components/responses/Problem"
+        "422":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
   /v1/catalog/courses:
     get:
       operationId: listCatalogCourses
@@ -335,25 +371,77 @@ components:
     MeResponse:
       type: object
       additionalProperties: false
-      required: [id, subject, displayName, appLocale, activeTargetLanguage]
+      x-kelimio-cross-field-invariants:
+        - REQUIRED means profileVersion is 0 and preferredSupportLanguage is absent or null.
+        - COMPLETE means profileVersion is at least 1 and preferredSupportLanguage is non-null.
+      required:
+        - id
+        - displayName
+        - appLocale
+        - activeTargetLanguage
+        - timeZone
+        - profileVersion
+        - profileSetupStatus
       properties:
         id:
           $ref: "#/components/schemas/Id"
-        subject:
-          type: string
-          minLength: 1
-          maxLength: 255
         displayName:
           type: string
           minLength: 1
           maxLength: 80
-        username:
-          type: [string, "null"]
-          maxLength: 40
         appLocale:
           $ref: "#/components/schemas/LanguageTag"
         activeTargetLanguage:
           $ref: "#/components/schemas/LanguageTag"
+        preferredSupportLanguage:
+          type: [string, "null"]
+          description: Absent or null until first-login profile setup is complete.
+          minLength: 2
+          maxLength: 35
+          pattern: "^[a-z]{2,8}(?:-[A-Z][a-z]{3})?(?:-(?:[A-Z]{2}|[0-9]{3}))?(?:-(?:[a-z0-9]{5,8}|[0-9][a-z0-9]{3}))*$"
+        timeZone:
+          $ref: "#/components/schemas/TimeZoneId"
+        profileVersion:
+          type: integer
+          format: int64
+          minimum: 0
+        profileSetupStatus:
+          type: string
+          description: >-
+            REQUIRED pairs with profileVersion 0 and no support language;
+            COMPLETE pairs with profileVersion at least 1 and a support language.
+          enum: [REQUIRED, COMPLETE]
+    ProfileSetupRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - displayName
+        - appLocale
+        - activeTargetLanguage
+        - preferredSupportLanguage
+        - timeZone
+      properties:
+        displayName:
+          type: string
+          minLength: 1
+          maxLength: 80
+        appLocale:
+          type: string
+          enum: [tr, en, ar]
+        activeTargetLanguage:
+          $ref: "#/components/schemas/LanguageTag"
+        preferredSupportLanguage:
+          $ref: "#/components/schemas/LanguageTag"
+        timeZone:
+          $ref: "#/components/schemas/TimeZoneId"
+    TimeZoneId:
+      type: string
+      description: >-
+        Named IANA time-zone identifier accepted by the backend runtime, or UTC.
+        Raw numeric offsets and GMT-prefixed fixed offsets are rejected.
+      minLength: 1
+      maxLength: 64
+      examples: [Europe/Istanbul, UTC]
     CourseSummary:
       type: object
       additionalProperties: false

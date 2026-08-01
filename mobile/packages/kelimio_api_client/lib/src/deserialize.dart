@@ -12,6 +12,7 @@ import 'package:kelimio_api_client/src/model/finish_attempt_response.dart';
 import 'package:kelimio_api_client/src/model/local_starter_course_response.dart';
 import 'package:kelimio_api_client/src/model/me_response.dart';
 import 'package:kelimio_api_client/src/model/problem.dart';
+import 'package:kelimio_api_client/src/model/profile_setup_request.dart';
 import 'package:kelimio_api_client/src/model/question_payload.dart';
 import 'package:kelimio_api_client/src/model/submit_answer_request.dart';
 import 'package:kelimio_api_client/src/model/test_summary.dart';
@@ -76,6 +77,9 @@ ReturnType deserialize<ReturnType, BaseType>(
       return MeResponse.fromJson(value as Map<String, dynamic>) as ReturnType;
     case 'Problem':
       return Problem.fromJson(value as Map<String, dynamic>) as ReturnType;
+    case 'ProfileSetupRequest':
+      return ProfileSetupRequest.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
     case 'QuestionPayload':
       return QuestionPayload.fromJson(value as Map<String, dynamic>)
           as ReturnType;

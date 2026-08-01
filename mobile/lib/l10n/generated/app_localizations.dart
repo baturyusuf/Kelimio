@@ -142,6 +142,102 @@ abstract class AppLocalizations {
   /// **'Sign out'**
   String get signOut;
 
+  /// No description provided for @profileSetupTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Set up your learning profile'**
+  String get profileSetupTitle;
+
+  /// No description provided for @profileSetupBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose the language used by the app, the language you want to learn, and the language used for explanations.'**
+  String get profileSetupBody;
+
+  /// No description provided for @profileSetupLegalNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'This step saves learning preferences only. It is not acceptance of legal terms or marketing consent.'**
+  String get profileSetupLegalNotice;
+
+  /// No description provided for @displayName.
+  ///
+  /// In en, this message translates to:
+  /// **'Display name'**
+  String get displayName;
+
+  /// No description provided for @appLanguage.
+  ///
+  /// In en, this message translates to:
+  /// **'App language'**
+  String get appLanguage;
+
+  /// No description provided for @targetLanguage.
+  ///
+  /// In en, this message translates to:
+  /// **'Language to learn'**
+  String get targetLanguage;
+
+  /// No description provided for @preferredSupportLanguage.
+  ///
+  /// In en, this message translates to:
+  /// **'Preferred explanation language'**
+  String get preferredSupportLanguage;
+
+  /// No description provided for @timeZone.
+  ///
+  /// In en, this message translates to:
+  /// **'Time zone'**
+  String get timeZone;
+
+  /// No description provided for @timeZoneIstanbul.
+  ///
+  /// In en, this message translates to:
+  /// **'Türkiye (Europe/Istanbul)'**
+  String get timeZoneIstanbul;
+
+  /// No description provided for @timeZoneUtc.
+  ///
+  /// In en, this message translates to:
+  /// **'UTC'**
+  String get timeZoneUtc;
+
+  /// No description provided for @completeProfileSetup.
+  ///
+  /// In en, this message translates to:
+  /// **'Save and continue'**
+  String get completeProfileSetup;
+
+  /// No description provided for @requiredField.
+  ///
+  /// In en, this message translates to:
+  /// **'This field is required.'**
+  String get requiredField;
+
+  /// No description provided for @languageTurkish.
+  ///
+  /// In en, this message translates to:
+  /// **'Turkish'**
+  String get languageTurkish;
+
+  /// No description provided for @languageEnglish.
+  ///
+  /// In en, this message translates to:
+  /// **'English'**
+  String get languageEnglish;
+
+  /// No description provided for @languageArabic.
+  ///
+  /// In en, this message translates to:
+  /// **'Arabic'**
+  String get languageArabic;
+
+  /// No description provided for @languageFrench.
+  ///
+  /// In en, this message translates to:
+  /// **'French'**
+  String get languageFrench;
+
   /// No description provided for @catalog.
   ///
   /// In en, this message translates to:

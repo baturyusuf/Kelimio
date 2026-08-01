@@ -24,6 +24,7 @@ doc/LocalStarterCourseResponse.md
 doc/MeResponse.md
 doc/Problem.md
 doc/ProfileApi.md
+doc/ProfileSetupRequest.md
 doc/QuestionPayload.md
 doc/SubmitAnswerRequest.md
 doc/TestSummary.md
@@ -56,6 +57,7 @@ lib/src/model/finish_attempt_response.dart
 lib/src/model/local_starter_course_response.dart
 lib/src/model/me_response.dart
 lib/src/model/problem.dart
+lib/src/model/profile_setup_request.dart
 lib/src/model/question_payload.dart
 lib/src/model/submit_answer_request.dart
 lib/src/model/test_summary.dart
@@ -81,6 +83,7 @@ test/local_starter_course_response_test.dart
 test/me_response_test.dart
 test/problem_test.dart
 test/profile_api_test.dart
+test/profile_setup_request_test.dart
 test/question_payload_test.dart
 test/submit_answer_request_test.dart
 test/test_summary_test.dart

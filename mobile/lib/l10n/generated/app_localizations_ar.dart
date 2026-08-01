@@ -22,13 +22,63 @@ class AppLocalizationsAr extends AppLocalizations {
   String get signInTitle => 'تعلّم بتقدّم موثوق';
 
   @override
-  String get signInBody => 'سجّل الدخول بأمان لتصفح الدورات ومتابعة التعلم.';
+  String get signInBody => 'سجّل الدخول بأمان لتصفح الدورات ومتابعة التعلّم.';
 
   @override
   String get signIn => 'تسجيل الدخول';
 
   @override
   String get signOut => 'تسجيل الخروج';
+
+  @override
+  String get profileSetupTitle => 'إعداد ملف التعلّم';
+
+  @override
+  String get profileSetupBody =>
+      'اختر لغة التطبيق واللغة التي تريد تعلّمها ولغة الشرح.';
+
+  @override
+  String get profileSetupLegalNotice =>
+      'تحفظ هذه الخطوة تفضيلات التعلّم فقط، ولا تعني قبول الشروط القانونية أو الموافقة التسويقية.';
+
+  @override
+  String get displayName => 'الاسم الظاهر';
+
+  @override
+  String get appLanguage => 'لغة التطبيق';
+
+  @override
+  String get targetLanguage => 'اللغة المراد تعلّمها';
+
+  @override
+  String get preferredSupportLanguage => 'لغة الشرح المفضلة';
+
+  @override
+  String get timeZone => 'المنطقة الزمنية';
+
+  @override
+  String get timeZoneIstanbul => 'تركيا (Europe/Istanbul)';
+
+  @override
+  String get timeZoneUtc => 'UTC';
+
+  @override
+  String get completeProfileSetup => 'حفظ ومتابعة';
+
+  @override
+  String get requiredField => 'هذا الحقل مطلوب.';
+
+  @override
+  String get languageTurkish => 'التركية';
+
+  @override
+  String get languageEnglish => 'الإنجليزية';
+
+  @override
+  String get languageArabic => 'العربية';
+
+  @override
+  String get languageFrench => 'الفرنسية';
 
   @override
   String get catalog => 'الدورات';
@@ -56,7 +106,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get localStarterCourseBody =>
-      'للاختبار المحلي، ثبّت دورة البداية من النوع A التي تمت مراجعتها. لا ينشئ هذا مستخدمين أو نتائج تعلم.';
+      'للاختبار المحلي، ثبّت دورة البداية من النوع A التي تمت مراجعتها. لا ينشئ هذا مستخدمين أو نتائج تعلّم.';
 
   @override
   String get installLocalStarterCourse => 'تثبيت دورة البداية المحلية';
@@ -80,7 +130,7 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get progressUpdating => 'يتم تحديث التقدم من أحداث الخادم الموثقة.';
+  String get progressUpdating => 'يتم تحديث التقدم من أحداث الخادم الموثوقة.';
 
   @override
   String get courseDetails => 'تفاصيل الدورة';
@@ -161,7 +211,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get contentChanged =>
-      'تغيّر هذا الاختبار أثناء التعلم. ارجع إلى الدورة وابدأ النسخة الحالية.';
+      'تغيّر هذا الاختبار أثناء التعلّم. ارجع إلى الدورة وابدأ النسخة الحالية.';
 
   @override
   String get recoverAttempt => 'استعادة الاختبار';

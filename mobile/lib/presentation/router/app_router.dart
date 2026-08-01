@@ -3,10 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../application/auth_controller.dart';
+import '../../application/profile_controller.dart';
 import '../screens/attempt_screen.dart';
 import '../screens/catalog_screen.dart';
 import '../screens/course_detail_screen.dart';
 import '../screens/energy_screen.dart';
+import '../screens/profile_setup_screen.dart';
 import '../screens/sign_in_screen.dart';
 import '../screens/splash_screen.dart';
 import '../widgets/localization.dart';
@@ -18,6 +20,9 @@ final _energyNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'energy');
 final appRouterProvider = Provider<GoRouter>((ref) {
   final refresh = ValueNotifier<int>(0);
   ref.listen(authControllerProvider, (previous, next) {
+    refresh.value += 1;
+  });
+  ref.listen(profileControllerProvider, (previous, next) {
     refresh.value += 1;
   });
   ref.onDispose(refresh.dispose);
@@ -36,7 +41,21 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       if (!authenticated) {
         return path == '/sign-in' ? null : '/sign-in';
       }
-      if (path == '/splash' || path == '/sign-in') {
+      final profile = ref.read(profileControllerProvider);
+      if (profile.isLoading) {
+        return path == '/splash' ? null : '/splash';
+      }
+      if (profile.hasError) {
+        return path == '/profile-setup' ? null : '/profile-setup';
+      }
+      final currentProfile = profile.hasValue ? profile.requireValue : null;
+      if (currentProfile == null) {
+        return path == '/splash' ? null : '/splash';
+      }
+      if (!currentProfile.setupComplete) {
+        return path == '/profile-setup' ? null : '/profile-setup';
+      }
+      if (path == '/splash' || path == '/sign-in' || path == '/profile-setup') {
         return '/catalog';
       }
       return null;
@@ -51,6 +70,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/sign-in',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const SignInScreen(),
+      ),
+      GoRoute(
+        path: '/profile-setup',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const ProfileSetupScreen(),
       ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {

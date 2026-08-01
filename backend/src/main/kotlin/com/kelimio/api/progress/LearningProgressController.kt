@@ -20,7 +20,7 @@ class LearningProgressController(
     fun get(
         @AuthenticationPrincipal jwt: Jwt,
         @PathVariable courseId: UUID,
-    ): LearningProgressResponse = service.get(currentUserService.resolve(jwt), courseId).toResponse()
+    ): LearningProgressResponse = service.get(currentUserService.requireCompleted(jwt), courseId).toResponse()
 }
 
 data class LearningProgressResponse(

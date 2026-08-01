@@ -32,6 +32,56 @@ class AppLocalizationsEn extends AppLocalizations {
   String get signOut => 'Sign out';
 
   @override
+  String get profileSetupTitle => 'Set up your learning profile';
+
+  @override
+  String get profileSetupBody =>
+      'Choose the language used by the app, the language you want to learn, and the language used for explanations.';
+
+  @override
+  String get profileSetupLegalNotice =>
+      'This step saves learning preferences only. It is not acceptance of legal terms or marketing consent.';
+
+  @override
+  String get displayName => 'Display name';
+
+  @override
+  String get appLanguage => 'App language';
+
+  @override
+  String get targetLanguage => 'Language to learn';
+
+  @override
+  String get preferredSupportLanguage => 'Preferred explanation language';
+
+  @override
+  String get timeZone => 'Time zone';
+
+  @override
+  String get timeZoneIstanbul => 'Türkiye (Europe/Istanbul)';
+
+  @override
+  String get timeZoneUtc => 'UTC';
+
+  @override
+  String get completeProfileSetup => 'Save and continue';
+
+  @override
+  String get requiredField => 'This field is required.';
+
+  @override
+  String get languageTurkish => 'Turkish';
+
+  @override
+  String get languageEnglish => 'English';
+
+  @override
+  String get languageArabic => 'Arabic';
+
+  @override
+  String get languageFrench => 'French';
+
+  @override
   String get catalog => 'Catalog';
 
   @override

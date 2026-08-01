@@ -31,7 +31,7 @@ class LearningSessionController(
         @PathVariable testId: UUID,
         @RequestHeader("Idempotency-Key") idempotencyKey: UUID,
     ): StartAttemptResponse =
-        learningSessionService.startAttempt(currentUserService.resolve(jwt), testId, idempotencyKey).toResponse()
+        learningSessionService.startAttempt(currentUserService.requireCompleted(jwt), testId, idempotencyKey).toResponse()
 
     @PostMapping("/attempts/{attemptId}/answers")
     fun submitAnswer(
@@ -41,7 +41,7 @@ class LearningSessionController(
         @Valid @RequestBody request: SubmitAnswerRequest,
     ): SubmitAnswerResponse =
         learningSessionService.submitAnswer(
-            user = currentUserService.resolve(jwt),
+            user = currentUserService.requireCompleted(jwt),
             attemptId = attemptId,
             submissionId = request.submissionId,
             questionRevisionId = request.questionRevisionId,
@@ -55,7 +55,7 @@ class LearningSessionController(
         @PathVariable attemptId: UUID,
         @RequestHeader("Idempotency-Key") idempotencyKey: UUID,
     ): FinishAttemptResponse =
-        learningSessionService.finishAttempt(currentUserService.resolve(jwt), attemptId, idempotencyKey).toResponse()
+        learningSessionService.finishAttempt(currentUserService.requireCompleted(jwt), attemptId, idempotencyKey).toResponse()
 }
 
 data class SubmitAnswerRequest(

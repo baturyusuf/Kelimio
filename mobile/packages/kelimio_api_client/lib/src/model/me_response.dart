@@ -18,28 +18,26 @@ class MeResponse {
   MeResponse({
     required this.id,
 
-    required this.subject,
-
     required this.displayName,
-
-    this.username,
 
     required this.appLocale,
 
     required this.activeTargetLanguage,
+
+    this.preferredSupportLanguage,
+
+    required this.timeZone,
+
+    required this.profileVersion,
+
+    required this.profileSetupStatus,
   });
 
   @JsonKey(name: r'id', required: true, includeIfNull: false)
   final String id;
 
-  @JsonKey(name: r'subject', required: true, includeIfNull: false)
-  final String subject;
-
   @JsonKey(name: r'displayName', required: true, includeIfNull: false)
   final String displayName;
-
-  @JsonKey(name: r'username', required: false, includeIfNull: false)
-  final String? username;
 
   /// Canonically cased BCP 47 subset: lowercase primary language, optional title-case script, uppercase region, and lowercase variants. Extensions and private-use subtags are outside the initial API contract.
   @JsonKey(name: r'appLocale', required: true, includeIfNull: false)
@@ -49,25 +47,51 @@ class MeResponse {
   @JsonKey(name: r'activeTargetLanguage', required: true, includeIfNull: false)
   final String activeTargetLanguage;
 
+  /// Absent or null until first-login profile setup is complete.
+  @JsonKey(
+    name: r'preferredSupportLanguage',
+    required: false,
+    includeIfNull: false,
+  )
+  final String? preferredSupportLanguage;
+
+  /// Named IANA time-zone identifier accepted by the backend runtime, or UTC. Raw numeric offsets and GMT-prefixed fixed offsets are rejected.
+  @JsonKey(name: r'timeZone', required: true, includeIfNull: false)
+  final String timeZone;
+
+  // minimum: 0
+  @JsonKey(name: r'profileVersion', required: true, includeIfNull: false)
+  final int profileVersion;
+
+  /// REQUIRED pairs with profileVersion 0 and no support language; COMPLETE pairs with profileVersion at least 1 and a support language.
+  @JsonKey(name: r'profileSetupStatus', required: true, includeIfNull: false)
+  final MeResponseProfileSetupStatusEnum profileSetupStatus;
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is MeResponse &&
           other.id == id &&
-          other.subject == subject &&
           other.displayName == displayName &&
-          other.username == username &&
           other.appLocale == appLocale &&
-          other.activeTargetLanguage == activeTargetLanguage;
+          other.activeTargetLanguage == activeTargetLanguage &&
+          other.preferredSupportLanguage == preferredSupportLanguage &&
+          other.timeZone == timeZone &&
+          other.profileVersion == profileVersion &&
+          other.profileSetupStatus == profileSetupStatus;
 
   @override
   int get hashCode =>
       id.hashCode +
-      subject.hashCode +
       displayName.hashCode +
-      (username == null ? 0 : username.hashCode) +
       appLocale.hashCode +
-      activeTargetLanguage.hashCode;
+      activeTargetLanguage.hashCode +
+      (preferredSupportLanguage == null
+          ? 0
+          : preferredSupportLanguage.hashCode) +
+      timeZone.hashCode +
+      profileVersion.hashCode +
+      profileSetupStatus.hashCode;
 
   factory MeResponse.fromJson(Map<String, dynamic> json) =>
       _$MeResponseFromJson(json);
@@ -78,4 +102,22 @@ class MeResponse {
   String toString() {
     return toJson().toString();
   }
+}
+
+/// REQUIRED pairs with profileVersion 0 and no support language; COMPLETE pairs with profileVersion at least 1 and a support language.
+enum MeResponseProfileSetupStatusEnum {
+  /// REQUIRED pairs with profileVersion 0 and no support language; COMPLETE pairs with profileVersion at least 1 and a support language.
+  @JsonValue(r'REQUIRED')
+  REQUIRED(r'REQUIRED'),
+
+  /// REQUIRED pairs with profileVersion 0 and no support language; COMPLETE pairs with profileVersion at least 1 and a support language.
+  @JsonValue(r'COMPLETE')
+  COMPLETE(r'COMPLETE');
+
+  const MeResponseProfileSetupStatusEnum(this.value);
+
+  final String value;
+
+  @override
+  String toString() => value;
 }

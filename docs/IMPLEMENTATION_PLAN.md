@@ -42,7 +42,7 @@ Exit gate:
 
 Status: in progress; the local code path exists, but the staging exit gate is not met.
 
-Implemented so far: JWT/OIDC resource-server validation, mobile Authorization Code + PKCE adapter, catalog/detail/enrollment, one Type-A attempt, persistent idempotency, authoritative scoring/energy/outbox transaction, generated-client mobile repositories, Drift recovery state, result display, an idempotent rebuildable learner-course progress projection, and real-PostgreSQL local transaction evidence. A fail-closed local-development command can create one immutable provenance-recorded Type-A starter release without seeding users or learning results. Explicit profile/language onboarding, the remaining projections, production telemetry, production-supported course creation/import, and staging end-to-end proof remain open.
+Implemented so far: JWT/OIDC resource-server validation, mobile Authorization Code + PKCE adapter, a server-enforced provisional-user gate and explicit one-time profile/language/time-zone setup, catalog/detail/enrollment, one Type-A attempt, persistent idempotency, authoritative scoring/energy/outbox transaction, generated-client mobile repositories, Drift recovery state, result display, an idempotent rebuildable learner-course progress projection, and real-PostgreSQL local transaction evidence. A fail-closed local-development command can create one immutable provenance-recorded Type-A starter release without seeding users or learning results. General profile editing and legal-consent facts, the remaining projections, production telemetry, production-supported course creation/import, isolated real-registration E2E, and staging proof remain open.
 
 Deliverables:
 

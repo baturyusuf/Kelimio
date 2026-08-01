@@ -12,6 +12,7 @@ import '../domain/development/development.dart';
 import '../domain/energy/energy.dart';
 import '../domain/identifiers.dart';
 import '../domain/learning/learning.dart';
+import '../domain/profile/profile.dart';
 import '../infrastructure/auth/app_auth_gateway.dart';
 import '../infrastructure/network/failure_mapper.dart';
 import '../infrastructure/network/interceptors.dart';
@@ -87,6 +88,13 @@ final learningRepositoryProvider = Provider<LearningRepository>((ref) {
 final developmentRepositoryProvider = Provider<DevelopmentRepository>((ref) {
   return GeneratedDevelopmentRepository(
     ref.watch(apiClientProvider).getDevelopmentApi(),
+    const DioFailureMapper(),
+  );
+});
+
+final profileRepositoryProvider = Provider<ProfileRepository>((ref) {
+  return GeneratedProfileRepository(
+    ref.watch(apiClientProvider).getProfileApi(),
     const DioFailureMapper(),
   );
 });

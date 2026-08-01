@@ -32,6 +32,56 @@ class AppLocalizationsTr extends AppLocalizations {
   String get signOut => 'Çıkış yap';
 
   @override
+  String get profileSetupTitle => 'Öğrenme profilini ayarla';
+
+  @override
+  String get profileSetupBody =>
+      'Uygulamanın dilini, öğrenmek istediğin dili ve açıklamalarda kullanılacak dili seç.';
+
+  @override
+  String get profileSetupLegalNotice =>
+      'Bu adım yalnızca öğrenme tercihlerini kaydeder. Hukuki koşulları kabul veya pazarlama izni anlamına gelmez.';
+
+  @override
+  String get displayName => 'Görünen ad';
+
+  @override
+  String get appLanguage => 'Uygulama dili';
+
+  @override
+  String get targetLanguage => 'Öğrenilecek dil';
+
+  @override
+  String get preferredSupportLanguage => 'Tercih edilen açıklama dili';
+
+  @override
+  String get timeZone => 'Saat dilimi';
+
+  @override
+  String get timeZoneIstanbul => 'Türkiye (Europe/Istanbul)';
+
+  @override
+  String get timeZoneUtc => 'UTC';
+
+  @override
+  String get completeProfileSetup => 'Kaydet ve devam et';
+
+  @override
+  String get requiredField => 'Bu alan zorunludur.';
+
+  @override
+  String get languageTurkish => 'Türkçe';
+
+  @override
+  String get languageEnglish => 'İngilizce';
+
+  @override
+  String get languageArabic => 'Arapça';
+
+  @override
+  String get languageFrench => 'Fransızca';
+
+  @override
   String get catalog => 'Katalog';
 
   @override
