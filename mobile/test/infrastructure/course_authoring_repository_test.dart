@@ -246,6 +246,7 @@ GeneratedCourseAuthoringRepository _repository(
   return GeneratedCourseAuthoringRepository(
     api.CourseImportApi(apiDio),
     api.CourseReleaseApi(apiDio),
+    api.DevelopmentApi(apiDio),
     const DioFailureMapper(),
     uploadClient: uploadDio,
   );

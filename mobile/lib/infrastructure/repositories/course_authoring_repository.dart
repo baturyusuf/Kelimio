@@ -15,12 +15,14 @@ final class GeneratedCourseAuthoringRepository
   GeneratedCourseAuthoringRepository(
     this._imports,
     this._releases,
+    this._development,
     this._failures, {
     Dio? uploadClient,
   }) : _uploadClient = uploadClient ?? createPresignedUploadClient();
 
   final api.CourseImportApi _imports;
   final api.CourseReleaseApi _releases;
+  final api.DevelopmentApi _development;
   final DioFailureMapper _failures;
   final Dio _uploadClient;
 
@@ -303,6 +305,73 @@ final class GeneratedCourseAuthoringRepository
       releaseRevision: data.releaseRevision,
       questionCount: data.questionCount,
       reprojectionStatus: data.reprojectionStatus.value,
+    );
+  });
+
+  @override
+  Future<LocalCourseEditorDocument> getEditor(String courseId) =>
+      _guard(() async {
+        final response = await _development.getLocalCourseEditor(
+          courseId: courseId,
+        );
+        final data = response.data;
+        final entityTag = response.headers.value('etag');
+        if (data == null) {
+          throw const ProtocolFailure('Course editor response body was empty');
+        }
+        if (entityTag == null ||
+            !RegExp(r'^"[0-9a-f]{64}"$').hasMatch(entityTag)) {
+          throw const ProtocolFailure('Course editor ETag was invalid');
+        }
+        return LocalCourseEditorDocument(
+          courseId: data.courseId,
+          courseName: data.courseName,
+          activeReleaseId: data.activeReleaseId,
+          releaseRevision: data.releaseRevision,
+          levelTitle: data.levelTitle,
+          unitTitle: data.unitTitle,
+          topicTitle: data.topicTitle,
+          testId: data.testId,
+          testTitle: data.testTitle,
+          questionId: data.questionId,
+          questionRevisionId: data.questionRevisionId,
+          questionRevision: data.questionRevision,
+          prompt: data.prompt,
+          entityTag: entityTag,
+        );
+      });
+
+  @override
+  Future<LocalCourseEditorDraftResult> createEditorDraft({
+    required LocalCourseEditorDocument document,
+    required String editedPrompt,
+    required String commandId,
+  }) => _guard(() async {
+    final response = await _development.createLocalCourseEditorDraft(
+      courseId: document.courseId,
+      idempotencyKey: commandId,
+      ifMatch: document.entityTag,
+      createLocalCourseEditorDraftRequest:
+          api.CreateLocalCourseEditorDraftRequest(
+            baseReleaseId: document.activeReleaseId,
+            questionRevisionId: document.questionRevisionId,
+            editedPrompt: editedPrompt,
+          ),
+      extra: {RequestMetadata.idempotencyKey: commandId},
+    );
+    final data = response.data;
+    if (data == null) {
+      throw const ProtocolFailure(
+        'Course editor draft response body was empty',
+      );
+    }
+    return LocalCourseEditorDraftResult(
+      courseId: data.courseId,
+      baseReleaseId: data.baseReleaseId,
+      draftReleaseId: data.draftReleaseId,
+      releaseRevision: data.releaseRevision,
+      questionRevisionId: data.questionRevisionId,
+      created: data.created,
     );
   });
 

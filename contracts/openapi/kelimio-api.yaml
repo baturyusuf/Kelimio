@@ -833,6 +833,93 @@ paths:
           $ref: "#/components/responses/Problem"
         default:
           $ref: "#/components/responses/Problem"
+  /v1/development/courses/{courseId}/editor:
+    get:
+      operationId: getLocalCourseEditor
+      tags: [Development]
+      summary: Read the owner-scoped local course editor document
+      description: >-
+        Returns the first eligible typed-cloze prompt and its immutable hierarchy
+        from the exact active release. The response is owner-scoped, no-store,
+        answer-key-free, and carries the strong ETag required by draft creation.
+        It is unavailable outside explicitly enabled local/test environments.
+      parameters:
+        - $ref: "#/components/parameters/CourseId"
+      responses:
+        "200":
+          description: Current editable document
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+            ETag:
+              description: Strong opaque version of the active release and editable question revision.
+              schema:
+                type: string
+                pattern: '^"[0-9a-f]{64}"$'
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LocalCourseEditorSnapshot"
+        "401":
+          $ref: "#/components/responses/Problem"
+        "404":
+          $ref: "#/components/responses/Problem"
+        "409":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/development/courses/{courseId}/editor/drafts:
+    post:
+      operationId: createLocalCourseEditorDraft
+      tags: [Development]
+      summary: Save one ETag-bound immutable local editor draft
+      description: >-
+        Creates a committed MOBILE_AUTHORING change set and an unpublished
+        immutable release only when If-Match still names the current owner-scoped
+        editor document. It accepts a changed typed-cloze prompt but no answer,
+        score, entitlement, ownership, or publication assertion. Publication
+        remains a separate impact-bound operation.
+      parameters:
+        - $ref: "#/components/parameters/CourseId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/IfMatch"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateLocalCourseEditorDraftRequest"
+      responses:
+        "201":
+          description: Editor draft created
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubsequentCourseDraftResult"
+        "200":
+          description: Existing editor draft returned for an idempotent retry
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubsequentCourseDraftResult"
+        "400":
+          $ref: "#/components/responses/Problem"
+        "401":
+          $ref: "#/components/responses/Problem"
+        "404":
+          $ref: "#/components/responses/Problem"
+        "409":
+          $ref: "#/components/responses/Problem"
+        "422":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
 components:
   securitySchemes:
     bearerAuth:
@@ -876,6 +963,14 @@ components:
       required: true
       schema:
         $ref: "#/components/schemas/Id"
+    IfMatch:
+      name: If-Match
+      in: header
+      required: true
+      description: Strong ETag returned by the current owner-scoped editor document.
+      schema:
+        type: string
+        pattern: '^"[0-9a-f]{64}"$'
     Cursor:
       name: cursor
       in: query
@@ -2550,6 +2645,89 @@ components:
       properties:
         baseReleaseId:
           $ref: "#/components/schemas/Id"
+    CreateLocalCourseEditorDraftRequest:
+      type: object
+      additionalProperties: false
+      x-kelimio-redacted-to-string: true
+      x-kelimio-redacted-field-names: [editedPrompt]
+      x-kelimio-redaction-test-course-editor: true
+      required: [baseReleaseId, questionRevisionId, editedPrompt]
+      properties:
+        baseReleaseId:
+          $ref: "#/components/schemas/Id"
+        questionRevisionId:
+          $ref: "#/components/schemas/Id"
+        editedPrompt:
+          type: string
+          minLength: 1
+          maxLength: 1000
+          description: Changed typed-cloze prompt containing exactly one literal --- marker.
+    LocalCourseEditorSnapshot:
+      type: object
+      additionalProperties: false
+      x-kelimio-redacted-to-string: true
+      x-kelimio-redacted-field-names:
+        - courseName
+        - levelTitle
+        - unitTitle
+        - topicTitle
+        - testTitle
+        - prompt
+      required:
+        - courseId
+        - courseName
+        - activeReleaseId
+        - releaseRevision
+        - levelTitle
+        - unitTitle
+        - topicTitle
+        - testId
+        - testTitle
+        - questionId
+        - questionRevisionId
+        - questionRevision
+        - prompt
+      properties:
+        courseId:
+          $ref: "#/components/schemas/Id"
+        courseName:
+          type: string
+          minLength: 1
+          maxLength: 160
+        activeReleaseId:
+          $ref: "#/components/schemas/Id"
+        releaseRevision:
+          type: integer
+          minimum: 1
+        levelTitle:
+          type: string
+          minLength: 1
+          maxLength: 2000
+        unitTitle:
+          type: string
+          minLength: 1
+          maxLength: 2000
+        topicTitle:
+          type: string
+          minLength: 1
+          maxLength: 2000
+        testId:
+          $ref: "#/components/schemas/Id"
+        testTitle:
+          type: string
+          minLength: 1
+          maxLength: 160
+        questionId:
+          $ref: "#/components/schemas/Id"
+        questionRevisionId:
+          $ref: "#/components/schemas/Id"
+        questionRevision:
+          type: integer
+          minimum: 1
+        prompt:
+          type: string
+          minLength: 1
+          maxLength: 1000
     SubsequentCourseDraftResult:
       type: object
       additionalProperties: false

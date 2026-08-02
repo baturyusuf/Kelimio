@@ -507,4 +507,110 @@ class AppLocalizationsTr extends AppLocalizations {
   String matchingGroupTeacher(Object group) {
     return 'Eşleştirme grubu: $group';
   }
+
+  @override
+  String get editPublishedCourse => 'Yayımlanmış kursu düzenle';
+
+  @override
+  String get courseEditorTitle => 'Bir kurs sorusunu düzenle';
+
+  @override
+  String get courseEditorScope =>
+      'Bu yerel test editörü, uygun ilk yazılı boşluk sorusunun metnini değiştirir. Doğru cevap yalnızca sunucuda kalır.';
+
+  @override
+  String courseEditorPath(
+    Object level,
+    Object test,
+    Object topic,
+    Object unit,
+  ) {
+    return '$level / $unit / $topic / $test';
+  }
+
+  @override
+  String get courseEditorPromptLabel => 'Soru metni';
+
+  @override
+  String get courseEditorPromptHelp =>
+      'Tam olarak bir --- boşluğu bırakın. En fazla 1.000 karakter.';
+
+  @override
+  String get courseEditorRecovered =>
+      'Kaydedilmemiş değişikliğiniz bu cihazın güvenli alanından geri yüklendi.';
+
+  @override
+  String get courseEditorRecoveryFailed =>
+      'Bu değişiklik güvenli alanda korunamadı. Ekrandan ayrılmadan önce metni kopyalayın.';
+
+  @override
+  String get courseEditorPromptEmpty => 'Bir soru metni girin.';
+
+  @override
+  String get courseEditorPromptTooLong =>
+      'Soru metni en fazla 1.000 karakter olabilir.';
+
+  @override
+  String get courseEditorPromptPlaceholder =>
+      'Soru metninde tam olarak bir --- boşluğu bulunmalı.';
+
+  @override
+  String get courseEditorPromptUnchanged =>
+      'Taslak oluşturmadan önce soru metnini değiştirin.';
+
+  @override
+  String get discardEditorChanges => 'Değişiklikleri sil';
+
+  @override
+  String get saveEditorDraft => 'Değişmez taslak oluştur';
+
+  @override
+  String get courseEditorConflictHeading => 'Yayımlanan soru değişmiş';
+
+  @override
+  String get courseEditorConflictBody =>
+      'Sürümleri karşılaştırın. Nasıl devam edeceğinizi seçene kadar hiçbir şeyin üzerine yazılmaz.';
+
+  @override
+  String get courseEditorPreviousVersion => 'Başladığınız sürüm';
+
+  @override
+  String get courseEditorYourVersion => 'Kaydedilmemiş sürümünüz';
+
+  @override
+  String get courseEditorLatestVersion => 'En son yayımlanan sürüm';
+
+  @override
+  String get courseEditorUseLatest => 'En son sürümü kullan';
+
+  @override
+  String get courseEditorReapplyMine => 'Benim sürümümü yeniden uygula';
+
+  @override
+  String get courseEditorImpactConfirmation =>
+      'Bu tek soruluk etkiyi inceledim ve değişmez yayını etkinleştirmek istiyorum.';
+
+  @override
+  String get publishEditorRevision => 'Bu sürümü yayımla';
+
+  @override
+  String get courseEditorPublished =>
+      'Düzenlenen yayın etkin. Doğru cevap bu cihaza gönderilmedi.';
+
+  @override
+  String get courseEditorOtherRecovery =>
+      'Başka bir kursun güvenli, kaydedilmemiş taslağı var. Bu kursu düzenlemeden önce o taslağı silin.';
+
+  @override
+  String get courseEditorDiscardOther => 'Diğer taslağı sil';
+
+  @override
+  String get courseEditorLeaveTitle => 'Kaydedilmemiş değişiklik silinsin mi?';
+
+  @override
+  String get courseEditorLeaveBody =>
+      'Değişikliğiniz bu cihazda güvenle saklanıyor. Daha sonrası için tutabilir veya şimdi silebilirsiniz.';
+
+  @override
+  String get keepEditing => 'Daha sonrası için tut';
 }

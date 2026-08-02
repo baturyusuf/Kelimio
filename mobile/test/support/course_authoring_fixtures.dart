@@ -22,19 +22,27 @@ final class RecordingCourseAuthoringRepository
     implements CourseAuthoringRepository {
   RecordingCourseAuthoringRepository({
     this.failFirstUpload = false,
+    this.failFirstEditorDraftWithConflict = false,
     this.importToGet,
     this.importsToDiscover = const [],
-  });
+    List<LocalCourseEditorDocument>? editorDocuments,
+  }) : editorDocuments = [...?editorDocuments];
 
   final bool failFirstUpload;
+  final bool failFirstEditorDraftWithConflict;
   final CourseImportSummary? importToGet;
   final List<CourseImportSummary> importsToDiscover;
+  final List<LocalCourseEditorDocument> editorDocuments;
   int uploadCalls = 0;
   int listCalls = 0;
   final List<(String, String)> uploadCommands = [];
   final List<String> approvalCommands = [];
   final List<String> commitCommands = [];
   final List<String> activationCommands = [];
+  final List<String> editorDraftCommands = [];
+  final List<String> editorPrompts = [];
+  int editorDraftCalls = 0;
+  int getEditorCalls = 0;
 
   @override
   Future<CourseImportSummary> uploadWorkbook({
@@ -122,7 +130,9 @@ final class RecordingCourseAuthoringRepository
   Future<CourseReleaseImpact> getReleaseImpact({
     required String courseId,
     required String releaseId,
-  }) async => authoredImpact;
+  }) async => releaseId == authoredEditorDraft.draftReleaseId
+      ? authoredEditorImpact
+      : authoredImpact;
 
   @override
   Future<CourseReleaseActivation> activateRelease({
@@ -130,14 +140,36 @@ final class RecordingCourseAuthoringRepository
     required String commandId,
   }) async {
     activationCommands.add(commandId);
-    return const CourseReleaseActivation(
+    return CourseReleaseActivation(
       courseId: authoredCourseId,
-      releaseId: draftReleaseId,
-      operation: CourseReleaseOperation.initialPublication,
-      releaseRevision: 1,
+      releaseId: impact.targetReleaseId,
+      operation: impact.operation,
+      releaseRevision: impact.releaseRevision,
       questionCount: 14,
       reprojectionStatus: 'PENDING',
     );
+  }
+
+  @override
+  Future<LocalCourseEditorDocument> getEditor(String courseId) async {
+    getEditorCalls += 1;
+    if (editorDocuments.isNotEmpty) return editorDocuments.removeAt(0);
+    return authoredEditorDocument;
+  }
+
+  @override
+  Future<LocalCourseEditorDraftResult> createEditorDraft({
+    required LocalCourseEditorDocument document,
+    required String editedPrompt,
+    required String commandId,
+  }) async {
+    editorDraftCalls += 1;
+    editorDraftCommands.add(commandId);
+    editorPrompts.add(editedPrompt);
+    if (failFirstEditorDraftWithConflict && editorDraftCalls == 1) {
+      throw const ConflictFailure(code: 'course-editor-version-conflict');
+    }
+    return authoredEditorDraft;
   }
 }
 
@@ -187,6 +219,67 @@ const authoredImpact = CourseReleaseImpact(
   unchangedQuestionCount: 0,
   changedQuestionCount: 0,
   addedQuestionCount: 14,
+  removedQuestionCount: 0,
+  affectedEnrollmentCount: 0,
+  requiredClientCapabilities: ['question.matching.v1'],
+  impactBindingSha256: approvalBinding,
+);
+
+const authoredEditorDocument = LocalCourseEditorDocument(
+  courseId: authoredCourseId,
+  courseName: 'Kelimio test course',
+  activeReleaseId: draftReleaseId,
+  releaseRevision: 1,
+  levelTitle: 'A1',
+  unitTitle: 'Home',
+  topicTitle: 'Daily routines',
+  testId: '00000000-0000-4000-8000-000000000410',
+  testTitle: 'Test 1',
+  questionId: '00000000-0000-4000-8000-000000000420',
+  questionRevisionId: '00000000-0000-4000-8000-000000000430',
+  questionRevision: 1,
+  prompt: 'Ben her gun ---.',
+  entityTag:
+      '"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"',
+);
+
+const latestAuthoredEditorDocument = LocalCourseEditorDocument(
+  courseId: authoredCourseId,
+  courseName: 'Kelimio test course',
+  activeReleaseId: '00000000-0000-4000-8000-000000000301',
+  releaseRevision: 2,
+  levelTitle: 'A1',
+  unitTitle: 'Home',
+  topicTitle: 'Daily routines',
+  testId: '00000000-0000-4000-8000-000000000410',
+  testTitle: 'Test 1',
+  questionId: '00000000-0000-4000-8000-000000000420',
+  questionRevisionId: '00000000-0000-4000-8000-000000000431',
+  questionRevision: 2,
+  prompt: 'Ben her aksam ---.',
+  entityTag:
+      '"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"',
+);
+
+const authoredEditorDraft = LocalCourseEditorDraftResult(
+  courseId: authoredCourseId,
+  baseReleaseId: draftReleaseId,
+  draftReleaseId: '00000000-0000-4000-8000-000000000302',
+  releaseRevision: 2,
+  questionRevisionId: '00000000-0000-4000-8000-000000000431',
+  created: true,
+);
+
+const authoredEditorImpact = CourseReleaseImpact(
+  courseId: authoredCourseId,
+  targetReleaseId: '00000000-0000-4000-8000-000000000302',
+  expectedActiveReleaseId: draftReleaseId,
+  operation: CourseReleaseOperation.publication,
+  releaseRevision: 2,
+  targetQuestionCount: 14,
+  unchangedQuestionCount: 13,
+  changedQuestionCount: 1,
+  addedQuestionCount: 0,
   removedQuestionCount: 0,
   affectedEnrollmentCount: 0,
   requiredClientCapabilities: ['question.matching.v1'],

@@ -16,6 +16,9 @@ void main() {
       overrides: [
         authRepositoryProvider.overrideWithValue(RecordingAuthRepository()),
         recoveryStoreProvider.overrideWith((ref) async => store),
+        courseEditorRecoveryStoreProvider.overrideWithValue(
+          MemoryCourseEditorRecoveryStore(),
+        ),
       ],
     );
     addTearDown(container.dispose);
@@ -34,6 +37,9 @@ void main() {
       overrides: [
         authRepositoryProvider.overrideWithValue(auth),
         recoveryStoreProvider.overrideWith((ref) async => store),
+        courseEditorRecoveryStoreProvider.overrideWithValue(
+          MemoryCourseEditorRecoveryStore(),
+        ),
       ],
     );
     addTearDown(container.dispose);
@@ -58,6 +64,9 @@ void main() {
         catalogRepositoryProvider.overrideWithValue(catalog),
         recoveryStoreProvider.overrideWith(
           (ref) async => MemoryRecoveryStore(),
+        ),
+        courseEditorRecoveryStoreProvider.overrideWithValue(
+          MemoryCourseEditorRecoveryStore(),
         ),
       ],
     );

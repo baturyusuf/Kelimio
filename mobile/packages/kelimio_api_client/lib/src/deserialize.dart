@@ -32,10 +32,12 @@ import 'package:kelimio_api_client/src/model/course_release_impact_response.dart
 import 'package:kelimio_api_client/src/model/course_summary.dart';
 import 'package:kelimio_api_client/src/model/create_course_import_request.dart';
 import 'package:kelimio_api_client/src/model/create_enrollment_request.dart';
+import 'package:kelimio_api_client/src/model/create_local_course_editor_draft_request.dart';
 import 'package:kelimio_api_client/src/model/create_local_course_revision_request.dart';
 import 'package:kelimio_api_client/src/model/energy_response.dart';
 import 'package:kelimio_api_client/src/model/enrollment_response.dart';
 import 'package:kelimio_api_client/src/model/finish_attempt_response.dart';
+import 'package:kelimio_api_client/src/model/local_course_editor_snapshot.dart';
 import 'package:kelimio_api_client/src/model/local_starter_course_response.dart';
 import 'package:kelimio_api_client/src/model/matching_item.dart';
 import 'package:kelimio_api_client/src/model/matching_selection.dart';
@@ -185,6 +187,11 @@ ReturnType deserialize<ReturnType, BaseType>(
     case 'CreateEnrollmentRequest':
       return CreateEnrollmentRequest.fromJson(value as Map<String, dynamic>)
           as ReturnType;
+    case 'CreateLocalCourseEditorDraftRequest':
+      return CreateLocalCourseEditorDraftRequest.fromJson(
+            value as Map<String, dynamic>,
+          )
+          as ReturnType;
     case 'CreateLocalCourseRevisionRequest':
       return CreateLocalCourseRevisionRequest.fromJson(
             value as Map<String, dynamic>,
@@ -198,6 +205,9 @@ ReturnType deserialize<ReturnType, BaseType>(
           as ReturnType;
     case 'FinishAttemptResponse':
       return FinishAttemptResponse.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'LocalCourseEditorSnapshot':
+      return LocalCourseEditorSnapshot.fromJson(value as Map<String, dynamic>)
           as ReturnType;
     case 'LocalStarterCourseResponse':
       return LocalStarterCourseResponse.fromJson(value as Map<String, dynamic>)

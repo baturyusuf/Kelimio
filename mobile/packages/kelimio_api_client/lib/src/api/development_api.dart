@@ -9,7 +9,9 @@ import 'dart:convert';
 import 'package:kelimio_api_client/src/deserialize.dart';
 import 'package:dio/dio.dart';
 
+import 'package:kelimio_api_client/src/model/create_local_course_editor_draft_request.dart';
 import 'package:kelimio_api_client/src/model/create_local_course_revision_request.dart';
+import 'package:kelimio_api_client/src/model/local_course_editor_snapshot.dart';
 import 'package:kelimio_api_client/src/model/local_starter_course_response.dart';
 import 'package:kelimio_api_client/src/model/problem.dart';
 import 'package:kelimio_api_client/src/model/subsequent_course_draft_result.dart';
@@ -18,6 +20,114 @@ class DevelopmentApi {
   final Dio _dio;
 
   const DevelopmentApi(this._dio);
+
+  /// Save one ETag-bound immutable local editor draft
+  /// Creates a committed MOBILE_AUTHORING change set and an unpublished immutable release only when If-Match still names the current owner-scoped editor document. It accepts a changed typed-cloze prompt but no answer, score, entitlement, ownership, or publication assertion. Publication remains a separate impact-bound operation.
+  ///
+  /// Parameters:
+  /// * [courseId]
+  /// * [idempotencyKey] - Stable UUID generated once for the logical command.
+  /// * [ifMatch] - Strong ETag returned by the current owner-scoped editor document.
+  /// * [createLocalCourseEditorDraftRequest]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [SubsequentCourseDraftResult] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<SubsequentCourseDraftResult>> createLocalCourseEditorDraft({
+    required String courseId,
+    required String idempotencyKey,
+    required String ifMatch,
+    required CreateLocalCourseEditorDraftRequest
+    createLocalCourseEditorDraftRequest,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/v1/development/courses/{courseId}/editor/drafts'
+        .replaceAll(
+          '{'
+          r'courseId'
+          '}',
+          courseId.toString(),
+        );
+    final _options = Options(
+      method: r'POST',
+      headers: <String, dynamic>{
+        r'Idempotency-Key': idempotencyKey,
+        r'If-Match': ifMatch,
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearerAuth'},
+        ],
+        ...?extra,
+      },
+      contentType: 'application/json',
+      validateStatus: validateStatus,
+    );
+
+    dynamic _bodyData;
+
+    try {
+      _bodyData = jsonEncode(createLocalCourseEditorDraftRequest);
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _options.compose(_dio.options, _path),
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    final _response = await _dio.request<Object>(
+      _path,
+      data: _bodyData,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    SubsequentCourseDraftResult? _responseData;
+
+    try {
+      final rawData = _response.data;
+      _responseData = rawData == null
+          ? null
+          : deserialize<
+              SubsequentCourseDraftResult,
+              SubsequentCourseDraftResult
+            >(rawData, 'SubsequentCourseDraftResult', growable: true);
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<SubsequentCourseDraftResult>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
 
   /// Create one subsequent immutable course release for local verification
   /// Available only in explicitly enabled local/test environments. The owner creates one real MOBILE_AUTHORING change set from the exact active release, revises one eligible typed-cloze prompt without returning authored text or answer material, and receives an unpublished immutable release. Publication and rollback still require the separate impact-bound release operations.
@@ -111,6 +221,88 @@ class DevelopmentApi {
     }
 
     return Response<SubsequentCourseDraftResult>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// Read the owner-scoped local course editor document
+  /// Returns the first eligible typed-cloze prompt and its immutable hierarchy from the exact active release. The response is owner-scoped, no-store, answer-key-free, and carries the strong ETag required by draft creation. It is unavailable outside explicitly enabled local/test environments.
+  ///
+  /// Parameters:
+  /// * [courseId]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [LocalCourseEditorSnapshot] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<LocalCourseEditorSnapshot>> getLocalCourseEditor({
+    required String courseId,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/v1/development/courses/{courseId}/editor'.replaceAll(
+      '{'
+      r'courseId'
+      '}',
+      courseId.toString(),
+    );
+    final _options = Options(
+      method: r'GET',
+      headers: <String, dynamic>{...?headers},
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearerAuth'},
+        ],
+        ...?extra,
+      },
+      validateStatus: validateStatus,
+    );
+
+    final _response = await _dio.request<Object>(
+      _path,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    LocalCourseEditorSnapshot? _responseData;
+
+    try {
+      final rawData = _response.data;
+      _responseData = rawData == null
+          ? null
+          : deserialize<LocalCourseEditorSnapshot, LocalCourseEditorSnapshot>(
+              rawData,
+              'LocalCourseEditorSnapshot',
+              growable: true,
+            );
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<LocalCourseEditorSnapshot>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,

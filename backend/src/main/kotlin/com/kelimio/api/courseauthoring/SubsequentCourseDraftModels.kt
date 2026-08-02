@@ -7,6 +7,33 @@ data class CreateLocalCourseRevisionRequest(
     val baseReleaseId: UUID,
 )
 
+data class CreateLocalCourseEditorDraftRequest(
+    val baseReleaseId: UUID,
+    val questionRevisionId: UUID,
+    val editedPrompt: String,
+)
+
+data class LocalCourseEditorSnapshot(
+    val courseId: UUID,
+    val courseName: String,
+    val activeReleaseId: UUID,
+    val releaseRevision: Int,
+    val levelTitle: String,
+    val unitTitle: String,
+    val topicTitle: String,
+    val testId: UUID,
+    val testTitle: String,
+    val questionId: UUID,
+    val questionRevisionId: UUID,
+    val questionRevision: Int,
+    val prompt: String,
+)
+
+internal data class LocalCourseEditorDocument(
+    val snapshot: LocalCourseEditorSnapshot,
+    val entityTag: String,
+)
+
 data class SubsequentCourseDraftResult(
     val courseId: UUID,
     val baseReleaseId: UUID,
@@ -38,6 +65,7 @@ internal data class CourseAuthoringSource(
     val previousQuestionRevisionId: UUID,
     val previousQuestionRevision: Int,
     val nextQuestionRevision: Int,
+    val previousPrompt: String,
     val changedTestId: UUID,
     val previousTestRevisionId: UUID,
     val previousTestRevision: Int,
@@ -53,6 +81,7 @@ internal data class CreateSubsequentCourseDraftCommand(
     val questionRevisionId: UUID,
     val testRevisionId: UUID,
     val outboxEventId: UUID,
+    val editedPrompt: String,
     val occurredAt: OffsetDateTime,
     val correlationId: String,
 ) {

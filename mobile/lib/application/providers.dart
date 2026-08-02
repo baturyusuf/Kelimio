@@ -22,6 +22,7 @@ import '../infrastructure/network/interceptors.dart';
 import '../infrastructure/repositories/course_authoring_repository.dart';
 import '../infrastructure/repositories/dio_repositories.dart';
 import '../infrastructure/storage/drift_attempt_recovery_store.dart';
+import '../infrastructure/storage/secure_course_editor_recovery_store.dart';
 
 final appConfigProvider = Provider<AppConfig>((ref) {
   throw StateError('AppConfig must be overridden at startup');
@@ -118,6 +119,7 @@ final courseAuthoringRepositoryProvider = Provider<CourseAuthoringRepository>((
   return GeneratedCourseAuthoringRepository(
     client.getCourseImportApi(),
     client.getCourseReleaseApi(),
+    client.getDevelopmentApi(),
     const DioFailureMapper(),
     uploadClient: ref.watch(courseAuthoringUploadClientProvider),
   );
@@ -142,6 +144,12 @@ final recoveryStoreProvider = FutureProvider<AttemptRecoveryStore>((ref) async {
   await store.open();
   ref.onDispose(() => unawaited(store.close()));
   return store;
+});
+
+final courseEditorRecoveryStoreProvider = Provider<CourseEditorRecoveryStore>((
+  ref,
+) {
+  return SecureCourseEditorRecoveryStore();
 });
 
 final courseDetailProvider = FutureProvider.family<CourseDetail, String>((

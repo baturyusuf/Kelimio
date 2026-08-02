@@ -4,6 +4,7 @@ import '../domain/auth/auth.dart';
 import 'attempt_controller.dart';
 import 'catalog_controller.dart';
 import 'course_authoring_controller.dart';
+import 'course_editor_controller.dart';
 import 'energy_controller.dart';
 import 'providers.dart';
 
@@ -52,18 +53,37 @@ final class AuthController extends AsyncNotifier<AuthSession?> {
   }
 
   Future<void> _purgePrivateState() async {
+    Object? failure;
+    StackTrace? failureStackTrace;
     try {
       final store = await ref.read(recoveryStoreProvider.future);
       await store.clear();
+    } on Object catch (error, stackTrace) {
+      failure = error;
+      failureStackTrace = stackTrace;
+    }
+    try {
+      await ref.read(courseEditorRecoveryStoreProvider).clear();
+    } on Object catch (error, stackTrace) {
+      failure ??= error;
+      failureStackTrace ??= stackTrace;
     } finally {
       ref.invalidate(attemptControllerProvider);
       ref.invalidate(catalogControllerProvider);
       ref.invalidate(courseAuthoringControllerProvider);
+      ref.invalidate(courseEditorControllerProvider);
       ref.invalidate(energyControllerProvider);
       ref.invalidate(courseDetailProvider);
       ref.invalidate(courseProgressProvider);
       ref.invalidate(dioProvider);
       ref.invalidate(recoveryStoreProvider);
+      ref.invalidate(courseEditorRecoveryStoreProvider);
+    }
+    if (failure != null) {
+      Error.throwWithStackTrace(
+        failure,
+        failureStackTrace ?? StackTrace.current,
+      );
     }
   }
 }

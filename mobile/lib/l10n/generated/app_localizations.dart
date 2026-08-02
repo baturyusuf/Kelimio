@@ -949,6 +949,180 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Matching group: {group}'**
   String matchingGroupTeacher(Object group);
+
+  /// No description provided for @editPublishedCourse.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit published course'**
+  String get editPublishedCourse;
+
+  /// No description provided for @courseEditorTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit one course question'**
+  String get courseEditorTitle;
+
+  /// No description provided for @courseEditorScope.
+  ///
+  /// In en, this message translates to:
+  /// **'This local test editor changes the prompt of the first eligible typed-gap question. The answer stays on the server.'**
+  String get courseEditorScope;
+
+  /// No description provided for @courseEditorPath.
+  ///
+  /// In en, this message translates to:
+  /// **'{level} / {unit} / {topic} / {test}'**
+  String courseEditorPath(Object level, Object test, Object topic, Object unit);
+
+  /// No description provided for @courseEditorPromptLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Question prompt'**
+  String get courseEditorPromptLabel;
+
+  /// No description provided for @courseEditorPromptHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep exactly one --- placeholder. Maximum 1,000 characters.'**
+  String get courseEditorPromptHelp;
+
+  /// No description provided for @courseEditorRecovered.
+  ///
+  /// In en, this message translates to:
+  /// **'Your unsaved change was restored from this device\'\'s secure storage.'**
+  String get courseEditorRecovered;
+
+  /// No description provided for @courseEditorRecoveryFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'This change could not be protected in secure storage. Copy it before leaving this screen.'**
+  String get courseEditorRecoveryFailed;
+
+  /// No description provided for @courseEditorPromptEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a question prompt.'**
+  String get courseEditorPromptEmpty;
+
+  /// No description provided for @courseEditorPromptTooLong.
+  ///
+  /// In en, this message translates to:
+  /// **'The prompt must be at most 1,000 characters.'**
+  String get courseEditorPromptTooLong;
+
+  /// No description provided for @courseEditorPromptPlaceholder.
+  ///
+  /// In en, this message translates to:
+  /// **'The prompt must contain exactly one --- placeholder.'**
+  String get courseEditorPromptPlaceholder;
+
+  /// No description provided for @courseEditorPromptUnchanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Change the prompt before creating a draft.'**
+  String get courseEditorPromptUnchanged;
+
+  /// No description provided for @discardEditorChanges.
+  ///
+  /// In en, this message translates to:
+  /// **'Discard changes'**
+  String get discardEditorChanges;
+
+  /// No description provided for @saveEditorDraft.
+  ///
+  /// In en, this message translates to:
+  /// **'Create immutable draft'**
+  String get saveEditorDraft;
+
+  /// No description provided for @courseEditorConflictHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'The published question changed'**
+  String get courseEditorConflictHeading;
+
+  /// No description provided for @courseEditorConflictBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Compare the versions. Nothing will be overwritten until you choose how to continue.'**
+  String get courseEditorConflictBody;
+
+  /// No description provided for @courseEditorPreviousVersion.
+  ///
+  /// In en, this message translates to:
+  /// **'Version you started from'**
+  String get courseEditorPreviousVersion;
+
+  /// No description provided for @courseEditorYourVersion.
+  ///
+  /// In en, this message translates to:
+  /// **'Your unsaved version'**
+  String get courseEditorYourVersion;
+
+  /// No description provided for @courseEditorLatestVersion.
+  ///
+  /// In en, this message translates to:
+  /// **'Latest published version'**
+  String get courseEditorLatestVersion;
+
+  /// No description provided for @courseEditorUseLatest.
+  ///
+  /// In en, this message translates to:
+  /// **'Use latest version'**
+  String get courseEditorUseLatest;
+
+  /// No description provided for @courseEditorReapplyMine.
+  ///
+  /// In en, this message translates to:
+  /// **'Reapply my version'**
+  String get courseEditorReapplyMine;
+
+  /// No description provided for @courseEditorImpactConfirmation.
+  ///
+  /// In en, this message translates to:
+  /// **'I reviewed this exact one-question impact and want to publish the immutable release.'**
+  String get courseEditorImpactConfirmation;
+
+  /// No description provided for @publishEditorRevision.
+  ///
+  /// In en, this message translates to:
+  /// **'Publish this revision'**
+  String get publishEditorRevision;
+
+  /// No description provided for @courseEditorPublished.
+  ///
+  /// In en, this message translates to:
+  /// **'The edited release is active. No answer key was sent to this device.'**
+  String get courseEditorPublished;
+
+  /// No description provided for @courseEditorOtherRecovery.
+  ///
+  /// In en, this message translates to:
+  /// **'Another course has an unsaved secure draft. Discard that draft before editing this course.'**
+  String get courseEditorOtherRecovery;
+
+  /// No description provided for @courseEditorDiscardOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Discard other draft'**
+  String get courseEditorDiscardOther;
+
+  /// No description provided for @courseEditorLeaveTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Discard unsaved change?'**
+  String get courseEditorLeaveTitle;
+
+  /// No description provided for @courseEditorLeaveBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your change is stored securely on this device. You can keep it for later or discard it now.'**
+  String get courseEditorLeaveBody;
+
+  /// No description provided for @keepEditing.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep for later'**
+  String get keepEditing;
 }
 
 class _AppLocalizationsDelegate

@@ -598,12 +598,47 @@ class VerticalSliceIntegrationTest {
                 jsonPath("$.updating") { value(false) }
             }
 
+        val editorResponse = mockMvc.get("/v1/development/courses/${fixture.courseId}/editor") {
+            with(ownerJwt)
+        }.andExpect {
+            status { isOk() }
+            header { string("Cache-Control", "no-store") }
+            header { string("ETag", org.hamcrest.Matchers.matchesPattern("\"[0-9a-f]{64}\"")) }
+            jsonPath("$.courseName") { value("Sourced authoring course") }
+            jsonPath("$.activeReleaseId") { value(fixture.baseReleaseId.toString()) }
+            jsonPath("$.levelTitle") { value("Level 1") }
+            jsonPath("$.unitTitle") { value("Unit 1") }
+            jsonPath("$.topicTitle") { value("Topic 1") }
+            jsonPath("$.testTitle") { value("Typed proof") }
+            jsonPath("$.questionRevisionId") { value(fixture.questionRevisionId.toString()) }
+            jsonPath("$.prompt") { value("Ben her gun ---.") }
+            jsonPath("$.correctAnswer") { doesNotExist() }
+        }.andReturn().response
+        val editorEtag = checkNotNull(editorResponse.getHeader("ETag"))
+        val editedPrompt = "Ben her sabah ---."
+        val editorRequest = objectMapper.writeValueAsString(
+            mapOf(
+                "baseReleaseId" to fixture.baseReleaseId,
+                "questionRevisionId" to fixture.questionRevisionId,
+                "editedPrompt" to editedPrompt,
+            ),
+        )
+
+        mockMvc.post("/v1/development/courses/${fixture.courseId}/editor/drafts") {
+            with(ownerJwt)
+            header("Idempotency-Key", UUID.randomUUID().toString())
+            header("If-Match", "\"${"0".repeat(64)}\"")
+            contentType = MediaType.APPLICATION_JSON
+            content = editorRequest
+        }.andExpect { status { isConflict() } }
+
         val authoringKey = UUID.randomUUID()
-        val draftBody = mockMvc.post("/v1/development/courses/${fixture.courseId}/revisions") {
+        val draftBody = mockMvc.post("/v1/development/courses/${fixture.courseId}/editor/drafts") {
             with(ownerJwt)
             header("Idempotency-Key", authoringKey.toString())
+            header("If-Match", editorEtag)
             contentType = MediaType.APPLICATION_JSON
-            content = """{"baseReleaseId":"${fixture.baseReleaseId}"}"""
+            content = editorRequest
         }.andExpect {
             status { isCreated() }
             header { string("Cache-Control", "no-store") }
@@ -618,22 +653,32 @@ class VerticalSliceIntegrationTest {
         val newQuestionRevisionId = UUID.fromString(draft["questionRevisionId"].asText())
         val contentChangeSetId = UUID.fromString(draft["contentChangeSetId"].asText())
 
-        mockMvc.post("/v1/development/courses/${fixture.courseId}/revisions") {
+        mockMvc.post("/v1/development/courses/${fixture.courseId}/editor/drafts") {
             with(ownerJwt)
             header("Idempotency-Key", authoringKey.toString())
+            header("If-Match", editorEtag)
             contentType = MediaType.APPLICATION_JSON
-            content = """{"baseReleaseId":"${fixture.baseReleaseId}"}"""
+            content = editorRequest
         }.andExpect {
             status { isOk() }
             jsonPath("$.draftReleaseId") { value(draftReleaseId.toString()) }
             jsonPath("$.created") { value(false) }
         }
-        mockMvc.post("/v1/development/courses/${fixture.courseId}/revisions") {
+        mockMvc.post("/v1/development/courses/${fixture.courseId}/editor/drafts") {
             with(ownerJwt)
             header("Idempotency-Key", UUID.randomUUID().toString())
+            header("If-Match", editorEtag)
             contentType = MediaType.APPLICATION_JSON
-            content = """{"baseReleaseId":"${fixture.baseReleaseId}"}"""
+            content = editorRequest
         }.andExpect { status { isConflict() } }
+
+        assertThat(
+            jdbcTemplate.queryForObject(
+                "select prompt from question_revision where id = ?",
+                String::class.java,
+                newQuestionRevisionId,
+            ),
+        ).isEqualTo(editedPrompt)
 
         val publicationImpactBody = mockMvc.get(
             "/v1/courses/${fixture.courseId}/releases/$draftReleaseId/impact",
@@ -764,6 +809,7 @@ class VerticalSliceIntegrationTest {
         )!!
         assertThat(authoringOutbox)
             .doesNotContain("Ben her gun")
+            .doesNotContain("Ben her sabah")
             .doesNotContain("yazarim")
             .doesNotContain("I write")
         assertThat(

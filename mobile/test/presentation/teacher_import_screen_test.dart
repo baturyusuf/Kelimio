@@ -51,6 +51,26 @@ void main() {
       find.byKey(const Key('teacher-publication-success')),
       findsOneWidget,
     );
+
+    await _tapVisible(tester, 'teacher-open-course-editor');
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('teacher-course-editor')), findsOneWidget);
+    await tester.enterText(
+      find.byType(TextFormField).last,
+      'Ben her sabah ---.',
+    );
+    await tester.pump();
+    await _tapVisible(tester, 'teacher-editor-save');
+    await tester.pumpAndSettle();
+    await _tapVisible(tester, 'teacher-editor-impact-confirmation');
+    await _tapVisible(tester, 'teacher-editor-publish');
+    await tester.pumpAndSettle();
+
+    expect(repository.activationCommands, hasLength(2));
+    expect(
+      find.byKey(const Key('teacher-editor-publication-success')),
+      findsOneWidget,
+    );
     expect(tester.takeException(), isNull);
   });
 
@@ -116,6 +136,9 @@ Future<void> _pumpScreen(
         appConfigProvider.overrideWithValue(_config),
         workbookPickerProvider.overrideWithValue(const StubWorkbookPicker()),
         courseAuthoringRepositoryProvider.overrideWithValue(repository),
+        courseEditorRecoveryStoreProvider.overrideWithValue(
+          MemoryCourseEditorRecoveryStore(),
+        ),
         identifierFactoryProvider.overrideWithValue(
           SequenceIdentifierFactory([
             '00000000-0000-4000-8000-000000000001',
@@ -123,6 +146,8 @@ Future<void> _pumpScreen(
             '00000000-0000-4000-8000-000000000003',
             '00000000-0000-4000-8000-000000000004',
             '00000000-0000-4000-8000-000000000005',
+            '00000000-0000-4000-8000-000000000006',
+            '00000000-0000-4000-8000-000000000007',
           ]),
         ),
         courseAuthoringPollDelayProvider.overrideWithValue(Duration.zero),
@@ -146,6 +171,13 @@ Future<void> _pumpScreen(
 
 Future<void> _tapVisible(WidgetTester tester, String key) async {
   final finder = find.byKey(Key(key));
+  if (finder.evaluate().isEmpty) {
+    await tester.scrollUntilVisible(
+      finder,
+      240,
+      scrollable: find.byType(Scrollable).first,
+    );
+  }
   await tester.ensureVisible(finder);
   await tester.pumpAndSettle();
   await tester.tap(finder);

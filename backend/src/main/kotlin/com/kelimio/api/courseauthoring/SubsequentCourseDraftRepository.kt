@@ -8,6 +8,15 @@ import java.util.UUID
 internal class SubsequentCourseDraftRepository(
     private val dsl: DSLContext,
 ) {
+    fun course(courseId: UUID): CourseAuthoringCourseState? = dsl.fetchOne(
+        """
+        select id, owner_user_id, publication_status, active_release_id
+          from course
+         where id = ?
+        """.trimIndent(),
+        courseId,
+    )?.toCourseState()
+
     fun lockCourse(courseId: UUID): CourseAuthoringCourseState? = dsl.fetchOne(
         """
         select id, owner_user_id, publication_status, active_release_id
@@ -16,12 +25,78 @@ internal class SubsequentCourseDraftRepository(
          for update
         """.trimIndent(),
         courseId,
-    )?.let {
+    )?.toCourseState()
+
+    private fun org.jooq.Record.toCourseState() =
         CourseAuthoringCourseState(
-            courseId = it.get("id", UUID::class.java)!!,
-            ownerUserId = it.get("owner_user_id", UUID::class.java)!!,
-            publicationStatus = it.get("publication_status", String::class.java)!!,
-            activeReleaseId = it.get("active_release_id", UUID::class.java),
+            courseId = get("id", UUID::class.java)!!,
+            ownerUserId = get("owner_user_id", UUID::class.java)!!,
+            publicationStatus = get("publication_status", String::class.java)!!,
+            activeReleaseId = get("active_release_id", UUID::class.java),
+        )
+
+    fun editorSnapshot(courseId: UUID): LocalCourseEditorSnapshot? = dsl.fetchOne(
+        """
+        select course.id as course_id, course.name as course_name,
+               release_row.id as active_release_id,
+               release_row.revision_number as release_revision,
+               level_revision.title as level_title,
+               unit_revision.title as unit_title,
+               topic_revision.title as topic_title,
+               test_revision.test_id, test_revision.title as test_title,
+               question_revision.question_id, question_revision.id as question_revision_id,
+               question_revision.revision_number as question_revision,
+               question_revision.prompt
+          from course
+          join course_release release_row on release_row.id = course.active_release_id
+          join course_release_test_hierarchy test_hierarchy
+            on test_hierarchy.course_release_id = release_row.id
+          join test_revision on test_revision.id = test_hierarchy.test_revision_id
+          join test_revision_question test_question
+            on test_question.test_revision_id = test_revision.id
+          join question_revision on question_revision.id = test_question.question_revision_id
+          join content_topic_revision topic_revision
+            on topic_revision.id = test_hierarchy.parent_topic_revision_id
+          join course_release_topic_revision release_topic
+            on release_topic.course_release_id = release_row.id
+           and release_topic.topic_revision_id = topic_revision.id
+          join course_release_unit_revision release_unit
+            on release_unit.course_release_id = release_row.id
+           and release_unit.unit_revision_id = release_topic.parent_unit_revision_id
+          join content_unit_revision unit_revision
+            on unit_revision.id = release_unit.unit_revision_id
+          join course_release_level_revision release_level
+            on release_level.course_release_id = release_row.id
+           and release_level.level_revision_id = release_unit.parent_level_revision_id
+          join content_level_revision level_revision
+            on level_revision.id = release_level.level_revision_id
+         where course.id = ?
+           and course.publication_status in ('PUBLISHED', 'HIDDEN')
+           and release_row.status = 'ACTIVE'
+           and test_revision.status = 'ACTIVE'
+           and question_revision.status = 'ACTIVE'
+           and question_revision.question_type = 'C'
+         order by release_level.position, release_unit.position, release_topic.position,
+                  test_hierarchy.position, test_question.position,
+                  question_revision.question_id, question_revision.id
+         limit 1
+        """.trimIndent(),
+        courseId,
+    )?.let {
+        LocalCourseEditorSnapshot(
+            courseId = it.get("course_id", UUID::class.java)!!,
+            courseName = it.get("course_name", String::class.java)!!,
+            activeReleaseId = it.get("active_release_id", UUID::class.java)!!,
+            releaseRevision = it.get("release_revision", Int::class.java)!!,
+            levelTitle = it.get("level_title", String::class.java)!!,
+            unitTitle = it.get("unit_title", String::class.java)!!,
+            topicTitle = it.get("topic_title", String::class.java)!!,
+            testId = it.get("test_id", UUID::class.java)!!,
+            testTitle = it.get("test_title", String::class.java)!!,
+            questionId = it.get("question_id", UUID::class.java)!!,
+            questionRevisionId = it.get("question_revision_id", UUID::class.java)!!,
+            questionRevision = it.get("question_revision", Int::class.java)!!,
+            prompt = it.get("prompt", String::class.java)!!,
         )
     }
 
@@ -40,7 +115,11 @@ internal class SubsequentCourseDraftRepository(
             baseReleaseId,
     )!!.get("found", Boolean::class.java)!!
 
-    fun source(courseId: UUID, baseReleaseId: UUID): CourseAuthoringSource? = dsl.fetchOne(
+    fun source(
+        courseId: UUID,
+        baseReleaseId: UUID,
+        expectedQuestionRevisionId: UUID? = null,
+    ): CourseAuthoringSource? = dsl.fetchOne(
         """
         select release_row.course_id, release_row.id as base_release_id,
                (select max(candidate.revision_number) + 1
@@ -52,6 +131,7 @@ internal class SubsequentCourseDraftRepository(
                (select max(candidate.revision_number) + 1
                   from question_revision candidate
                  where candidate.question_id = question_revision.question_id) as next_question_revision,
+               question_revision.prompt as previous_prompt,
                test_revision.test_id as changed_test_id,
                test_revision.id as previous_test_revision_id,
                test_revision.revision_number as previous_test_revision,
@@ -69,13 +149,15 @@ internal class SubsequentCourseDraftRepository(
            and release_row.course_id = ?
            and release_row.status = 'ACTIVE'
            and question_revision.question_type = 'C'
-           and length(question_revision.prompt) <= 960
+           and (cast(? as uuid) is null or question_revision.id = cast(? as uuid))
          order by release_test.position, test_question.position,
                   question_revision.question_id, question_revision.id
          limit 1
         """.trimIndent(),
         baseReleaseId,
         courseId,
+        expectedQuestionRevisionId,
+        expectedQuestionRevisionId,
     )?.let {
         CourseAuthoringSource(
             courseId = it.get("course_id", UUID::class.java)!!,
@@ -85,6 +167,7 @@ internal class SubsequentCourseDraftRepository(
             previousQuestionRevisionId = it.get("previous_question_revision_id", UUID::class.java)!!,
             previousQuestionRevision = it.get("previous_question_revision", Int::class.java)!!,
             nextQuestionRevision = it.get("next_question_revision", Int::class.java)!!,
+            previousPrompt = it.get("previous_prompt", String::class.java)!!,
             changedTestId = it.get("changed_test_id", UUID::class.java)!!,
             previousTestRevisionId = it.get("previous_test_revision_id", UUID::class.java)!!,
             previousTestRevision = it.get("previous_test_revision", Int::class.java)!!,
@@ -169,7 +252,7 @@ internal class SubsequentCourseDraftRepository(
                     matching_target_language, status, created_at
                 )
                 select ?, question_id, course_id, ?, question_type,
-                       prompt || ' [yerel revizyon ' || ? || ']', correct_answer,
+                       ?, correct_answer,
                        alternative_correct_answer, answer_match_policy,
                        answer_match_language, correct_answer_match_key,
                        alternative_answer_match_key, matching_policy,
@@ -182,7 +265,7 @@ internal class SubsequentCourseDraftRepository(
                 """.trimIndent(),
                 command.questionRevisionId,
                 source.nextQuestionRevision,
-                command.releaseRevision,
+                command.editedPrompt,
                 command.occurredAt,
                 source.previousQuestionRevisionId,
                 source.changedQuestionId,

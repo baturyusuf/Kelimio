@@ -1367,6 +1367,79 @@ assert.equal(
   "subsequent draft responses must not expose authored content",
 );
 
+const editorReadOperation = contract.paths[
+  "/v1/development/courses/{courseId}/editor"
+].get;
+assert.equal(
+  editorReadOperation.responses["200"].headers["Cache-Control"].$ref,
+  "#/components/headers/NoStore",
+  "owner editor documents must remain non-cacheable",
+);
+assert.equal(
+  editorReadOperation.responses["200"].headers.ETag.schema.pattern,
+  '^"[0-9a-f]{64}"$',
+  "editor reads must return one strong opaque ETag",
+);
+const editorDraftOperation = contract.paths[
+  "/v1/development/courses/{courseId}/editor/drafts"
+].post;
+assert.ok(
+  editorDraftOperation.parameters.some(
+    (parameter) => parameter.$ref === "#/components/parameters/IfMatch",
+  ),
+  "editor writes must require If-Match",
+);
+assert.ok(
+  editorDraftOperation.parameters.some(
+    (parameter) => parameter.$ref === "#/components/parameters/IdempotencyKey",
+  ),
+  "editor writes must remain idempotent",
+);
+const validateEditorSnapshot = compileSchema("LocalCourseEditorSnapshot");
+const validEditorSnapshot = {
+  courseId: committedImport.courseId,
+  courseName: "Kelimio course",
+  activeReleaseId: committedImport.draftReleaseId,
+  releaseRevision: 1,
+  levelTitle: "Level 1",
+  unitTitle: "Unit 1",
+  topicTitle: "Topic 1",
+  testId: "00000000-0000-4000-8000-000000000990",
+  testTitle: "Typed cloze",
+  questionId: "00000000-0000-4000-8000-000000000997",
+  questionRevisionId: "00000000-0000-4000-8000-000000000998",
+  questionRevision: 1,
+  prompt: "Ben her gun ---.",
+};
+assert.equal(validateEditorSnapshot(validEditorSnapshot), true);
+assert.equal(
+  validateEditorSnapshot({ ...validEditorSnapshot, correctAnswer: "yazarim" }),
+  false,
+  "editor reads must not expose answer-key material",
+);
+const validateEditorDraftRequest = compileSchema(
+  "CreateLocalCourseEditorDraftRequest",
+);
+assert.equal(
+  validateEditorDraftRequest({
+    baseReleaseId: committedImport.draftReleaseId,
+    questionRevisionId: validEditorSnapshot.questionRevisionId,
+    editedPrompt: "Ben her sabah ---.",
+  }),
+  true,
+  "editor writes must bind the base, question revision, and changed prompt",
+);
+assert.equal(
+  validateEditorDraftRequest({
+    baseReleaseId: committedImport.draftReleaseId,
+    questionRevisionId: validEditorSnapshot.questionRevisionId,
+    editedPrompt: "Ben her sabah ---.",
+    correctAnswer: "client-owned-answer",
+  }),
+  false,
+  "editor writes must reject answer-key fields",
+);
+
 const validateCourseProgress = compileSchema("CourseProgressResponse");
 const validCourseProgress = {
   courseId: committedImport.courseId,

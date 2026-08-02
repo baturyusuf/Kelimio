@@ -257,6 +257,86 @@ final class CourseReleaseActivation {
   final String reprojectionStatus;
 }
 
+final class LocalCourseEditorDocument {
+  const LocalCourseEditorDocument({
+    required this.courseId,
+    required this.courseName,
+    required this.activeReleaseId,
+    required this.releaseRevision,
+    required this.levelTitle,
+    required this.unitTitle,
+    required this.topicTitle,
+    required this.testId,
+    required this.testTitle,
+    required this.questionId,
+    required this.questionRevisionId,
+    required this.questionRevision,
+    required this.prompt,
+    required this.entityTag,
+  });
+
+  final String courseId;
+  final String courseName;
+  final String activeReleaseId;
+  final int releaseRevision;
+  final String levelTitle;
+  final String unitTitle;
+  final String topicTitle;
+  final String testId;
+  final String testTitle;
+  final String questionId;
+  final String questionRevisionId;
+  final int questionRevision;
+  final String prompt;
+  final String entityTag;
+}
+
+final class LocalCourseEditorDraftResult {
+  const LocalCourseEditorDraftResult({
+    required this.courseId,
+    required this.baseReleaseId,
+    required this.draftReleaseId,
+    required this.releaseRevision,
+    required this.questionRevisionId,
+    required this.created,
+  });
+
+  final String courseId;
+  final String baseReleaseId;
+  final String draftReleaseId;
+  final int releaseRevision;
+  final String questionRevisionId;
+  final bool created;
+}
+
+final class LocalCourseEditorRecoveryDraft {
+  const LocalCourseEditorRecoveryDraft({
+    required this.courseId,
+    required this.baseReleaseId,
+    required this.questionRevisionId,
+    required this.entityTag,
+    required this.originalPrompt,
+    required this.editedPrompt,
+    required this.updatedAt,
+  });
+
+  final String courseId;
+  final String baseReleaseId;
+  final String questionRevisionId;
+  final String entityTag;
+  final String originalPrompt;
+  final String editedPrompt;
+  final DateTime updatedAt;
+}
+
+abstract interface class CourseEditorRecoveryStore {
+  Future<LocalCourseEditorRecoveryDraft?> read();
+
+  Future<void> write(LocalCourseEditorRecoveryDraft draft);
+
+  Future<void> clear();
+}
+
 typedef UploadProgress = void Function(int sentBytes, int totalBytes);
 
 abstract interface class CourseAuthoringRepository {
@@ -302,6 +382,14 @@ abstract interface class CourseAuthoringRepository {
 
   Future<CourseReleaseActivation> activateRelease({
     required CourseReleaseImpact impact,
+    required String commandId,
+  });
+
+  Future<LocalCourseEditorDocument> getEditor(String courseId);
+
+  Future<LocalCourseEditorDraftResult> createEditorDraft({
+    required LocalCourseEditorDocument document,
+    required String editedPrompt,
     required String commandId,
   });
 }

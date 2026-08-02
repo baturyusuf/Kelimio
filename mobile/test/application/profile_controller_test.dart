@@ -68,6 +68,9 @@ void main() {
           authRepositoryProvider.overrideWithValue(auth),
           profileRepositoryProvider.overrideWithValue(repository),
           recoveryStoreProvider.overrideWith((ref) async => recovery),
+          courseEditorRecoveryStoreProvider.overrideWithValue(
+            MemoryCourseEditorRecoveryStore(),
+          ),
           identifierFactoryProvider.overrideWithValue(
             SequenceIdentifierFactory([
               'first-user-command',

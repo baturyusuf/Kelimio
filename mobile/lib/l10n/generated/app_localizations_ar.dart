@@ -503,4 +503,108 @@ class AppLocalizationsAr extends AppLocalizations {
   String matchingGroupTeacher(Object group) {
     return 'مجموعة المطابقة: $group';
   }
+
+  @override
+  String get editPublishedCourse => 'تحرير الدورة المنشورة';
+
+  @override
+  String get courseEditorTitle => 'تحرير سؤال واحد في الدورة';
+
+  @override
+  String get courseEditorScope =>
+      'يغيّر محرر الاختبار المحلي هذا نص أول سؤال مؤهل ذي فراغ كتابي. تبقى الإجابة على الخادم.';
+
+  @override
+  String courseEditorPath(
+    Object level,
+    Object test,
+    Object topic,
+    Object unit,
+  ) {
+    return '$level / $unit / $topic / $test';
+  }
+
+  @override
+  String get courseEditorPromptLabel => 'نص السؤال';
+
+  @override
+  String get courseEditorPromptHelp =>
+      'احتفظ بعلامة فراغ واحدة --- فقط. الحد الأقصى 1,000 حرف.';
+
+  @override
+  String get courseEditorRecovered =>
+      'استُعيد تغييرك غير المحفوظ من التخزين الآمن لهذا الجهاز.';
+
+  @override
+  String get courseEditorRecoveryFailed =>
+      'تعذر حماية هذا التغيير في التخزين الآمن. انسخ النص قبل مغادرة الشاشة.';
+
+  @override
+  String get courseEditorPromptEmpty => 'أدخل نص السؤال.';
+
+  @override
+  String get courseEditorPromptTooLong => 'يجب ألا يتجاوز نص السؤال 1,000 حرف.';
+
+  @override
+  String get courseEditorPromptPlaceholder =>
+      'يجب أن يحتوي نص السؤال على علامة فراغ واحدة --- فقط.';
+
+  @override
+  String get courseEditorPromptUnchanged => 'غيّر نص السؤال قبل إنشاء المسودة.';
+
+  @override
+  String get discardEditorChanges => 'تجاهل التغييرات';
+
+  @override
+  String get saveEditorDraft => 'إنشاء مسودة ثابتة';
+
+  @override
+  String get courseEditorConflictHeading => 'تغيّر السؤال المنشور';
+
+  @override
+  String get courseEditorConflictBody =>
+      'قارن بين الإصدارات. لن يُستبدل شيء حتى تختار كيفية المتابعة.';
+
+  @override
+  String get courseEditorPreviousVersion => 'الإصدار الذي بدأت منه';
+
+  @override
+  String get courseEditorYourVersion => 'إصدارك غير المحفوظ';
+
+  @override
+  String get courseEditorLatestVersion => 'أحدث إصدار منشور';
+
+  @override
+  String get courseEditorUseLatest => 'استخدام أحدث إصدار';
+
+  @override
+  String get courseEditorReapplyMine => 'إعادة تطبيق إصداري';
+
+  @override
+  String get courseEditorImpactConfirmation =>
+      'راجعت أثر هذا السؤال الواحد وأريد نشر الإصدار الثابت.';
+
+  @override
+  String get publishEditorRevision => 'نشر هذا الإصدار';
+
+  @override
+  String get courseEditorPublished =>
+      'الإصدار المعدّل نشط. لم تُرسل الإجابة الصحيحة إلى هذا الجهاز.';
+
+  @override
+  String get courseEditorOtherRecovery =>
+      'هناك مسودة آمنة غير محفوظة لدورة أخرى. تجاهلها قبل تحرير هذه الدورة.';
+
+  @override
+  String get courseEditorDiscardOther => 'تجاهل المسودة الأخرى';
+
+  @override
+  String get courseEditorLeaveTitle => 'هل تريد تجاهل التغيير غير المحفوظ؟';
+
+  @override
+  String get courseEditorLeaveBody =>
+      'تغييرك محفوظ بأمان على هذا الجهاز. يمكنك الاحتفاظ به لوقت لاحق أو تجاهله الآن.';
+
+  @override
+  String get keepEditing => 'الاحتفاظ به لوقت لاحق';
 }

@@ -50,9 +50,11 @@ This is an evidence checklist, not a statement of completion. Check an item only
 ## Excel import, authoring, and content releases
 
 Local/test upload-through-publication and mobile operator evidence exists under
-ADRs 010 through 016, including owner-scoped state-loss discovery/resume,
+ADRs 010 through 017, including owner-scoped state-loss discovery/resume,
 prior-activation suppression, and a non-empty later-publication/rollback
-reprojection proof that preserves lifetime score. Every item below remains unchecked until
+reprojection proof that preserves lifetime score. The narrow local editor also
+proves strong ETag/If-Match, secure unsaved recovery, and explicit
+old/mine/latest conflict handling. Every item below remains unchecked until
 production-equivalent staging and the complete authoring/release path pass.
 
 - [ ] Only `.xlsx` is accepted; file type, size, checksum, malware, zip bomb, XML/path, formula, external-link, Unicode, and resource limits are enforced in an isolated worker.

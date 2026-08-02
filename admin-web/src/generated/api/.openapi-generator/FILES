@@ -50,10 +50,12 @@ src/models/CourseReleaseOperation.ts
 src/models/CourseSummary.ts
 src/models/CreateCourseImportRequest.ts
 src/models/CreateEnrollmentRequest.ts
+src/models/CreateLocalCourseEditorDraftRequest.ts
 src/models/CreateLocalCourseRevisionRequest.ts
 src/models/EnergyResponse.ts
 src/models/EnrollmentResponse.ts
 src/models/FinishAttemptResponse.ts
+src/models/LocalCourseEditorSnapshot.ts
 src/models/LocalStarterCourseResponse.ts
 src/models/MatchingItem.ts
 src/models/MatchingSelection.ts

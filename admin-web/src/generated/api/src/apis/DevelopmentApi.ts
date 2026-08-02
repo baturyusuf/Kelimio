@@ -15,14 +15,20 @@
 
 import * as runtime from '../runtime';
 import type {
+  CreateLocalCourseEditorDraftRequest,
   CreateLocalCourseRevisionRequest,
+  LocalCourseEditorSnapshot,
   LocalStarterCourseResponse,
   Problem,
   SubsequentCourseDraftResult,
 } from '../models/index';
 import {
+    CreateLocalCourseEditorDraftRequestFromJSON,
+    CreateLocalCourseEditorDraftRequestToJSON,
     CreateLocalCourseRevisionRequestFromJSON,
     CreateLocalCourseRevisionRequestToJSON,
+    LocalCourseEditorSnapshotFromJSON,
+    LocalCourseEditorSnapshotToJSON,
     LocalStarterCourseResponseFromJSON,
     LocalStarterCourseResponseToJSON,
     ProblemFromJSON,
@@ -31,10 +37,21 @@ import {
     SubsequentCourseDraftResultToJSON,
 } from '../models/index';
 
+export interface CreateLocalCourseEditorDraftOperationRequest {
+    courseId: string;
+    idempotencyKey: string;
+    ifMatch: string;
+    createLocalCourseEditorDraftRequest: CreateLocalCourseEditorDraftRequest;
+}
+
 export interface CreateLocalCourseRevisionOperationRequest {
     courseId: string;
     idempotencyKey: string;
     createLocalCourseRevisionRequest: CreateLocalCourseRevisionRequest;
+}
+
+export interface GetLocalCourseEditorRequest {
+    courseId: string;
 }
 
 export interface InstallLocalStarterCourseRequest {
@@ -48,6 +65,25 @@ export interface InstallLocalStarterCourseRequest {
  * @interface DevelopmentApiInterface
  */
 export interface DevelopmentApiInterface {
+    /**
+     * Creates a committed MOBILE_AUTHORING change set and an unpublished immutable release only when If-Match still names the current owner-scoped editor document. It accepts a changed typed-cloze prompt but no answer, score, entitlement, ownership, or publication assertion. Publication remains a separate impact-bound operation.
+     * @summary Save one ETag-bound immutable local editor draft
+     * @param {string} courseId
+     * @param {string} idempotencyKey Stable UUID generated once for the logical command.
+     * @param {string} ifMatch Strong ETag returned by the current owner-scoped editor document.
+     * @param {CreateLocalCourseEditorDraftRequest} createLocalCourseEditorDraftRequest
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof DevelopmentApiInterface
+     */
+    createLocalCourseEditorDraftRaw(requestParameters: CreateLocalCourseEditorDraftOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<SubsequentCourseDraftResult>>;
+
+    /**
+     * Creates a committed MOBILE_AUTHORING change set and an unpublished immutable release only when If-Match still names the current owner-scoped editor document. It accepts a changed typed-cloze prompt but no answer, score, entitlement, ownership, or publication assertion. Publication remains a separate impact-bound operation.
+     * Save one ETag-bound immutable local editor draft
+     */
+    createLocalCourseEditorDraft(requestParameters: CreateLocalCourseEditorDraftOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<SubsequentCourseDraftResult>;
+
     /**
      * Available only in explicitly enabled local/test environments. The owner creates one real MOBILE_AUTHORING change set from the exact active release, revises one eligible typed-cloze prompt without returning authored text or answer material, and receives an unpublished immutable release. Publication and rollback still require the separate impact-bound release operations.
      * @summary Create one subsequent immutable course release for local verification
@@ -65,6 +101,22 @@ export interface DevelopmentApiInterface {
      * Create one subsequent immutable course release for local verification
      */
     createLocalCourseRevision(requestParameters: CreateLocalCourseRevisionOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<SubsequentCourseDraftResult>;
+
+    /**
+     * Returns the first eligible typed-cloze prompt and its immutable hierarchy from the exact active release. The response is owner-scoped, no-store, answer-key-free, and carries the strong ETag required by draft creation. It is unavailable outside explicitly enabled local/test environments.
+     * @summary Read the owner-scoped local course editor document
+     * @param {string} courseId
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof DevelopmentApiInterface
+     */
+    getLocalCourseEditorRaw(requestParameters: GetLocalCourseEditorRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<LocalCourseEditorSnapshot>>;
+
+    /**
+     * Returns the first eligible typed-cloze prompt and its immutable hierarchy from the exact active release. The response is owner-scoped, no-store, answer-key-free, and carries the strong ETag required by draft creation. It is unavailable outside explicitly enabled local/test environments.
+     * Read the owner-scoped local course editor document
+     */
+    getLocalCourseEditor(requestParameters: GetLocalCourseEditorRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<LocalCourseEditorSnapshot>;
 
     /**
      * Available only when the backend is explicitly running in the local environment with starter-course installation enabled. It creates one immutable Type-A/Type-B/Type-C English-support release derived from the reviewed workbook subset and never creates users or learning results.
@@ -88,6 +140,85 @@ export interface DevelopmentApiInterface {
  *
  */
 export class DevelopmentApi extends runtime.BaseAPI implements DevelopmentApiInterface {
+
+    /**
+     * Creates a committed MOBILE_AUTHORING change set and an unpublished immutable release only when If-Match still names the current owner-scoped editor document. It accepts a changed typed-cloze prompt but no answer, score, entitlement, ownership, or publication assertion. Publication remains a separate impact-bound operation.
+     * Save one ETag-bound immutable local editor draft
+     */
+    async createLocalCourseEditorDraftRaw(requestParameters: CreateLocalCourseEditorDraftOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<SubsequentCourseDraftResult>> {
+        if (requestParameters['courseId'] == null) {
+            throw new runtime.RequiredError(
+                'courseId',
+                'Required parameter "courseId" was null or undefined when calling createLocalCourseEditorDraft().'
+            );
+        }
+
+        if (requestParameters['idempotencyKey'] == null) {
+            throw new runtime.RequiredError(
+                'idempotencyKey',
+                'Required parameter "idempotencyKey" was null or undefined when calling createLocalCourseEditorDraft().'
+            );
+        }
+
+        if (requestParameters['ifMatch'] == null) {
+            throw new runtime.RequiredError(
+                'ifMatch',
+                'Required parameter "ifMatch" was null or undefined when calling createLocalCourseEditorDraft().'
+            );
+        }
+
+        if (requestParameters['createLocalCourseEditorDraftRequest'] == null) {
+            throw new runtime.RequiredError(
+                'createLocalCourseEditorDraftRequest',
+                'Required parameter "createLocalCourseEditorDraftRequest" was null or undefined when calling createLocalCourseEditorDraft().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (requestParameters['idempotencyKey'] != null) {
+            headerParameters['Idempotency-Key'] = String(requestParameters['idempotencyKey']);
+        }
+
+        if (requestParameters['ifMatch'] != null) {
+            headerParameters['If-Match'] = String(requestParameters['ifMatch']);
+        }
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("bearerAuth", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/v1/development/courses/{courseId}/editor/drafts`;
+        urlPath = urlPath.replace(`{${"courseId"}}`, encodeURIComponent(String(requestParameters['courseId'])));
+
+        const response = await this.request({
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: CreateLocalCourseEditorDraftRequestToJSON(requestParameters['createLocalCourseEditorDraftRequest']),
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => SubsequentCourseDraftResultFromJSON(jsonValue));
+    }
+
+    /**
+     * Creates a committed MOBILE_AUTHORING change set and an unpublished immutable release only when If-Match still names the current owner-scoped editor document. It accepts a changed typed-cloze prompt but no answer, score, entitlement, ownership, or publication assertion. Publication remains a separate impact-bound operation.
+     * Save one ETag-bound immutable local editor draft
+     */
+    async createLocalCourseEditorDraft(requestParameters: CreateLocalCourseEditorDraftOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<SubsequentCourseDraftResult> {
+        const response = await this.createLocalCourseEditorDraftRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
 
     /**
      * Available only in explicitly enabled local/test environments. The owner creates one real MOBILE_AUTHORING change set from the exact active release, revises one eligible typed-cloze prompt without returning authored text or answer material, and receives an unpublished immutable release. Publication and rollback still require the separate impact-bound release operations.
@@ -154,6 +285,53 @@ export class DevelopmentApi extends runtime.BaseAPI implements DevelopmentApiInt
      */
     async createLocalCourseRevision(requestParameters: CreateLocalCourseRevisionOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<SubsequentCourseDraftResult> {
         const response = await this.createLocalCourseRevisionRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Returns the first eligible typed-cloze prompt and its immutable hierarchy from the exact active release. The response is owner-scoped, no-store, answer-key-free, and carries the strong ETag required by draft creation. It is unavailable outside explicitly enabled local/test environments.
+     * Read the owner-scoped local course editor document
+     */
+    async getLocalCourseEditorRaw(requestParameters: GetLocalCourseEditorRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<LocalCourseEditorSnapshot>> {
+        if (requestParameters['courseId'] == null) {
+            throw new runtime.RequiredError(
+                'courseId',
+                'Required parameter "courseId" was null or undefined when calling getLocalCourseEditor().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("bearerAuth", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/v1/development/courses/{courseId}/editor`;
+        urlPath = urlPath.replace(`{${"courseId"}}`, encodeURIComponent(String(requestParameters['courseId'])));
+
+        const response = await this.request({
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => LocalCourseEditorSnapshotFromJSON(jsonValue));
+    }
+
+    /**
+     * Returns the first eligible typed-cloze prompt and its immutable hierarchy from the exact active release. The response is owner-scoped, no-store, answer-key-free, and carries the strong ETag required by draft creation. It is unavailable outside explicitly enabled local/test environments.
+     * Read the owner-scoped local course editor document
+     */
+    async getLocalCourseEditor(requestParameters: GetLocalCourseEditorRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<LocalCourseEditorSnapshot> {
+        const response = await this.getLocalCourseEditorRaw(requestParameters, initOverrides);
         return await response.value();
     }
 

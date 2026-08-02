@@ -513,4 +513,110 @@ class AppLocalizationsEn extends AppLocalizations {
   String matchingGroupTeacher(Object group) {
     return 'Matching group: $group';
   }
+
+  @override
+  String get editPublishedCourse => 'Edit published course';
+
+  @override
+  String get courseEditorTitle => 'Edit one course question';
+
+  @override
+  String get courseEditorScope =>
+      'This local test editor changes the prompt of the first eligible typed-gap question. The answer stays on the server.';
+
+  @override
+  String courseEditorPath(
+    Object level,
+    Object test,
+    Object topic,
+    Object unit,
+  ) {
+    return '$level / $unit / $topic / $test';
+  }
+
+  @override
+  String get courseEditorPromptLabel => 'Question prompt';
+
+  @override
+  String get courseEditorPromptHelp =>
+      'Keep exactly one --- placeholder. Maximum 1,000 characters.';
+
+  @override
+  String get courseEditorRecovered =>
+      'Your unsaved change was restored from this device\'s secure storage.';
+
+  @override
+  String get courseEditorRecoveryFailed =>
+      'This change could not be protected in secure storage. Copy it before leaving this screen.';
+
+  @override
+  String get courseEditorPromptEmpty => 'Enter a question prompt.';
+
+  @override
+  String get courseEditorPromptTooLong =>
+      'The prompt must be at most 1,000 characters.';
+
+  @override
+  String get courseEditorPromptPlaceholder =>
+      'The prompt must contain exactly one --- placeholder.';
+
+  @override
+  String get courseEditorPromptUnchanged =>
+      'Change the prompt before creating a draft.';
+
+  @override
+  String get discardEditorChanges => 'Discard changes';
+
+  @override
+  String get saveEditorDraft => 'Create immutable draft';
+
+  @override
+  String get courseEditorConflictHeading => 'The published question changed';
+
+  @override
+  String get courseEditorConflictBody =>
+      'Compare the versions. Nothing will be overwritten until you choose how to continue.';
+
+  @override
+  String get courseEditorPreviousVersion => 'Version you started from';
+
+  @override
+  String get courseEditorYourVersion => 'Your unsaved version';
+
+  @override
+  String get courseEditorLatestVersion => 'Latest published version';
+
+  @override
+  String get courseEditorUseLatest => 'Use latest version';
+
+  @override
+  String get courseEditorReapplyMine => 'Reapply my version';
+
+  @override
+  String get courseEditorImpactConfirmation =>
+      'I reviewed this exact one-question impact and want to publish the immutable release.';
+
+  @override
+  String get publishEditorRevision => 'Publish this revision';
+
+  @override
+  String get courseEditorPublished =>
+      'The edited release is active. No answer key was sent to this device.';
+
+  @override
+  String get courseEditorOtherRecovery =>
+      'Another course has an unsaved secure draft. Discard that draft before editing this course.';
+
+  @override
+  String get courseEditorDiscardOther => 'Discard other draft';
+
+  @override
+  String get courseEditorLeaveTitle => 'Discard unsaved change?';
+
+  @override
+  String get courseEditorLeaveBody =>
+      'Your change is stored securely on this device. You can keep it for later or discard it now.';
+
+  @override
+  String get keepEditing => 'Keep for later';
 }

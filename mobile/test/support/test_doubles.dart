@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:kelimio_mobile/domain/auth/auth.dart';
 import 'package:kelimio_mobile/domain/catalog/catalog.dart';
+import 'package:kelimio_mobile/domain/course_authoring/course_authoring.dart';
 import 'package:kelimio_mobile/domain/development/development.dart';
 import 'package:kelimio_mobile/domain/identifiers.dart';
 import 'package:kelimio_mobile/domain/learning/learning.dart';
@@ -94,6 +95,32 @@ final class MemoryRecoveryStore implements AttemptRecoveryStore {
   @override
   Future<void> write(AttemptRecoverySnapshot snapshot) async {
     value = snapshot;
+  }
+}
+
+final class MemoryCourseEditorRecoveryStore
+    implements CourseEditorRecoveryStore {
+  LocalCourseEditorRecoveryDraft? value;
+  int readCalls = 0;
+  int writeCalls = 0;
+  int clearCalls = 0;
+
+  @override
+  Future<void> clear() async {
+    clearCalls += 1;
+    value = null;
+  }
+
+  @override
+  Future<LocalCourseEditorRecoveryDraft?> read() async {
+    readCalls += 1;
+    return value;
+  }
+
+  @override
+  Future<void> write(LocalCourseEditorRecoveryDraft draft) async {
+    writeCalls += 1;
+    value = draft;
   }
 }
 

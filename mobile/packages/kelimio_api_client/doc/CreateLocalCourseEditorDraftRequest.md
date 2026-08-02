@@ -1,0 +1,15 @@
+# kelimio_api_client.model.CreateLocalCourseEditorDraftRequest
+
+## Load the model package
+```dart
+import 'package:kelimio_api_client/api.dart';
+```
+
+## Properties
+Name | Type | Description | Notes
+------------ | ------------- | ------------- | -------------
+**baseReleaseId** | **String** |  |
+**questionRevisionId** | **String** |  |
+**editedPrompt** | **String** | Changed typed-cloze prompt containing exactly one literal --- marker. |
+
+[[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
