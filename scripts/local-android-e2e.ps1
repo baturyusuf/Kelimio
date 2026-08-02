@@ -11,6 +11,7 @@ $repositoryRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
 $composePath = Join-Path $repositoryRoot "compose.yaml"
 $mobilePath = Join-Path $repositoryRoot "mobile"
 $testPath = "integration_test/real_local_auth_to_progress_test.dart"
+$expectedFlywayVersion = "8"
 $projectPattern = '^kelimio-e2e-[0-9a-f]{12}$'
 $environmentNames = @(
     "KELIMIO_LOCAL_DB_PASSWORD",
@@ -26,6 +27,8 @@ $environmentNames = @(
     "KELIMIO_LOCAL_API_HOST_PORT",
     "KELIMIO_LOCAL_KEYCLOAK_BASE_URL",
     "KELIMIO_LOCAL_OIDC_ISSUER",
+    "KELIMIO_MATCHING_REPLAY_ACTIVE_KEY_VERSION",
+    "KELIMIO_MATCHING_REPLAY_KEYS",
     "KELIMIO_LOCAL_RESTART_POLICY"
 )
 
@@ -51,6 +54,18 @@ function New-RandomSecret {
         $generator.Dispose()
     }
     return [Convert]::ToBase64String($bytes).Replace("+", "-").Replace("/", "_").TrimEnd("=")
+}
+
+function New-RandomBase64Key {
+    $bytes = New-Object byte[] 32
+    $generator = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+    try {
+        $generator.GetBytes($bytes)
+        return [Convert]::ToBase64String($bytes)
+    } finally {
+        [Array]::Clear($bytes, 0, $bytes.Length)
+        $generator.Dispose()
+    }
 }
 
 function Get-AvailableLoopbackPort {
@@ -241,6 +256,29 @@ function Wait-IsolatedStack {
     } while ((Get-Date) -lt $deadline)
 
     throw "The isolated local stack did not become healthy in time."
+}
+
+function Assert-FlywayVersion {
+    param(
+        [string] $Docker,
+        [string] $Project,
+        [string] $ExpectedVersion
+    )
+
+    if ($ExpectedVersion -ne "8") {
+        throw "The isolated Flyway version guard rejected its configured expectation."
+    }
+    $rows = @(& $Docker compose -f $composePath -p $Project exec -T postgres `
+        psql -U kelimio -d kelimio --no-psqlrc --tuples-only --no-align `
+        --command "select version from flyway_schema_history where success and version is not null order by installed_rank desc limit 1" `
+        2>$null)
+    if ($LASTEXITCODE -ne 0) {
+        throw "Unable to verify the isolated Flyway schema version."
+    }
+    $versions = @($rows | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+    if ($versions.Count -ne 1 -or $versions[0] -ne $ExpectedVersion) {
+        throw "The isolated API did not reach the expected Flyway schema version."
+    }
 }
 
 function Get-ProjectResources {
@@ -537,6 +575,7 @@ try {
         Api = Get-AvailableLoopbackPort $reservedPorts
     }
 
+    $matchingReplayKey = New-RandomBase64Key
     $environmentValues = @{
         KELIMIO_LOCAL_DB_PASSWORD = New-RandomSecret
         KELIMIO_LOCAL_KEYCLOAK_ADMIN = "e2e-admin-$(New-RandomHex -ByteCount 6)"
@@ -551,15 +590,21 @@ try {
         KELIMIO_LOCAL_API_HOST_PORT = $ports.Api.ToString()
         KELIMIO_LOCAL_KEYCLOAK_BASE_URL = "http://localhost:$($ports.Keycloak)"
         KELIMIO_LOCAL_OIDC_ISSUER = "http://localhost:$($ports.Keycloak)/realms/kelimio"
+        KELIMIO_MATCHING_REPLAY_ACTIVE_KEY_VERSION = "e2e-v1"
+        KELIMIO_MATCHING_REPLAY_KEYS = "e2e-v1=$matchingReplayKey"
         KELIMIO_LOCAL_RESTART_POLICY = "no"
     }
     foreach ($entry in $environmentValues.GetEnumerator()) {
         [Environment]::SetEnvironmentVariable($entry.Key, [string] $entry.Value, "Process")
     }
+    $entry = $null
+    [void] $environmentValues.Remove("KELIMIO_MATCHING_REPLAY_KEYS")
+    $matchingReplayKey = $null
 
     $stage = "isolated Compose guard"
     $configuration = Get-ComposeConfiguration -Docker $dockerCommand.Source -Project $project
     Assert-IsolatedComposeConfiguration -Configuration $configuration -Project $project -Ports $ports
+    $configuration = $null
     $configurationValidated = $true
 
     $stage = "isolated service startup"
@@ -577,6 +622,12 @@ try {
     if ($apiHealth.status -ne "UP") {
         throw "The isolated API readiness probe failed."
     }
+    $stage = "Flyway V8 schema guard"
+    Assert-FlywayVersion `
+        -Docker $dockerCommand.Source `
+        -Project $project `
+        -ExpectedVersion $expectedFlywayVersion
+    $stage = "isolated service readiness"
     $discovery = Invoke-RestMethod `
         -Uri "http://localhost:$($ports.Keycloak)/realms/kelimio/.well-known/openid-configuration" `
         -TimeoutSec 10

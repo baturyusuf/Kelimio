@@ -38,8 +38,9 @@ This is an evidence checklist, not a statement of completion. Check an item only
 
 ## Learning, score, energy, and progress
 
-- [ ] Pre-answer and offline payloads plus durable/mobile recovery state contain no answer key; only transaction-specific POST or ownership-scoped reconciliation feedback may reveal that submitted question's correct option for A/B or primary correct-answer text for C under ADR-000/ADR-008, and correctness is evaluated server-side.
+- [ ] Pre-answer and offline payloads plus durable/mobile recovery state contain no answer key; Type D exposes only separate independently ordered target/support arrays. The only client/API responses that may contain that submitted question's correct option for A/B, primary correct-answer text for C, or correct mapping for D are transaction-specific no-store POST or ownership-scoped no-store reconciliation feedback under ADR-000/ADR-008/ADR-009, and correctness is evaluated server-side.
 - [ ] Raw/canonical typed answers never enter durable facts, logs, analytics, metrics, outbox events, problem details, or mobile recovery; bounded input, pinned-policy grading, replay, and ownership-scoped reconciliation preserve idempotency without retaining learner text.
+- [ ] Type-D submission accepts exactly one complete two-to-six-item bijection and grades it all-or-nothing under the attempt's pinned support language. No explicit submitted/correct mapping or correct-pair count enters durable facts, recovery, logs, analytics, metrics, outbox events, or problem details; the durable fact contains a random salt, HMAC-SHA-256 token, stored key version, and required `is_correct`, with the key external to PostgreSQL and constant-time same-map replay/changed-map conflict. Security acceptance documents and tests the residual correctness inference: true identifies the authored mapping, and a false two-pair result identifies the sole swap.
 - [ ] The answer transaction atomically handles revision/attempt validation, submission idempotency, correctness, energy, attempt fact, score event, and outbox.
 - [ ] Property and concurrency tests prove score caps, first-answer rules, lifetime monotonicity, energy bounds/regeneration, duplicate/replay safety, and multi-device locking.
 - [ ] Completion, revision changes, interruption, repeat attempts, and reprojection semantics match accepted ADRs.
@@ -51,6 +52,7 @@ This is an evidence checklist, not a statement of completion. Check an item only
 - [ ] Only `.xlsx` is accepted; file type, size, checksum, malware, zip bomb, XML/path, formula, external-link, Unicode, and resource limits are enforced in an isolated worker.
 - [ ] Language-code normalization and test-mode inheritance match ADR-000/ADR-003 and workbook regression fixtures.
 - [ ] Deterministic fixed/automatic test allocation passes every required edge case without loss or duplication.
+- [ ] Production Type-D workbook conversion has approved and tested matching-group allocation semantics, never guesses pair relationships, and publication is enforced by a stored minimum-client/capability gate for unsupported clients.
 - [ ] Upload, preview/error report, approval, import commit, and original-file archive are idempotent and auditable; a course cannot be updated by a second Excel import.
 - [ ] Mobile teacher edits use ETag/If-Match, show conflicts/diffs, and never silently apply last-write-wins.
 - [ ] Draft change sets, impact preview, immutable revisions/releases, publication, rollback, package versioning, and idempotent reprojection pass end-to-end and failure tests.
@@ -92,7 +94,7 @@ This is an evidence checklist, not a statement of completion. Check an item only
 ## Infrastructure, security, and operations
 
 - [ ] Dev, staging, and production are isolated and reproducible through reviewed Terraform with protected state and drift detection.
-- [ ] Production uses TLS, WAF/CDN, managed Multi-AZ PostgreSQL, Redis, S3 protections/versioning, SQS/DLQ, KMS, Secrets Manager, least-privilege IAM, CloudTrail, and approved network boundaries.
+- [ ] Production uses TLS, WAF/CDN, managed Multi-AZ PostgreSQL, Redis, S3 protections/versioning, SQS/DLQ, KMS, Secrets Manager, least-privilege IAM, CloudTrail, and approved network boundaries. The Type-D replay keyring is injected from AWS Secrets Manager with an explicit active version, least-privilege access, audited rotation/rollback, and retention of every historical verification key while its facts remain replayable.
 - [ ] GitHub Actions deploys through OIDC short-lived roles and protected environments; no long-lived cloud key or production secret exists in source, logs, artifacts, or mobile binaries.
 - [ ] OpenTelemetry traces, metrics, and redacted structured logs correlate critical paths; SLO dashboards, synthetic checks, alarms, on-call, and runbooks are exercised.
 - [ ] Secret, SAST, dependency, license, container/IaC, API authorization, ASVS/MASVS, and penetration checks have no open critical/high finding.
@@ -103,7 +105,7 @@ This is an evidence checklist, not a statement of completion. Check an item only
 
 - [ ] Unit/property, architecture, real-service integration, contract, widget/component, golden, accessibility, end-to-end, malicious-input, concurrency, webhook replay, migration, load, soak, and disaster-recovery suites pass.
 - [ ] No critical/high defect, security issue, data-integrity discrepancy, unreconciled payment, or unresolved migration risk remains.
-- [ ] Development, staging, and production configuration validation fails closed when mandatory provider configuration is absent.
+- [ ] Development, staging, and production configuration validation fails closed when mandatory provider configuration is absent; Type-D replay startup rejects absent, malformed, duplicate, wrong-length, or unknown-active-version key configuration, and replay fails closed when a stored historical key version is unavailable.
 - [ ] Feature flags are not used as authorization; kill switches, canary/blue-green backend release, staged mobile rollout, automatic halt thresholds, rollback/fix-forward, and support communication are rehearsed.
 - [ ] Store metadata, privacy/data-safety declarations, age/content rating, reviewer notes/accounts, export compliance, IAP review, signed AAB, and TestFlight archive are accepted or ready for submission.
 - [ ] The release owner reviews all evidence, confirms every launch blocker closed, and records the final go/no-go decision.

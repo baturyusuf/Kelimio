@@ -1,12 +1,16 @@
 package com.kelimio.api.learningsession
 
 import com.kelimio.api.catalog.LearningQuestionType
+import com.kelimio.api.catalog.MatchingPairSource
+import com.kelimio.api.catalog.MatchingQuestionSource
 import com.kelimio.api.catalog.TypedAnswerSource
 import com.kelimio.api.persistence.AnswerSubmissions
 import com.kelimio.api.persistence.AttemptEvents
 import com.kelimio.api.persistence.AttemptManifest
 import com.kelimio.api.persistence.Attempts
 import com.kelimio.api.persistence.QuestionRevisionOptions
+import com.kelimio.api.persistence.QuestionRevisionMatchingPairs
+import com.kelimio.api.persistence.QuestionRevisionMatchingTranslations
 import com.kelimio.api.persistence.QuestionRevisions
 import com.kelimio.api.persistence.StreakDays
 import com.kelimio.api.persistence.TestRevisions
@@ -29,6 +33,7 @@ class LearningSessionRepository(
         courseReleaseId: UUID,
         courseAccessType: String,
         testRevisionId: UUID,
+        supportLanguage: String,
         shuffleSeed: Long,
         totalQuestions: Int,
         now: OffsetDateTime,
@@ -41,6 +46,7 @@ class LearningSessionRepository(
                 Attempts.COURSE_RELEASE_ID,
                 Attempts.COURSE_ACCESS_TYPE,
                 Attempts.TEST_REVISION_ID,
+                Attempts.SUPPORT_LANGUAGE,
                 Attempts.STATUS,
                 Attempts.SHUFFLE_SEED,
                 Attempts.TOTAL_QUESTIONS,
@@ -56,6 +62,7 @@ class LearningSessionRepository(
                 courseReleaseId,
                 courseAccessType,
                 testRevisionId,
+                supportLanguage,
                 "IN_PROGRESS",
                 shuffleSeed,
                 totalQuestions,
@@ -102,6 +109,7 @@ class LearningSessionRepository(
             Attempts.ANSWERED_COUNT,
             Attempts.CORRECT_COUNT,
             Attempts.COURSE_ACCESS_TYPE,
+            Attempts.SUPPORT_LANGUAGE,
             TestRevisions.PASS_THRESHOLD,
             Attempts.STARTED_AT,
             Attempts.FINISHED_AT,
@@ -124,6 +132,7 @@ class LearningSessionRepository(
                     answeredCount = it.get(Attempts.ANSWERED_COUNT)!!,
                     correctCount = it.get(Attempts.CORRECT_COUNT)!!,
                     courseAccessType = it.get(Attempts.COURSE_ACCESS_TYPE)!!,
+                    supportLanguage = it.get(Attempts.SUPPORT_LANGUAGE)!!,
                     passThreshold = it.get(TestRevisions.PASS_THRESHOLD)!!,
                     startedAt = it.get(Attempts.STARTED_AT)!!,
                     finishedAt = it.get(Attempts.FINISHED_AT),
@@ -146,10 +155,17 @@ class LearningSessionRepository(
             QuestionRevisions.ANSWER_MATCH_LANGUAGE,
             QuestionRevisions.CORRECT_ANSWER_MATCH_KEY,
             QuestionRevisions.ALTERNATIVE_ANSWER_MATCH_KEY,
+            QuestionRevisions.MATCHING_POLICY,
+            QuestionRevisions.MATCHING_LABEL_POLICY,
+            QuestionRevisions.MATCHING_ORDER_POLICY,
+            QuestionRevisions.MATCHING_TARGET_LANGUAGE,
+            Attempts.SUPPORT_LANGUAGE,
             AttemptManifest.POSITION,
         ).from(AttemptManifest.TABLE)
             .join(QuestionRevisions.TABLE)
             .on(QuestionRevisions.ID.eq(AttemptManifest.QUESTION_REVISION_ID))
+            .join(Attempts.TABLE)
+            .on(Attempts.ID.eq(AttemptManifest.ATTEMPT_ID))
             .where(AttemptManifest.ATTEMPT_ID.eq(attemptId))
             .and(AttemptManifest.QUESTION_REVISION_ID.eq(questionRevisionId))
             .fetchOne {
@@ -158,9 +174,18 @@ class LearningSessionRepository(
                     questionId = it.get(QuestionRevisions.QUESTION_ID)!!,
                     questionRevisionId = it.get(QuestionRevisions.ID)!!,
                     type = type,
-                    prompt = it.get(QuestionRevisions.PROMPT)!!,
+                    prompt = it.get(QuestionRevisions.PROMPT),
                     options = findOptions(questionRevisionId),
                     typedAnswer = mapTypedAnswer(it, type),
+                    matching = mapMatchingAnswer(
+                        it,
+                        type,
+                        questionRevisionId,
+                        it.get(Attempts.SUPPORT_LANGUAGE)!!,
+                    ),
+                    targetItems = emptyList(),
+                    supportItems = emptyList(),
+                    supportLanguage = it.get(Attempts.SUPPORT_LANGUAGE)!!,
                     position = it.get(AttemptManifest.POSITION)!!,
                 )
             }
@@ -177,10 +202,17 @@ class LearningSessionRepository(
             QuestionRevisions.ANSWER_MATCH_LANGUAGE,
             QuestionRevisions.CORRECT_ANSWER_MATCH_KEY,
             QuestionRevisions.ALTERNATIVE_ANSWER_MATCH_KEY,
+            QuestionRevisions.MATCHING_POLICY,
+            QuestionRevisions.MATCHING_LABEL_POLICY,
+            QuestionRevisions.MATCHING_ORDER_POLICY,
+            QuestionRevisions.MATCHING_TARGET_LANGUAGE,
+            Attempts.SUPPORT_LANGUAGE,
             AttemptManifest.POSITION,
         ).from(AttemptManifest.TABLE)
             .join(QuestionRevisions.TABLE)
             .on(QuestionRevisions.ID.eq(AttemptManifest.QUESTION_REVISION_ID))
+            .join(Attempts.TABLE)
+            .on(Attempts.ID.eq(AttemptManifest.ATTEMPT_ID))
             .where(AttemptManifest.ATTEMPT_ID.eq(attemptId))
             .orderBy(AttemptManifest.POSITION.asc())
             .fetch {
@@ -190,9 +222,18 @@ class LearningSessionRepository(
                     questionId = it.get(QuestionRevisions.QUESTION_ID)!!,
                     questionRevisionId = revisionId,
                     type = type,
-                    prompt = it.get(QuestionRevisions.PROMPT)!!,
+                    prompt = it.get(QuestionRevisions.PROMPT),
                     options = findOptions(revisionId),
                     typedAnswer = mapTypedAnswer(it, type),
+                    matching = mapMatchingAnswer(
+                        it,
+                        type,
+                        revisionId,
+                        it.get(Attempts.SUPPORT_LANGUAGE)!!,
+                    ),
+                    targetItems = emptyList(),
+                    supportItems = emptyList(),
+                    supportLanguage = it.get(Attempts.SUPPORT_LANGUAGE)!!,
                     position = it.get(AttemptManifest.POSITION)!!,
                 )
             }
@@ -273,6 +314,9 @@ class LearningSessionRepository(
                 AnswerSubmissions.TYPED_ANSWER_SALT,
                 AnswerSubmissions.TYPED_ANSWER_DIGEST,
                 AnswerSubmissions.TYPED_MATCH_ORDINAL,
+                AnswerSubmissions.MATCHING_ANSWER_SALT,
+                AnswerSubmissions.MATCHING_ANSWER_DIGEST,
+                AnswerSubmissions.MATCHING_REPLAY_KEY_VERSION,
                 AnswerSubmissions.IS_CORRECT,
                 AnswerSubmissions.ACTIVE_DELTA,
                 AnswerSubmissions.LIFETIME_DELTA,
@@ -294,6 +338,9 @@ class LearningSessionRepository(
                 result.typedAnswerSalt,
                 result.typedAnswerDigest,
                 result.typedMatchOrdinal?.toShort(),
+                result.matchingAnswerSalt,
+                result.matchingAnswerDigest,
+                result.matchingReplayKeyVersion,
                 result.correct,
                 result.activeScoreDelta.toShort(),
                 result.lifetimeScoreDelta.toShort(),
@@ -418,6 +465,9 @@ class LearningSessionRepository(
             AnswerSubmissions.TYPED_ANSWER_SALT,
             AnswerSubmissions.TYPED_ANSWER_DIGEST,
             AnswerSubmissions.TYPED_MATCH_ORDINAL,
+            AnswerSubmissions.MATCHING_ANSWER_SALT,
+            AnswerSubmissions.MATCHING_ANSWER_DIGEST,
+            AnswerSubmissions.MATCHING_REPLAY_KEY_VERSION,
             AnswerSubmissions.IS_CORRECT,
             AnswerSubmissions.ACTIVE_DELTA,
             AnswerSubmissions.LIFETIME_DELTA,
@@ -441,6 +491,9 @@ class LearningSessionRepository(
             typedAnswerSalt = record.get(AnswerSubmissions.TYPED_ANSWER_SALT),
             typedAnswerDigest = record.get(AnswerSubmissions.TYPED_ANSWER_DIGEST),
             typedMatchOrdinal = record.get(AnswerSubmissions.TYPED_MATCH_ORDINAL)?.toInt(),
+            matchingAnswerSalt = record.get(AnswerSubmissions.MATCHING_ANSWER_SALT),
+            matchingAnswerDigest = record.get(AnswerSubmissions.MATCHING_ANSWER_DIGEST),
+            matchingReplayKeyVersion = record.get(AnswerSubmissions.MATCHING_REPLAY_KEY_VERSION),
             correct = record.get(AnswerSubmissions.IS_CORRECT)!!,
             activeScoreDelta = record.get(AnswerSubmissions.ACTIVE_DELTA)!!.toInt(),
             lifetimeScoreDelta = record.get(AnswerSubmissions.LIFETIME_DELTA)!!.toInt(),
@@ -469,4 +522,56 @@ class LearningSessionRepository(
         } else {
             null
         }
+
+    private fun mapMatchingAnswer(
+        record: org.jooq.Record,
+        type: LearningQuestionType,
+        questionRevisionId: UUID,
+        supportLanguage: String,
+    ): MatchingQuestionSource? =
+        if (type == LearningQuestionType.MATCHING) {
+            MatchingQuestionSource(
+                policyVersion = record.get(QuestionRevisions.MATCHING_POLICY)!!,
+                labelPolicyVersion = record.get(QuestionRevisions.MATCHING_LABEL_POLICY)!!,
+                orderPolicyVersion = record.get(QuestionRevisions.MATCHING_ORDER_POLICY)!!,
+                targetLanguage = record.get(QuestionRevisions.MATCHING_TARGET_LANGUAGE)!!,
+                pairs = findMatchingPairs(questionRevisionId, supportLanguage),
+            )
+        } else {
+            null
+        }
+
+    private fun findMatchingPairs(
+        questionRevisionId: UUID,
+        supportLanguage: String,
+    ): List<MatchingPairSource> =
+        dsl.select(
+            QuestionRevisionMatchingPairs.TARGET_ITEM_ID,
+            QuestionRevisionMatchingPairs.TARGET_TEXT,
+            QuestionRevisionMatchingTranslations.SUPPORT_ITEM_ID,
+            QuestionRevisionMatchingTranslations.SUPPORT_TEXT,
+            QuestionRevisionMatchingPairs.POSITION,
+        ).from(QuestionRevisionMatchingPairs.TABLE)
+            .join(QuestionRevisionMatchingTranslations.TABLE)
+            .on(
+                QuestionRevisionMatchingTranslations.QUESTION_REVISION_ID
+                    .eq(QuestionRevisionMatchingPairs.QUESTION_REVISION_ID),
+            )
+            .and(
+                QuestionRevisionMatchingTranslations.TARGET_ITEM_ID
+                    .eq(QuestionRevisionMatchingPairs.TARGET_ITEM_ID),
+            )
+            .and(QuestionRevisionMatchingTranslations.COURSE_ID.eq(QuestionRevisionMatchingPairs.COURSE_ID))
+            .where(QuestionRevisionMatchingPairs.QUESTION_REVISION_ID.eq(questionRevisionId))
+            .and(QuestionRevisionMatchingTranslations.SUPPORT_LANGUAGE.eq(supportLanguage))
+            .orderBy(QuestionRevisionMatchingPairs.POSITION.asc())
+            .fetch {
+                MatchingPairSource(
+                    targetItemId = it.get(QuestionRevisionMatchingPairs.TARGET_ITEM_ID)!!,
+                    targetText = it.get(QuestionRevisionMatchingPairs.TARGET_TEXT)!!,
+                    supportItemId = it.get(QuestionRevisionMatchingTranslations.SUPPORT_ITEM_ID)!!,
+                    supportText = it.get(QuestionRevisionMatchingTranslations.SUPPORT_TEXT)!!,
+                    position = it.get(QuestionRevisionMatchingPairs.POSITION)!!,
+                )
+            }
 }

@@ -1,7 +1,10 @@
 package com.kelimio.api.development
 
 import com.kelimio.api.catalog.LearningQuestionType
+import com.kelimio.api.language.MatchingLabelPolicy
 import com.kelimio.api.language.TypedAnswerPolicy
+import com.kelimio.api.learningsession.MatchingAnswerReplayDigest
+import com.kelimio.api.learningsession.MatchingOrderPolicy
 import org.jooq.DSLContext
 import org.springframework.stereotype.Repository
 import java.time.OffsetDateTime
@@ -105,9 +108,11 @@ class LocalStarterCourseRepository(
                     prompt, correct_answer, alternative_correct_answer,
                     answer_match_policy, answer_match_language,
                     correct_answer_match_key, alternative_answer_match_key,
+                    matching_policy, matching_label_policy, matching_order_policy,
+                    matching_target_language,
                     status, created_at
                 ) values (
-                    ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?,
+                    ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
                     'DRAFT', cast(? as timestamptz)
                 )
                 """.trimIndent(),
@@ -125,7 +130,7 @@ class LocalStarterCourseRepository(
                 source.type.takeIf { it == LearningQuestionType.TYPED_CLOZE }
                     ?.let {
                         TypedAnswerPolicy.canonicalize(
-                            source.correctAnswer,
+                            checkNotNull(source.correctAnswer),
                             TARGET_LANGUAGE,
                             TypedAnswerPolicy.VERSION,
                         )
@@ -140,6 +145,14 @@ class LocalStarterCourseRepository(
                             )
                         }
                     },
+                source.type.takeIf { it == LearningQuestionType.MATCHING }
+                    ?.let { MatchingAnswerReplayDigest.POLICY_VERSION },
+                source.type.takeIf { it == LearningQuestionType.MATCHING }
+                    ?.let { MatchingLabelPolicy.VERSION },
+                source.type.takeIf { it == LearningQuestionType.MATCHING }
+                    ?.let { MatchingOrderPolicy.VERSION },
+                source.type.takeIf { it == LearningQuestionType.MATCHING }
+                    ?.let { TARGET_LANGUAGE },
                 now,
             )
             source.options.forEachIndexed { optionIndex, option ->
@@ -154,6 +167,47 @@ class LocalStarterCourseRepository(
                     option,
                     option == source.correctAnswer,
                     optionIndex + 1,
+                )
+            }
+            source.matchingPairs.forEachIndexed { pairIndex, pair ->
+                val targetItemId = UUID.randomUUID()
+                val supportItemId = UUID.randomUUID()
+                dsl.execute(
+                    """
+                    insert into question_revision_matching_pair(
+                        target_item_id, question_revision_id, course_id, position,
+                        target_text, target_label_key
+                    ) values (?, ?, ?, ?, ?, ?)
+                    """.trimIndent(),
+                    targetItemId,
+                    questionRevisionId,
+                    courseId,
+                    pairIndex + 1,
+                    pair.targetText,
+                    MatchingLabelPolicy.canonicalize(
+                        pair.targetText,
+                        TARGET_LANGUAGE,
+                        MatchingLabelPolicy.VERSION,
+                    ),
+                )
+                dsl.execute(
+                    """
+                    insert into question_revision_matching_translation(
+                        support_item_id, question_revision_id, course_id, target_item_id,
+                        support_language, support_text, support_label_key
+                    ) values (?, ?, ?, ?, ?, ?, ?)
+                    """.trimIndent(),
+                    supportItemId,
+                    questionRevisionId,
+                    courseId,
+                    targetItemId,
+                    SUPPORT_LANGUAGE,
+                    pair.supportText,
+                    MatchingLabelPolicy.canonicalize(
+                        pair.supportText,
+                        SUPPORT_LANGUAGE,
+                        MatchingLabelPolicy.VERSION,
+                    ),
                 )
             }
             dsl.execute("update question_revision set status = 'ACTIVE' where id = ?", questionRevisionId)
@@ -211,5 +265,6 @@ class LocalStarterCourseRepository(
 
     private companion object {
         const val TARGET_LANGUAGE = "tr"
+        const val SUPPORT_LANGUAGE = "en"
     }
 }

@@ -13,6 +13,13 @@
  */
 
 import { mapValues } from '../runtime';
+import type { MatchingItem } from './MatchingItem';
+import {
+    MatchingItemFromJSON,
+    MatchingItemFromJSONTyped,
+    MatchingItemToJSON,
+    MatchingItemToJSONTyped,
+} from './MatchingItem';
 import type { AnswerOption } from './AnswerOption';
 import {
     AnswerOptionFromJSON,
@@ -22,7 +29,7 @@ import {
 } from './AnswerOption';
 
 /**
- * Answer-key-free online question payload. MULTIPLE_CHOICE_CLOZE and TYPED_CLOZE carry a raw target-language sentence and exactly one literal ASCII --- marker; the client renders that marker as an accessible visual blank. TYPED_CLOZE always carries an empty options array.
+ * Answer-key-free online question payload. MULTIPLE_CHOICE_CLOZE and TYPED_CLOZE carry a raw target-language sentence and exactly one literal ASCII --- marker; the client renders that marker as an accessible visual blank. MATCHING has a null prompt, no options, and independently ordered target/support item arrays with no field linking the two sides.
  * @export
  * @interface QuestionPayload
  */
@@ -52,17 +59,29 @@ export interface QuestionPayload {
      */
     position: number;
     /**
-     *
+     * Required question prompt value. MATCHING carries an explicit null; every other question type carries nonblank target-language text.
      * @type {string}
      * @memberof QuestionPayload
      */
-    prompt: string;
+    prompt: string | null;
     /**
      *
      * @type {Array<AnswerOption>}
      * @memberof QuestionPayload
      */
     options: Array<AnswerOption>;
+    /**
+     *
+     * @type {Array<MatchingItem>}
+     * @memberof QuestionPayload
+     */
+    targetItems: Array<MatchingItem>;
+    /**
+     *
+     * @type {Array<MatchingItem>}
+     * @memberof QuestionPayload
+     */
+    supportItems: Array<MatchingItem>;
 }
 
 
@@ -72,7 +91,8 @@ export interface QuestionPayload {
 export const QuestionPayloadTypeEnum = {
     WordMultipleChoice: 'WORD_MULTIPLE_CHOICE',
     MultipleChoiceCloze: 'MULTIPLE_CHOICE_CLOZE',
-    TypedCloze: 'TYPED_CLOZE'
+    TypedCloze: 'TYPED_CLOZE',
+    Matching: 'MATCHING'
 } as const;
 export type QuestionPayloadTypeEnum = typeof QuestionPayloadTypeEnum[keyof typeof QuestionPayloadTypeEnum];
 
@@ -87,6 +107,8 @@ export function instanceOfQuestionPayload(value: object): value is QuestionPaylo
     if (!('position' in value) || value['position'] === undefined) return false;
     if (!('prompt' in value) || value['prompt'] === undefined) return false;
     if (!('options' in value) || value['options'] === undefined) return false;
+    if (!('targetItems' in value) || value['targetItems'] === undefined) return false;
+    if (!('supportItems' in value) || value['supportItems'] === undefined) return false;
     return true;
 }
 
@@ -106,6 +128,8 @@ export function QuestionPayloadFromJSONTyped(json: any, ignoreDiscriminator: boo
         'position': json['position'],
         'prompt': json['prompt'],
         'options': ((json['options'] as Array<any>).map(AnswerOptionFromJSON)),
+        'targetItems': ((json['targetItems'] as Array<any>).map(MatchingItemFromJSON)),
+        'supportItems': ((json['supportItems'] as Array<any>).map(MatchingItemFromJSON)),
     };
 }
 
@@ -126,5 +150,7 @@ export function QuestionPayloadToJSONTyped(value?: QuestionPayload | null, ignor
         'position': value['position'],
         'prompt': value['prompt'],
         'options': ((value['options'] as Array<any>).map(AnswerOptionToJSON)),
+        'targetItems': ((value['targetItems'] as Array<any>).map(MatchingItemToJSON)),
+        'supportItems': ((value['supportItems'] as Array<any>).map(MatchingItemToJSON)),
     };
 }

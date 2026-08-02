@@ -4,6 +4,7 @@
 
 // ignore_for_file: unused_element
 import 'package:kelimio_api_client/src/model/answer_option.dart';
+import 'package:kelimio_api_client/src/model/matching_item.dart';
 import 'package:json_annotation/json_annotation.dart';
 
 part 'question_payload.g.dart';
@@ -28,6 +29,10 @@ class QuestionPayload {
     required this.prompt,
 
     required this.options,
+
+    required this.targetItems,
+
+    required this.supportItems,
   });
 
   @JsonKey(name: r'questionId', required: true, includeIfNull: false)
@@ -43,11 +48,18 @@ class QuestionPayload {
   @JsonKey(name: r'position', required: true, includeIfNull: false)
   final int position;
 
-  @JsonKey(name: r'prompt', required: true, includeIfNull: false)
-  final String prompt;
+  /// Required question prompt value. MATCHING carries an explicit null; every other question type carries nonblank target-language text.
+  @JsonKey(name: r'prompt', required: true, includeIfNull: true)
+  final String? prompt;
 
   @JsonKey(name: r'options', required: true, includeIfNull: false)
   final List<AnswerOption> options;
+
+  @JsonKey(name: r'targetItems', required: true, includeIfNull: false)
+  final List<MatchingItem> targetItems;
+
+  @JsonKey(name: r'supportItems', required: true, includeIfNull: false)
+  final List<MatchingItem> supportItems;
 
   @override
   bool operator ==(Object other) =>
@@ -58,7 +70,9 @@ class QuestionPayload {
           other.type == type &&
           other.position == position &&
           other.prompt == prompt &&
-          other.options == options;
+          other.options == options &&
+          other.targetItems == targetItems &&
+          other.supportItems == supportItems;
 
   @override
   int get hashCode =>
@@ -66,8 +80,10 @@ class QuestionPayload {
       questionRevisionId.hashCode +
       type.hashCode +
       position.hashCode +
-      prompt.hashCode +
-      options.hashCode;
+      (prompt == null ? 0 : prompt.hashCode) +
+      options.hashCode +
+      targetItems.hashCode +
+      supportItems.hashCode;
 
   factory QuestionPayload.fromJson(Map<String, dynamic> json) =>
       _$QuestionPayloadFromJson(json);
@@ -86,7 +102,9 @@ enum QuestionPayloadTypeEnum {
   @JsonValue(r'MULTIPLE_CHOICE_CLOZE')
   MULTIPLE_CHOICE_CLOZE(r'MULTIPLE_CHOICE_CLOZE'),
   @JsonValue(r'TYPED_CLOZE')
-  TYPED_CLOZE(r'TYPED_CLOZE');
+  TYPED_CLOZE(r'TYPED_CLOZE'),
+  @JsonValue(r'MATCHING')
+  MATCHING(r'MATCHING');
 
   const QuestionPayloadTypeEnum(this.value);
 

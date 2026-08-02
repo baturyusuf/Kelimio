@@ -1,6 +1,7 @@
 package com.kelimio.api.learningsession
 
 import com.fasterxml.jackson.annotation.JsonIgnore
+import com.fasterxml.jackson.annotation.JsonInclude
 import com.kelimio.api.energy.EnergySnapshot
 import com.kelimio.api.identityprofile.CurrentUserService
 import com.kelimio.api.language.InvalidTypedAnswerException
@@ -89,32 +90,58 @@ class SubmitAnswerRequest(
     @field:NotNull val questionRevisionId: UUID,
     val selectedOptionId: UUID? = null,
     val typedAnswer: String? = null,
+    @field:Valid val matches: List<MatchingSelectionRequest?>? = null,
 ) {
     @get:JsonIgnore
     @get:AssertTrue(message = "Exactly one answer form is required")
     val hasExactlyOneAnswer: Boolean
-        get() = (selectedOptionId == null) != (typedAnswer == null)
+        get() = listOf(selectedOptionId, typedAnswer, matches).count { it != null } == 1
 
     fun toSubmittedAnswer(): SubmittedAnswer {
         selectedOptionId?.let { return SubmittedAnswer.Option(it) }
-        val value = checkNotNull(typedAnswer)
-        try {
-            TypedAnswerPolicy.validateRawEnvelope(value)
-        } catch (_: InvalidTypedAnswerException) {
-            throw UnprocessableProblem("The typed answer is invalid.")
+        typedAnswer?.let { value ->
+            try {
+                TypedAnswerPolicy.validateRawEnvelope(value)
+            } catch (_: InvalidTypedAnswerException) {
+                throw UnprocessableProblem("The typed answer is invalid.")
+            }
+            return SubmittedAnswer.TypedText(value)
         }
-        return SubmittedAnswer.TypedText(value)
+        val edges = checkNotNull(matches).map { selection ->
+            val value = selection
+                ?: throw UnprocessableProblem("The matching answer must be a complete bijection.")
+            SubmittedMatch(value.targetItemId, value.supportItemId)
+        }
+        val targetIds = edges.map { it.targetItemId }
+        val supportIds = edges.map { it.supportItemId }
+        if (
+            edges.size !in MatchingAnswerReplayDigest.MIN_EDGES..MatchingAnswerReplayDigest.MAX_EDGES ||
+            targetIds.toSet().size != edges.size ||
+            supportIds.toSet().size != edges.size ||
+            targetIds.toSet().intersect(supportIds.toSet()).isNotEmpty()
+        ) {
+            throw UnprocessableProblem("The matching answer must be a complete bijection.")
+        }
+        return SubmittedAnswer.Matching(edges)
     }
 
     override fun toString(): String =
         "SubmitAnswerRequest(submissionId=$submissionId, questionRevisionId=$questionRevisionId, " +
-            "selectedOptionId=$selectedOptionId, typedAnswer=[REDACTED])"
+            "selectedOptionId=[REDACTED], typedAnswer=[REDACTED], matches=[REDACTED])"
+}
+
+data class MatchingSelectionRequest(
+    @field:NotNull val targetItemId: UUID,
+    @field:NotNull val supportItemId: UUID,
+) {
+    override fun toString(): String = "MatchingSelectionRequest([REDACTED])"
 }
 
 data class StartAttemptResponse(
     val id: UUID,
     val testId: UUID,
     val testRevisionId: UUID,
+    val supportLanguage: String,
     val state: String,
     val questions: List<AttemptQuestionResponse>,
     val startedAt: OffsetDateTime,
@@ -124,12 +151,20 @@ data class AttemptQuestionResponse(
     val questionId: UUID,
     val questionRevisionId: UUID,
     val type: String,
-    val prompt: String,
+    @get:JsonInclude(JsonInclude.Include.ALWAYS)
+    val prompt: String?,
     val position: Int,
     val options: List<AttemptOptionResponse>,
+    val targetItems: List<MatchingItemResponse>,
+    val supportItems: List<MatchingItemResponse>,
 )
 
 data class AttemptOptionResponse(
+    val id: UUID,
+    val text: String,
+)
+
+data class MatchingItemResponse(
     val id: UUID,
     val text: String,
 )
@@ -139,6 +174,7 @@ data class SubmitAnswerResponse(
     val correct: Boolean,
     val correctOptionId: UUID?,
     val correctAnswerText: String?,
+    val correctMatches: List<CorrectMatchResponse>?,
     val activeScoreDelta: Int,
     val lifetimeScoreDelta: Int,
     val activeQuestionScore: Int,
@@ -148,10 +184,17 @@ data class SubmitAnswerResponse(
 ) {
     override fun toString(): String =
         "SubmitAnswerResponse(submissionId=$submissionId, correct=$correct, " +
-            "correctOptionId=[REDACTED], correctAnswerText=[REDACTED], " +
+            "feedback=[REDACTED], " +
             "activeScoreDelta=$activeScoreDelta, lifetimeScoreDelta=$lifetimeScoreDelta, " +
             "activeQuestionScore=$activeQuestionScore, lifetimeScore=$lifetimeScore, " +
             "energy=$energy, attemptState=$attemptState)"
+}
+
+data class CorrectMatchResponse(
+    val targetItemId: UUID,
+    val supportItemId: UUID,
+) {
+    override fun toString(): String = "CorrectMatchResponse([REDACTED])"
 }
 
 data class FinishAttemptResponse(
@@ -167,6 +210,7 @@ private fun StartAttemptResult.toResponse() = StartAttemptResponse(
     id = attemptId,
     testId = testId,
     testRevisionId = testRevisionId,
+    supportLanguage = supportLanguage,
     state = status,
     questions = questions.map { question ->
         AttemptQuestionResponse(
@@ -176,6 +220,8 @@ private fun StartAttemptResult.toResponse() = StartAttemptResponse(
             prompt = question.prompt,
             position = question.position,
             options = question.options.map { AttemptOptionResponse(it.id, it.text) },
+            targetItems = question.targetItems.map { MatchingItemResponse(it.id, it.text) },
+            supportItems = question.supportItems.map { MatchingItemResponse(it.id, it.text) },
         )
     },
     startedAt = startedAt,
@@ -186,6 +232,7 @@ private fun SubmitAnswerResult.toResponse() = SubmitAnswerResponse(
     correct = correct,
     correctOptionId = correctOptionId,
     correctAnswerText = correctAnswerText,
+    correctMatches = correctMatches?.map { CorrectMatchResponse(it.targetItemId, it.supportItemId) },
     activeScoreDelta = activeScoreDelta,
     lifetimeScoreDelta = lifetimeScoreDelta,
     activeQuestionScore = activeQuestionScore,

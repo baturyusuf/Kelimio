@@ -10,17 +10,118 @@ final class ActiveAttempt {
 }
 
 final class PendingAnswer {
-  const PendingAnswer({
+  PendingAnswer({
     required this.submissionId,
     required this.questionRevisionId,
     required this.input,
-  });
+    this.matchingResendUsed = false,
+  }) {
+    if (matchingResendUsed && input.kind != AnswerKind.matching) {
+      throw ArgumentError('Only a matching answer can use the resend marker');
+    }
+  }
 
   final String submissionId;
   final String questionRevisionId;
   final AnswerInput input;
+  final bool matchingResendUsed;
 
   AnswerKind get kind => input.kind;
+
+  PendingAnswer markMatchingResendUsed() {
+    if (kind != AnswerKind.matching || matchingResendUsed) {
+      throw StateError('Matching resend is not available');
+    }
+    return PendingAnswer(
+      submissionId: submissionId,
+      questionRevisionId: questionRevisionId,
+      input: input,
+      matchingResendUsed: true,
+    );
+  }
+}
+
+/// Ephemeral learner work for a matching question.
+///
+/// The selected relationships are intentionally absent from
+/// [AttemptRecoverySnapshot]. They may live only for the current process and
+/// are redacted from diagnostics.
+final class MatchingDraft {
+  const MatchingDraft.empty() : activeTargetItemId = null, pairs = const [];
+
+  MatchingDraft._({
+    this.activeTargetItemId,
+    required Iterable<MatchingPair> pairs,
+  }) : pairs = List.unmodifiable(pairs);
+
+  final String? activeTargetItemId;
+  final List<MatchingPair> pairs;
+
+  bool isCompleteFor(Question question) {
+    if (activeTargetItemId != null ||
+        question.answerKind != AnswerKind.matching ||
+        pairs.length != question.targetItems.length) {
+      return false;
+    }
+    return MatchingAnswerInput(pairs).hasExactCoverageOf(question);
+  }
+
+  MatchingDraft selectTarget(Question question, String targetItemId) {
+    _requireMatchingQuestion(question);
+    if (!question.containsTargetItem(targetItemId) ||
+        pairs.any((pair) => pair.targetItemId == targetItemId)) {
+      throw ArgumentError('Target item cannot be selected');
+    }
+    return MatchingDraft._(
+      activeTargetItemId: activeTargetItemId == targetItemId
+          ? null
+          : targetItemId,
+      pairs: pairs,
+    );
+  }
+
+  MatchingDraft selectSupport(Question question, String supportItemId) {
+    _requireMatchingQuestion(question);
+    final targetItemId = activeTargetItemId;
+    if (targetItemId == null ||
+        !question.containsSupportItem(supportItemId) ||
+        pairs.any((pair) => pair.supportItemId == supportItemId)) {
+      throw ArgumentError('Support item cannot be selected');
+    }
+    return MatchingDraft._(
+      pairs: [
+        ...pairs,
+        MatchingPair(targetItemId: targetItemId, supportItemId: supportItemId),
+      ],
+    );
+  }
+
+  MatchingDraft removePair(Question question, String targetItemId) {
+    _requireMatchingQuestion(question);
+    if (!pairs.any((pair) => pair.targetItemId == targetItemId)) {
+      throw ArgumentError('Matching pair does not exist');
+    }
+    return MatchingDraft._(
+      pairs: pairs.where((pair) => pair.targetItemId != targetItemId),
+    );
+  }
+
+  MatchingAnswerInput completeAnswerFor(Question question) {
+    final answer = MatchingAnswerInput(pairs);
+    if (activeTargetItemId != null || !answer.hasExactCoverageOf(question)) {
+      throw StateError('Matching draft is incomplete');
+    }
+    return answer;
+  }
+
+  static void _requireMatchingQuestion(Question question) {
+    if (question.answerKind != AnswerKind.matching) {
+      throw ArgumentError('Matching draft requires a matching question');
+    }
+  }
+
+  @override
+  String toString() => 'MatchingDraft(<redacted>)';
 }
 
 sealed class AttemptState {
@@ -50,12 +151,14 @@ final class AttemptPresenting extends AttemptState {
     required this.questionIndex,
     this.selectedOptionId,
     this.resumeSubmissionId,
+    this.matchingDraft = const MatchingDraft.empty(),
   });
 
   final ActiveAttempt context;
   final int questionIndex;
   final String? selectedOptionId;
   final String? resumeSubmissionId;
+  final MatchingDraft matchingDraft;
 
   Question get question => context.session.questions[questionIndex];
 
@@ -119,12 +222,16 @@ final class AttemptFeedback extends AttemptState {
     required this.answerKind,
     required this.feedback,
     this.selectedOptionId,
+    this.submittedMatches,
   });
 
   final ActiveAttempt context;
   final int questionIndex;
   final AnswerKind answerKind;
   final String? selectedOptionId;
+
+  /// Present only for live matching feedback; never written to recovery data.
+  final MatchingAnswerInput? submittedMatches;
   final AnswerFeedback feedback;
 
   Question get question => context.session.questions[questionIndex];
@@ -335,6 +442,36 @@ final class AttemptTypedSubmissionReserved extends AttemptEvent {
   final String submissionId;
 }
 
+final class AttemptMatchingTargetSelected extends AttemptEvent {
+  const AttemptMatchingTargetSelected(this.targetItemId);
+
+  final String targetItemId;
+}
+
+final class AttemptMatchingSupportSelected extends AttemptEvent {
+  const AttemptMatchingSupportSelected(this.supportItemId);
+
+  final String supportItemId;
+}
+
+final class AttemptMatchingPairRemoved extends AttemptEvent {
+  const AttemptMatchingPairRemoved(this.targetItemId);
+
+  final String targetItemId;
+}
+
+final class AttemptMatchingSubmitRequested extends AttemptEvent {
+  const AttemptMatchingSubmitRequested(this.submissionId);
+
+  final String submissionId;
+}
+
+final class AttemptMatchingSubmissionReserved extends AttemptEvent {
+  const AttemptMatchingSubmissionReserved(this.submissionId);
+
+  final String submissionId;
+}
+
 final class AttemptReconciliationRequested extends AttemptEvent {
   const AttemptReconciliationRequested({
     required this.submissionId,
@@ -455,6 +592,8 @@ final class AttemptMachine {
           context: presenting.context,
           questionIndex: presenting.questionIndex,
           selectedOptionId: selected.optionId,
+          resumeSubmissionId: presenting.resumeSubmissionId,
+          matchingDraft: presenting.matchingDraft,
         );
       }
       if (event case final AttemptSubmitRequested requested) {
@@ -501,6 +640,104 @@ final class AttemptMachine {
           context: presenting.context,
           questionIndex: presenting.questionIndex,
           resumeSubmissionId: reserved.submissionId,
+          matchingDraft: presenting.matchingDraft,
+        );
+      }
+      if (event case final AttemptMatchingTargetSelected selected) {
+        if (presenting.question.answerKind != AnswerKind.matching) {
+          throw IllegalAttemptTransition(state.runtimeType, event.runtimeType);
+        }
+        final MatchingDraft draft;
+        try {
+          draft = presenting.matchingDraft.selectTarget(
+            presenting.question,
+            selected.targetItemId,
+          );
+        } on ArgumentError {
+          throw IllegalAttemptTransition(state.runtimeType, event.runtimeType);
+        }
+        return AttemptPresenting(
+          context: presenting.context,
+          questionIndex: presenting.questionIndex,
+          resumeSubmissionId: presenting.resumeSubmissionId,
+          matchingDraft: draft,
+        );
+      }
+      if (event case final AttemptMatchingSupportSelected selected) {
+        if (presenting.question.answerKind != AnswerKind.matching) {
+          throw IllegalAttemptTransition(state.runtimeType, event.runtimeType);
+        }
+        final MatchingDraft draft;
+        try {
+          draft = presenting.matchingDraft.selectSupport(
+            presenting.question,
+            selected.supportItemId,
+          );
+        } on ArgumentError {
+          throw IllegalAttemptTransition(state.runtimeType, event.runtimeType);
+        }
+        return AttemptPresenting(
+          context: presenting.context,
+          questionIndex: presenting.questionIndex,
+          resumeSubmissionId: presenting.resumeSubmissionId,
+          matchingDraft: draft,
+        );
+      }
+      if (event case final AttemptMatchingPairRemoved removed) {
+        if (presenting.question.answerKind != AnswerKind.matching) {
+          throw IllegalAttemptTransition(state.runtimeType, event.runtimeType);
+        }
+        final MatchingDraft draft;
+        try {
+          draft = presenting.matchingDraft.removePair(
+            presenting.question,
+            removed.targetItemId,
+          );
+        } on ArgumentError {
+          throw IllegalAttemptTransition(state.runtimeType, event.runtimeType);
+        }
+        return AttemptPresenting(
+          context: presenting.context,
+          questionIndex: presenting.questionIndex,
+          resumeSubmissionId: presenting.resumeSubmissionId,
+          matchingDraft: draft,
+        );
+      }
+      if (event case final AttemptMatchingSubmitRequested requested) {
+        if (presenting.question.answerKind != AnswerKind.matching ||
+            requested.submissionId.isEmpty ||
+            (presenting.resumeSubmissionId != null &&
+                presenting.resumeSubmissionId != requested.submissionId)) {
+          throw IllegalAttemptTransition(state.runtimeType, event.runtimeType);
+        }
+        if (!presenting.matchingDraft.isCompleteFor(presenting.question)) {
+          throw IllegalAttemptTransition(state.runtimeType, event.runtimeType);
+        }
+        final answer = presenting.matchingDraft.completeAnswerFor(
+          presenting.question,
+        );
+        return AttemptSubmitting(
+          context: presenting.context,
+          questionIndex: presenting.questionIndex,
+          pending: PendingAnswer(
+            submissionId: requested.submissionId,
+            questionRevisionId: presenting.question.revisionId,
+            input: answer,
+          ),
+        );
+      }
+      if (event case final AttemptMatchingSubmissionReserved reserved) {
+        if (presenting.question.answerKind != AnswerKind.matching ||
+            presenting.resumeSubmissionId != null ||
+            reserved.submissionId.isEmpty ||
+            presenting.matchingDraft.pairs.isNotEmpty ||
+            presenting.matchingDraft.activeTargetItemId != null) {
+          throw IllegalAttemptTransition(state.runtimeType, event.runtimeType);
+        }
+        return AttemptPresenting(
+          context: presenting.context,
+          questionIndex: presenting.questionIndex,
+          resumeSubmissionId: reserved.submissionId,
         );
       }
       if (event case final AttemptReconciliationRequested requested) {
@@ -528,7 +765,11 @@ final class AttemptMachine {
           answerKind: submitting.pending.kind,
           selectedOptionId: switch (submitting.pending.input) {
             final OptionAnswerInput option => option.selectedOptionId,
-            TypedAnswerInput() => null,
+            TypedAnswerInput() || MatchingAnswerInput() => null,
+          },
+          submittedMatches: switch (submitting.pending.input) {
+            final MatchingAnswerInput matching => matching,
+            _ => null,
           },
           feedback: recorded.feedback,
         );
@@ -559,22 +800,38 @@ final class AttemptMachine {
           final OptionAnswerInput option => option.selectedOptionId,
           _ => null,
         };
+        final submittedMatches = switch (reconciling.pending?.input) {
+          final MatchingAnswerInput matching => matching,
+          _ => null,
+        };
         return _feedbackState(
           context: reconciling.context,
           questionIndex: reconciling.questionIndex,
           submissionId: reconciling.submissionId,
           answerKind: reconciling.answerKind,
           selectedOptionId: selectedOptionId,
+          submittedMatches: submittedMatches,
           feedback: recorded.feedback,
         );
       }
       if (event is AttemptReconciliationMissing) {
-        if (reconciling.answerKind == AnswerKind.typed &&
+        if ((reconciling.answerKind == AnswerKind.typed ||
+                reconciling.answerKind == AnswerKind.matching) &&
             reconciling.pending == null) {
           return AttemptPresenting(
             context: reconciling.context,
             questionIndex: reconciling.questionIndex,
             resumeSubmissionId: reconciling.submissionId,
+          );
+        }
+        if (reconciling.answerKind == AnswerKind.matching &&
+            reconciling.pending != null &&
+            reconciling.originalFailure?.isRetryable == true &&
+            !reconciling.pending!.matchingResendUsed) {
+          return AttemptSubmitting(
+            context: reconciling.context,
+            questionIndex: reconciling.questionIndex,
+            pending: reconciling.pending!.markMatchingResendUsed(),
           );
         }
         return AttemptFatal(
@@ -684,6 +941,7 @@ final class AttemptMachine {
     required String submissionId,
     required AnswerKind answerKind,
     required String? selectedOptionId,
+    required MatchingAnswerInput? submittedMatches,
     required AnswerFeedback feedback,
   }) {
     final question = context.session.questions[questionIndex];
@@ -697,7 +955,23 @@ final class AttemptMachine {
       AnswerKind.typed =>
         selectedOptionId == null &&
             feedback.correctOptionId == null &&
-            feedback.correctAnswerText != null,
+            feedback.correctAnswerText != null &&
+            feedback.correctMatches == null &&
+            submittedMatches == null,
+      AnswerKind.matching =>
+        selectedOptionId == null &&
+            feedback.correctOptionId == null &&
+            feedback.correctAnswerText == null &&
+            feedback.correctMatches != null &&
+            MatchingAnswerInput(
+              feedback.correctMatches!,
+            ).hasExactCoverageOf(question) &&
+            (submittedMatches == null ||
+                (submittedMatches.hasExactCoverageOf(question) &&
+                    feedback.correct ==
+                        submittedMatches.hasSameMappingAs(
+                          feedback.correctMatches!,
+                        ))),
     };
     if (feedback.submissionId != submissionId ||
         question.answerKind != answerKind ||
@@ -722,6 +996,7 @@ final class AttemptMachine {
       questionIndex: questionIndex,
       answerKind: answerKind,
       selectedOptionId: selectedOptionId,
+      submittedMatches: submittedMatches,
       feedback: feedback,
     );
   }
@@ -752,8 +1027,12 @@ final class AttemptMachine {
     AttemptSubmitting state,
     AppFailure failure,
   ) {
-    if (failure is ValidationFailure &&
-        state.pending.kind == AnswerKind.typed) {
+    final requiresBlankSameId =
+        failure is ValidationFailure ||
+        (failure is ServerFailure && failure.status == 413);
+    if (requiresBlankSameId &&
+        (state.pending.kind == AnswerKind.typed ||
+            state.pending.kind == AnswerKind.matching)) {
       return AttemptPresenting(
         context: state.context,
         questionIndex: state.questionIndex,
@@ -775,6 +1054,19 @@ final class AttemptMachine {
       );
     }
     if (failure.isRetryable) {
+      if (state.pending.kind == AnswerKind.matching) {
+        return AttemptRecovery(
+          recovery: ReconciliationRecoveryContext(
+            context: state.context,
+            questionIndex: state.questionIndex,
+            submissionId: state.pending.submissionId,
+            answerKind: state.pending.kind,
+            pending: state.pending,
+            originalFailure: failure,
+          ),
+          failure: failure,
+        );
+      }
       return AttemptRecovery(
         recovery: SubmissionRecoveryContext(
           context: state.context,

@@ -13,8 +13,16 @@
  */
 
 import { mapValues } from '../runtime';
+import type { MatchingSelection } from './MatchingSelection';
+import {
+    MatchingSelectionFromJSON,
+    MatchingSelectionFromJSONTyped,
+    MatchingSelectionToJSON,
+    MatchingSelectionToJSONTyped,
+} from './MatchingSelection';
+
 /**
- * Carries exactly one answer form. typedAnswer is sensitive, is evaluated only by the server, and must never be logged or emitted to analytics or outbox events.
+ * Carries exactly one answer form. typedAnswer and matches are sensitive, are evaluated only by the server, and must never be logged or emitted to analytics or outbox events.
  * @export
  * @interface SubmitAnswerRequest
  */
@@ -43,6 +51,12 @@ export interface SubmitAnswerRequest {
      * @memberof SubmitAnswerRequest
      */
     typedAnswer?: string;
+    /**
+     *
+     * @type {Array<MatchingSelection>}
+     * @memberof SubmitAnswerRequest
+     */
+    matches?: Array<MatchingSelection>;
 }
 
 /**
@@ -68,6 +82,7 @@ export function SubmitAnswerRequestFromJSONTyped(json: any, ignoreDiscriminator:
         'questionRevisionId': json['questionRevisionId'],
         'selectedOptionId': json['selectedOptionId'] == null ? undefined : json['selectedOptionId'],
         'typedAnswer': json['typedAnswer'] == null ? undefined : json['typedAnswer'],
+        'matches': json['matches'] == null ? undefined : ((json['matches'] as Array<any>).map(MatchingSelectionFromJSON)),
     };
 }
 
@@ -86,5 +101,6 @@ export function SubmitAnswerRequestToJSONTyped(value?: SubmitAnswerRequest | nul
         'questionRevisionId': value['questionRevisionId'],
         'selectedOptionId': value['selectedOptionId'],
         'typedAnswer': value['typedAnswer'],
+        'matches': value['matches'] == null ? undefined : ((value['matches'] as Array<any>).map(MatchingSelectionToJSON)),
     };
 }

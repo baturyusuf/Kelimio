@@ -42,14 +42,14 @@ Exit gate:
 
 Status: in progress; the local code path exists, but the staging exit gate is not met.
 
-Implemented so far: JWT/OIDC resource-server validation, mobile Authorization Code + PKCE adapter, a server-enforced provisional-user gate and explicit one-time profile/language/time-zone setup, catalog/detail/enrollment, Type-A word, Type-B multiple-choice-cloze, and privacy-safe Type-C typed-cloze attempts, persistent idempotency, authoritative scoring/energy/outbox transaction, generated-client mobile repositories, raw-free Drift recovery state, owner-scoped lost-response reconciliation, result display, an idempotent rebuildable learner-course progress projection, and real-PostgreSQL local transaction evidence. A fail-closed local-development command creates immutable provenance-recorded starter release v3 with five Type-A, one Type-B, and the exact reviewed-workbook Type-C row without seeding users or learning results. An isolated Android acceptance runner proves public Keycloak registration, Mailpit verification before code issuance, S256 PKCE, profile gating, enrollment, seven authoritative mixed questions, Type-B replay plus Type-C replay/reconciliation, the 7/7 and 420/420 projection at version 8, and private-state purge against fresh real services. General profile editing and legal-consent facts, Type D, the remaining projections, production telemetry, production-supported course creation/import, native Custom Tab/deep-link acceptance, and staging proof remain open.
+Implemented so far: JWT/OIDC resource-server validation, mobile Authorization Code + PKCE adapter, a server-enforced provisional-user gate and explicit one-time profile/language/time-zone setup, catalog/detail/enrollment, and authoritative Type-A word, Type-B multiple-choice-cloze, privacy-safe Type-C typed-cloze, and Type-D matching attempts. Type D exposes independently ordered target/support arrays, accepts one complete two-to-six-item bijection, and grades all-or-nothing under the attempt's pinned support language. Its durable answer fact retains no submitted mapping or correct-pair count: it contains a random salt, versioned externally keyed HMAC-SHA-256 replay evidence, and required `is_correct`. Authored correct relationships remain only in immutable content tables and are not copied into answer facts, events, logs, outbox payloads, mobile recovery, or diagnostics; the staging/production secret keyring remains external to PostgreSQL and source. Version-specific replay compares in constant time and fails closed for missing or invalid key configuration. HMAC resists candidate testing under database-only compromise while its external key remains secret, but correctness necessarily discloses the authored mapping when true and the sole swap for a false two-pair answer. Persistent idempotency, the authoritative scoring/energy/outbox transaction, generated-client mobile repositories, privacy-safe Drift recovery, owner-scoped lost-response reconciliation, result display, an idempotent rebuildable learner-course progress projection, and real-PostgreSQL local transaction evidence are present. A fail-closed local-development command creates immutable provenance-recorded starter release v4 with five Type-A, one Type-B, the exact reviewed-workbook Type-C row, and one four-pair Type-D question from the unambiguous `EV` group without seeding users or learning results. The backend passes 28 suites and 135/135 tests with no failure, error, or skip; contract generation passes 129/129 Dart tests plus TypeScript CJS/ESM consumers and deterministic regeneration of 158 generated source files; and Flutter analysis plus 117/117 tests pass, including the focused 18/18 accessible Type-D suite. The isolated Android acceptance runner passes a fresh Flyway V8 real-service eight-question A/B/C/D journey using a per-run random 32-byte replay key, with reordered same-map Type-D replay, owner-scoped reconciliation, changed-edge `409` without mutation, 8/8 and 480/480 at projection version 9, private-state purge, isolated cleanup, and unchanged normal services/ADB mappings. Production AWS Secrets Manager key provisioning, rotation/rollback, historical verification-key retention, and staging evidence remain open alongside general profile editing and legal-consent facts, the broader device matrix, remaining projections, production telemetry, production-supported course creation/import, and native Custom Tab/deep-link acceptance.
 
 Deliverables:
 
 - OIDC Authorization Code + PKCE sign-in and secure refresh handling;
 - profile/language preferences with app, target, and support language separation;
 - real course catalog/detail and public/private enrollment;
-- Type-A word, Type-B multiple-choice-cloze, and Type-C typed-cloze online questions with an explicit attempt state machine and raw typed-answer privacy;
+- all four online question types with an explicit attempt state machine, raw typed-answer privacy, and complete-bijection Type-D matching backed by random-salt, versioned externally keyed HMAC replay evidence with no explicit durable mapping or correct-pair count, while documenting the required `is_correct` disclosure;
 - transactionally authoritative answer handling: revision validation, submission idempotency, server correctness, energy, attempt fact, score event, and outbox;
 - synchronous response plus asynchronous progress/profile/ranking projection;
 - Flutter generated client, repository, Drift cache, typed errors, and result rendering;
@@ -62,7 +62,9 @@ A registered staging user signs in, enrolls, answers a real question against the
 
 ## Phase 2 — Student learning product
 
-Status: in progress; Type A, Type B, and Type C run locally, while Type D and the remaining student product are open.
+Status: in progress; all four question types, the 117-test Flutter suite, and the isolated eight-question Android E2E run locally, while the broader device matrix and remaining student product are open.
+
+Implemented foundation: the Type-D domain/controller/UI path provides an accessible two-stage non-drag interaction with RTL, focus, screen-reader, narrow-layout, and text-scale coverage. It never grades locally, retains no submitted or correct mapping in durable recovery or diagnostics, and rebuilds an empty board after restart unless ownership-scoped no-store reconciliation returns committed feedback. Flutter analysis and all 117 tests pass, including the focused 18/18 Type-D suite, and the updated eight-question Android E2E passes against a fresh Flyway V8 stack using a per-run random 32-byte replay key; these do not replace the supported device matrix.
 
 Deliverables:
 
@@ -82,12 +84,13 @@ Public/private/free student journeys, every question type, retry/idempotency, sc
 
 Status: secure parser/planner prototype implemented; production workflow not started.
 
-Foundation evidence: the isolated backend core performs bounded malicious-package preflight, read-only streaming parse, multilingual grammar normalization, deterministic test allocation, and versioned allocation/full-preview digests. It intentionally exposes no upload API or persistence path. The Phase 3 deliverables below remain required before an import can create or change a course.
+Foundation evidence: the isolated backend core performs bounded malicious-package preflight, read-only streaming parse, multilingual grammar normalization, deterministic test allocation, and versioned allocation/full-preview digests. It intentionally exposes no upload API or persistence path. The local starter's bounded `EV` matching fixture is not production import conversion: production Type-D group allocation remains fail-closed, and no stored minimum-client/capability publication gate exists yet. The Phase 3 deliverables below remain required before an import can create or change a course.
 
 Deliverables:
 
 - direct presigned S3 upload, completion callback, isolated scanner/parser worker, and immutable original archive;
 - workbook normalization, test-mode inheritance, deterministic test allocation, paged preview, and exportable error report;
+- explicit production Type-D matching-group allocation/conversion semantics plus a stored minimum-client/capability gate that blocks publication to unsupported clients;
 - single idempotent import commit and permanent lock against Excel updates to an existing course;
 - mobile teacher tree/editor, validation, drafts, ETag conflicts, diff/reapply, and unsaved-change protection;
 - `ContentChangeSet`, immutable revisions, impact analysis, atomic `CourseRelease`, publication outbox event, and rollback by release activation;
@@ -96,7 +99,7 @@ Deliverables:
 
 Exit gate:
 
-A real workbook imports safely, examples produce deterministic test plans, conflicts never silently overwrite, publishing creates one immutable release, failures keep the old release active, and affected progress is reproducibly reprojected without reducing lifetime score.
+A real workbook imports safely, examples produce deterministic test plans, Type-D groups are converted without guessed relationships, unsupported clients are blocked by a stored publication gate, conflicts never silently overwrite, publishing creates one immutable release, failures keep the old release active, and affected progress is reproducibly reprojected without reducing lifetime score.
 
 ## Phase 4 — Commerce, advertising, earnings, and payout
 
@@ -125,7 +128,7 @@ Deliverables:
 - internal admin with MFA, strong RBAC, just-in-time access, audit, moderation, support, entitlement, import/DLQ, reprojection, payout, and fraud tools;
 - public privacy, terms, support, community rules, copyright, and account-deletion pages;
 - UGC reporting, blocking, moderation states, appeals, child-safety escalation, and takedown workflows;
-- AWS dev/staging/production infrastructure through Terraform: network, ECS API/worker, ALB, WAF/CloudFront, RDS/Aurora, ElastiCache, S3, SQS/DLQ, EventBridge, Cognito/approved OIDC, SES, KMS, Secrets Manager, ECR, DNS/TLS, logging, alarms, and audit;
+- AWS dev/staging/production infrastructure through Terraform: network, ECS API/worker, ALB, WAF/CloudFront, RDS/Aurora, ElastiCache, S3, SQS/DLQ, EventBridge, Cognito/approved OIDC, SES, KMS, Secrets Manager, ECR, DNS/TLS, logging, alarms, and audit; inject the Type-D HMAC keyring from Secrets Manager with least-privilege access, an explicit active version, audited rotation/rollback, retention of every old verification key while its facts remain replayable, and fail-closed missing or unknown-version behavior;
 - GitHub Actions OIDC with short-lived roles, protected environments, approval gates, artifact signing, and staged deployment;
 - PITR, immutable/cross-account backups where selected, ledger export, restore automation, runbooks, and incident ownership.
 

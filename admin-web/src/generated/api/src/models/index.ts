@@ -13,6 +13,8 @@ export * from './EnergyResponse';
 export * from './EnrollmentResponse';
 export * from './FinishAttemptResponse';
 export * from './LocalStarterCourseResponse';
+export * from './MatchingItem';
+export * from './MatchingSelection';
 export * from './MeResponse';
 export * from './Problem';
 export * from './ProfileSetupRequest';

@@ -5,6 +5,7 @@
 // ignore_for_file: unused_element
 import 'package:kelimio_api_client/src/model/energy_response.dart';
 import 'package:kelimio_api_client/src/model/attempt_state.dart';
+import 'package:kelimio_api_client/src/model/matching_selection.dart';
 import 'package:json_annotation/json_annotation.dart';
 
 part 'answer_recorded_response.g.dart';
@@ -25,6 +26,8 @@ class AnswerRecordedResponse {
     this.correctOptionId,
 
     this.correctAnswerText,
+
+    this.correctMatches,
 
     required this.activeScoreDelta,
 
@@ -50,6 +53,9 @@ class AnswerRecordedResponse {
 
   @JsonKey(name: r'correctAnswerText', required: false, includeIfNull: false)
   final String? correctAnswerText;
+
+  @JsonKey(name: r'correctMatches', required: false, includeIfNull: false)
+  final List<MatchingSelection>? correctMatches;
 
   // minimum: 0
   // maximum: 60
@@ -84,6 +90,7 @@ class AnswerRecordedResponse {
           other.correct == correct &&
           other.correctOptionId == correctOptionId &&
           other.correctAnswerText == correctAnswerText &&
+          other.correctMatches == correctMatches &&
           other.activeScoreDelta == activeScoreDelta &&
           other.lifetimeScoreDelta == lifetimeScoreDelta &&
           other.activeQuestionScore == activeQuestionScore &&
@@ -97,6 +104,7 @@ class AnswerRecordedResponse {
       correct.hashCode +
       correctOptionId.hashCode +
       correctAnswerText.hashCode +
+      correctMatches.hashCode +
       activeScoreDelta.hashCode +
       lifetimeScoreDelta.hashCode +
       activeQuestionScore.hashCode +
@@ -117,6 +125,9 @@ class AnswerRecordedResponse {
     }
     if (json.containsKey(r'correctAnswerText')) {
       json[r'correctAnswerText'] = '[REDACTED]';
+    }
+    if (json.containsKey(r'correctMatches')) {
+      json[r'correctMatches'] = '[REDACTED]';
     }
     return json.toString();
   }

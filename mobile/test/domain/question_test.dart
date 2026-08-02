@@ -2,6 +2,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:kelimio_mobile/domain/energy/energy.dart';
 import 'package:kelimio_mobile/domain/learning/learning.dart';
 
+import '../support/fixtures.dart';
+
 void main() {
   group('Question', () {
     test('both cloze types expose text around their single marker', () {
@@ -74,6 +76,189 @@ void main() {
         throwsArgumentError,
       );
     });
+
+    test('matching questions expose only two answer-free item lists', () {
+      final question = fixtureMatchingQuestion();
+
+      expect(question.answerKind, AnswerKind.matching);
+      expect(question.prompt, isNull);
+      expect(question.options, isEmpty);
+      expect(question.targetItems, hasLength(2));
+      expect(question.supportItems, hasLength(2));
+      expect(
+        () => question.targetItems.add(MatchingItem(id: 'new', text: 'new')),
+        throwsUnsupportedError,
+      );
+    });
+
+    test('matching questions require equal groups of two to six items', () {
+      final oneTarget = [MatchingItem(id: 't1', text: 'one')];
+      final oneSupport = [MatchingItem(id: 's1', text: 'uno')];
+      expect(
+        () =>
+            _matchingQuestion(targetItems: oneTarget, supportItems: oneSupport),
+        throwsArgumentError,
+      );
+
+      expect(
+        () => _matchingQuestion(
+          targetItems: _matchingItems('t', 7),
+          supportItems: _matchingItems('s', 7),
+        ),
+        throwsArgumentError,
+      );
+
+      expect(
+        () => _matchingQuestion(
+          targetItems: _matchingItems('t', 2),
+          supportItems: _matchingItems('s', 3),
+        ),
+        throwsArgumentError,
+      );
+    });
+
+    test(
+      'matching questions reject prompt, options, and linked identifiers',
+      () {
+        expect(
+          () => Question(
+            id: 'question',
+            revisionId: 'revision',
+            type: QuestionType.matching,
+            position: 1,
+            prompt: 'answer-bearing prompt',
+            options: const [],
+            targetItems: _matchingItems('t', 2),
+            supportItems: _matchingItems('s', 2),
+          ),
+          throwsArgumentError,
+        );
+        expect(
+          () => Question(
+            id: 'question',
+            revisionId: 'revision',
+            type: QuestionType.matching,
+            position: 1,
+            prompt: null,
+            options: _options,
+            targetItems: _matchingItems('t', 2),
+            supportItems: _matchingItems('s', 2),
+          ),
+          throwsArgumentError,
+        );
+        expect(
+          () => _matchingQuestion(
+            targetItems: [
+              MatchingItem(id: 'shared', text: 'one'),
+              MatchingItem(id: 't2', text: 'two'),
+            ],
+            supportItems: [
+              MatchingItem(id: 'shared', text: 'uno'),
+              MatchingItem(id: 's2', text: 'dos'),
+            ],
+          ),
+          throwsArgumentError,
+        );
+      },
+    );
+
+    test('matching question identifiers and labels are unique per side', () {
+      expect(
+        () => _matchingQuestion(
+          targetItems: [
+            MatchingItem(id: 't1', text: 'duplicate'),
+            MatchingItem(id: 't1', text: 'other'),
+          ],
+          supportItems: _matchingItems('s', 2),
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => _matchingQuestion(
+          targetItems: [
+            MatchingItem(id: 't1', text: 'duplicate'),
+            MatchingItem(id: 't2', text: 'duplicate'),
+          ],
+          supportItems: _matchingItems('s', 2),
+        ),
+        throwsArgumentError,
+      );
+    });
+
+    test('non-matching questions reject matching item arrays', () {
+      expect(
+        () => Question(
+          id: 'question',
+          revisionId: 'revision',
+          type: QuestionType.wordMultipleChoice,
+          position: 1,
+          prompt: 'Word',
+          options: _options,
+          targetItems: _matchingItems('t', 2),
+          supportItems: _matchingItems('s', 2),
+        ),
+        throwsArgumentError,
+      );
+    });
+  });
+
+  group('MatchingAnswerInput privacy boundary', () {
+    test('requires a complete one-to-one mapping for the question', () {
+      final question = fixtureMatchingQuestion();
+      final answer = MatchingAnswerInput(fixtureCorrectMatches());
+
+      expect(answer.kind, AnswerKind.matching);
+      expect(answer.hasExactCoverageOf(question), isTrue);
+      expect(answer.hasSameMappingAs(fixtureCorrectMatches().reversed), isTrue);
+      expect(answer.hasSameMappingAs(fixtureIncorrectMatches()), isFalse);
+    });
+
+    test('rejects duplicate target or support identifiers', () {
+      expect(
+        () => MatchingAnswerInput([
+          MatchingPair(targetItemId: 't1', supportItemId: 's1'),
+          MatchingPair(targetItemId: 't1', supportItemId: 's2'),
+        ]),
+        throwsArgumentError,
+      );
+      expect(
+        () => MatchingPair(targetItemId: 'shared', supportItemId: 'shared'),
+        throwsArgumentError,
+      );
+      expect(
+        () => MatchingAnswerInput([
+          MatchingPair(targetItemId: 't1', supportItemId: 's1'),
+          MatchingPair(targetItemId: 't2', supportItemId: 's1'),
+        ]),
+        throwsArgumentError,
+      );
+    });
+
+    test('does not expose selected relationships through toString', () {
+      final answer = MatchingAnswerInput(fixtureCorrectMatches());
+
+      expect(answer.toString(), isNot(contains(targetItemOneId)));
+      expect(answer.toString(), isNot(contains(supportItemOneId)));
+      expect(answer.pairs.first.toString(), isNot(contains(targetItemOneId)));
+    });
+  });
+
+  group('AttemptSession', () {
+    test('requires and pins a nonblank support language', () {
+      expect(fixtureMatchingSession().supportLanguage, 'en');
+      expect(
+        () => AttemptSession(
+          id: attemptId,
+          testId: testId,
+          testRevisionId: testRevisionId,
+          supportLanguage: '   ',
+          status: ServerAttemptStatus.inProgress,
+          questions: [fixtureMatchingQuestion()],
+          startedAt: DateTime.utc(2026),
+        ),
+        throwsArgumentError,
+      );
+    });
   });
 
   group('TypedAnswerInput privacy boundary', () {
@@ -131,6 +316,10 @@ void main() {
     test('accepts the option and typed branches independently', () {
       expect(_feedback(correctOptionId: 'option').correctAnswerText, isNull);
       expect(_feedback(correctAnswerText: 'answer').correctOptionId, isNull);
+      expect(
+        _feedback(correctMatches: fixtureCorrectMatches()).correctMatches,
+        hasLength(2),
+      );
     });
 
     test('validates authoritative text by Unicode code points', () {
@@ -154,6 +343,12 @@ void main() {
       final feedback = _feedback(correctAnswerText: answerKey);
 
       expect(feedback.toString(), isNot(contains(answerKey)));
+
+      final matchingFeedback = _feedback(
+        correctMatches: fixtureCorrectMatches(),
+      );
+      expect(matchingFeedback.toString(), isNot(contains(targetItemOneId)));
+      expect(matchingFeedback.toString(), isNot(contains(supportItemOneId)));
     });
   });
 }
@@ -171,11 +366,13 @@ Question _question({required QuestionType type, required String prompt}) =>
 AnswerFeedback _feedback({
   String? correctOptionId,
   String? correctAnswerText,
+  List<MatchingPair>? correctMatches,
 }) => AnswerFeedback(
   submissionId: 'submission',
   correct: true,
   correctOptionId: correctOptionId,
   correctAnswerText: correctAnswerText,
+  correctMatches: correctMatches,
   activeScoreDelta: 1,
   lifetimeScoreDelta: 1,
   activeQuestionScore: 1,
@@ -188,6 +385,25 @@ AnswerFeedback _feedback({
   ),
   attemptStatus: ServerAttemptStatus.inProgress,
 );
+
+Question _matchingQuestion({
+  required List<MatchingItem> targetItems,
+  required List<MatchingItem> supportItems,
+}) => Question(
+  id: 'question',
+  revisionId: 'revision',
+  type: QuestionType.matching,
+  position: 1,
+  prompt: null,
+  options: const [],
+  targetItems: targetItems,
+  supportItems: supportItems,
+);
+
+List<MatchingItem> _matchingItems(String prefix, int count) => [
+  for (var index = 0; index < count; index++)
+    MatchingItem(id: '$prefix$index', text: '$prefix-label-$index'),
+];
 
 const _options = [
   AnswerOption(id: 'one', text: 'one'),

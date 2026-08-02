@@ -158,7 +158,12 @@ bool containsAnswerKeyLeak(Object? data) {
   if (data is! Map<Object?, Object?>) {
     return false;
   }
+  return _containsForbiddenAttemptAnswerMaterial(data);
+}
+
+bool _containsForbiddenAttemptAnswerMaterial(Object? value) {
   const forbidden = {
+    'correct',
     'correctOptionId',
     'correct_option_id',
     'correctAnswer',
@@ -171,31 +176,34 @@ bool containsAnswerKeyLeak(Object? data) {
     'is_correct',
     'typedAnswer',
     'typed_answer',
+    'correctMatches',
+    'correct_matches',
+    'matches',
+    'matchingPairs',
+    'matching_pairs',
+    'pairId',
+    'pair_id',
+    'targetItemId',
+    'target_item_id',
+    'supportItemId',
+    'support_item_id',
+    'correctPairCount',
+    'correct_pair_count',
+    'matchingAnswerSalt',
+    'matching_answer_salt',
+    'matchingAnswerDigest',
+    'matching_answer_digest',
   };
-  if (data.keys.any(forbidden.contains)) {
-    return true;
-  }
-  final questions = data['questions'];
-  if (questions is! List<Object?>) {
-    return false;
-  }
-  for (final value in questions) {
-    if (value is! Map<Object?, Object?>) {
-      continue;
-    }
-    if (value.keys.any(forbidden.contains)) {
-      return true;
-    }
-    final options = value['options'];
-    if (options is List<Object?>) {
-      for (final option in options) {
-        if (option is Map<Object?, Object?> &&
-            (option.containsKey('correct') ||
-                option.containsKey('isCorrect') ||
-                option.containsKey('is_correct'))) {
-          return true;
-        }
+  final pending = <Object?>[value];
+  while (pending.isNotEmpty) {
+    final current = pending.removeLast();
+    if (current is Map<Object?, Object?>) {
+      if (current.keys.any(forbidden.contains)) {
+        return true;
       }
+      pending.addAll(current.values);
+    } else if (current is List<Object?>) {
+      pending.addAll(current);
     }
   }
   return false;

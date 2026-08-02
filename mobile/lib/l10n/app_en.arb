@@ -75,5 +75,22 @@
   "accessibilityBlank": "blank",
   "typedAnswerLabel": "Your answer",
   "typedAnswerReentry": "The previous answer was not stored on this device. Enter it again to continue the same submission.",
-  "correctAnswerLabel": "Correct answer"
+  "correctAnswerLabel": "Correct answer",
+  "matchingInstructions": "Match each word in two steps: choose a learning-language word, then choose its meaning.",
+  "matchingTargetsHeading": "Words to match",
+  "matchingSupportsHeading": "Meanings",
+  "matchingPairsHeading": "Your matches",
+  "matchingProgress": "{matched} of {total} pairs matched",
+  "matchingTargetItemLabel": "Word: {item}",
+  "matchingSupportItemLabel": "Meaning: {item}",
+  "matchingTargetSelected": "Selected word",
+  "matchingAlreadyPaired": "Already matched",
+  "matchingChooseTargetFirst": "Choose a word first",
+  "matchingPairLabel": "{target} matches {support}",
+  "matchingTentativePair": "Tentative match",
+  "matchingCorrectPair": "Correct match",
+  "matchingIncorrectPair": "Incorrect match",
+  "matchingRemovePair": "Remove match for {target}",
+  "matchingCorrectMappingHeading": "Correct matching",
+  "matchingFeedbackUnavailable": "Your earlier matches are not stored on this device. The complete correct matching from the server is shown below."
 }

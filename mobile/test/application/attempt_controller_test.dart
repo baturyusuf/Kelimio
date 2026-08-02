@@ -281,6 +281,254 @@ void main() {
       },
     );
   });
+
+  group('matching answer controller flow', () {
+    test('two-stage actions submit one complete transient mapping', () async {
+      final store = MemoryRecoveryStore();
+      final repository = RecordingLearningRepository(
+        session: fixtureMatchingSession(),
+        answerBehaviors: [
+          (id, answer) async {
+            expect(answer, isA<MatchingAnswerInput>());
+            expect(
+              (answer as MatchingAnswerInput).hasSameMappingAs(
+                fixtureCorrectMatches(),
+              ),
+              isTrue,
+            );
+            expect(store.value?.answerKind, AnswerKind.matching);
+            expect(store.value?.selectedOptionId, isNull);
+            expect(store.value.toString(), isNot(contains(targetItemOneId)));
+            expect(store.value.toString(), isNot(contains(supportItemOneId)));
+            return fixtureMatchingFeedback(id: id);
+          },
+        ],
+      );
+      final container = _container(repository: repository, store: store);
+      addTearDown(container.dispose);
+      final controller = container.read(attemptControllerProvider.notifier);
+      await controller.recoverOrStart(testId);
+
+      controller.selectMatchingTarget(targetItemOneId);
+      controller.selectMatchingSupport(supportItemOneId);
+      controller.removeMatchingPair(targetItemOneId);
+      _completeMatching(controller);
+      await controller.submitMatching();
+
+      final state = container.read(attemptControllerProvider);
+      expect(state, isA<AttemptFeedback>());
+      expect((state as AttemptFeedback).submittedMatches, isNotNull);
+      expect(repository.submittedIds, [submissionId]);
+      expect(repository.submittedKinds, [AnswerKind.matching]);
+      expect(store.value?.phase, RecoveryPhase.feedback);
+      expect(store.value?.selectedOptionId, isNull);
+      expect(store.value.toString(), isNot(contains(targetItemOneId)));
+    });
+
+    test('retry performs GET then one exact same-ID resend', () async {
+      final store = MemoryRecoveryStore();
+      final repository = RecordingLearningRepository(
+        session: fixtureMatchingSession(),
+        answerBehaviors: [
+          (id, answer) => Future<AnswerFeedback>.error(const NetworkFailure()),
+          (id, answer) async => fixtureMatchingFeedback(id: id),
+        ],
+        recordedAnswerBehaviors: [(id) async => null],
+      );
+      final container = _container(repository: repository, store: store);
+      addTearDown(container.dispose);
+      final controller = container.read(attemptControllerProvider.notifier);
+      await controller.recoverOrStart(testId);
+      _completeMatching(controller);
+
+      await controller.submitMatching();
+      expect(container.read(attemptControllerProvider), isA<AttemptRecovery>());
+
+      await controller.retry();
+
+      expect(repository.reconciliationIds, [submissionId]);
+      expect(repository.submittedIds, [submissionId, submissionId]);
+      expect(
+        identical(
+          repository.submittedAnswers.first,
+          repository.submittedAnswers.last,
+        ),
+        isTrue,
+      );
+      expect(container.read(attemptControllerProvider), isA<AttemptFeedback>());
+    });
+
+    test('a retry cannot resend the matching mapping twice', () async {
+      final repository = RecordingLearningRepository(
+        session: fixtureMatchingSession(),
+        answerBehaviors: [
+          (id, answer) => Future<AnswerFeedback>.error(const NetworkFailure()),
+          (id, answer) => Future<AnswerFeedback>.error(const NetworkFailure()),
+        ],
+        recordedAnswerBehaviors: [(id) async => null, (id) async => null],
+      );
+      final container = _container(
+        repository: repository,
+        store: MemoryRecoveryStore(),
+      );
+      addTearDown(container.dispose);
+      final controller = container.read(attemptControllerProvider.notifier);
+      await controller.recoverOrStart(testId);
+      _completeMatching(controller);
+
+      await controller.submitMatching();
+      await controller.retry();
+      expect(container.read(attemptControllerProvider), isA<AttemptRecovery>());
+      await controller.retry();
+
+      expect(repository.reconciliationIds, [submissionId, submissionId]);
+      expect(repository.submittedIds, [submissionId, submissionId]);
+      expect(container.read(attemptControllerProvider), isA<AttemptFatal>());
+    });
+
+    test('GET hit after a retryable failure never resends', () async {
+      final repository = RecordingLearningRepository(
+        session: fixtureMatchingSession(),
+        answerBehaviors: [
+          (id, answer) => Future<AnswerFeedback>.error(const NetworkFailure()),
+        ],
+        recordedAnswerBehaviors: [
+          (id) async => fixtureMatchingFeedback(id: id),
+        ],
+      );
+      final container = _container(
+        repository: repository,
+        store: MemoryRecoveryStore(),
+      );
+      addTearDown(container.dispose);
+      final controller = container.read(attemptControllerProvider.notifier);
+      await controller.recoverOrStart(testId);
+      _completeMatching(controller);
+
+      await controller.submitMatching();
+      await controller.retry();
+
+      expect(repository.reconciliationIds, [submissionId]);
+      expect(repository.submittedIds, [submissionId]);
+      expect(container.read(attemptControllerProvider), isA<AttemptFeedback>());
+    });
+
+    test(
+      'cold GET hit degrades without reconstructing submitted pairs',
+      () async {
+        final store = MemoryRecoveryStore()
+          ..value = fixtureRecovery(
+            RecoveryPhase.submitting,
+            answerKind: AnswerKind.matching,
+            recoveredSubmissionId: submissionId,
+          );
+        final repository = RecordingLearningRepository(
+          session: fixtureMatchingSession(),
+          answerBehaviors: const [],
+          recordedAnswerBehaviors: [
+            (id) async => fixtureMatchingFeedback(id: id),
+          ],
+        );
+        final container = _container(
+          repository: repository,
+          store: store,
+          identifierValues: const [],
+        );
+        addTearDown(container.dispose);
+
+        await container
+            .read(attemptControllerProvider.notifier)
+            .recoverOrStart(testId);
+
+        final state = container.read(attemptControllerProvider);
+        expect(state, isA<AttemptFeedback>());
+        expect((state as AttemptFeedback).submittedMatches, isNull);
+        expect(state.feedback.correctMatches, hasLength(2));
+        expect(repository.submittedIds, isEmpty);
+        expect(repository.reconciliationIds, [submissionId]);
+        expect(store.value.toString(), isNot(contains(targetItemOneId)));
+      },
+    );
+
+    test('cold GET miss returns a blank same-ID board', () async {
+      final store = MemoryRecoveryStore()
+        ..value = fixtureRecovery(
+          RecoveryPhase.feedback,
+          answerKind: AnswerKind.matching,
+          recoveredSubmissionId: submissionId,
+        );
+      final repository = RecordingLearningRepository(
+        session: fixtureMatchingSession(),
+        answerBehaviors: [
+          (id, answer) async => fixtureMatchingFeedback(id: id),
+        ],
+        recordedAnswerBehaviors: [(id) async => null],
+      );
+      final container = _container(
+        repository: repository,
+        store: store,
+        identifierValues: const [],
+      );
+      addTearDown(container.dispose);
+      final controller = container.read(attemptControllerProvider.notifier);
+
+      await controller.recoverOrStart(testId);
+
+      final presenting = container.read(attemptControllerProvider);
+      expect(presenting, isA<AttemptPresenting>());
+      expect(
+        (presenting as AttemptPresenting).resumeSubmissionId,
+        submissionId,
+      );
+      expect(presenting.matchingDraft.pairs, isEmpty);
+      expect(presenting.matchingDraft.activeTargetItemId, isNull);
+      expect(store.value?.answerKind, AnswerKind.matching);
+      expect(store.value?.selectedOptionId, isNull);
+
+      _completeMatching(controller);
+      await controller.submitMatching();
+
+      expect(repository.submittedIds, [submissionId]);
+      expect(container.read(attemptControllerProvider), isA<AttemptFeedback>());
+    });
+
+    test(
+      'cold private submission without MATCHING kind fails closed',
+      () async {
+        final store = MemoryRecoveryStore()
+          ..value = fixtureRecovery(
+            RecoveryPhase.presenting,
+            recoveredSubmissionId: submissionId,
+          );
+        final repository = RecordingLearningRepository(
+          session: fixtureMatchingSession(),
+          answerBehaviors: const [],
+        );
+        final container = _container(
+          repository: repository,
+          store: store,
+          identifierValues: const [],
+        );
+        addTearDown(container.dispose);
+
+        await container
+            .read(attemptControllerProvider.notifier)
+            .recoverOrStart(testId);
+
+        expect(container.read(attemptControllerProvider), isA<AttemptFatal>());
+        expect(repository.submittedIds, isEmpty);
+        expect(repository.reconciliationIds, isEmpty);
+        expect(store.value, isNull);
+      },
+    );
+  });
+}
+
+void _completeMatching(AttemptController controller) {
+  controller.selectMatchingTarget(targetItemOneId);
+  controller.selectMatchingSupport(supportItemOneId);
+  controller.selectMatchingTarget(targetItemTwoId);
+  controller.selectMatchingSupport(supportItemTwoId);
 }
 
 ProviderContainer _container({

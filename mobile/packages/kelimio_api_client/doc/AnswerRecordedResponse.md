@@ -12,6 +12,7 @@ Name | Type | Description | Notes
 **correct** | **bool** |  |
 **correctOptionId** | **String** |  | [optional]
 **correctAnswerText** | **String** |  | [optional]
+**correctMatches** | [**List&lt;MatchingSelection&gt;**](MatchingSelection.md) |  | [optional]
 **activeScoreDelta** | **int** |  |
 **lifetimeScoreDelta** | **int** |  |
 **activeQuestionScore** | **int** |  |

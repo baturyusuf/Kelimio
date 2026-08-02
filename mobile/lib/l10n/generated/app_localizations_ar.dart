@@ -265,4 +265,67 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get correctAnswerLabel => 'الإجابة الصحيحة';
+
+  @override
+  String get matchingInstructions =>
+      'طابق كل كلمة في خطوتين: اختر أولًا كلمة لغة التعلّم، ثم اختر معناها.';
+
+  @override
+  String get matchingTargetsHeading => 'الكلمات المطلوب مطابقتها';
+
+  @override
+  String get matchingSupportsHeading => 'المعاني';
+
+  @override
+  String get matchingPairsHeading => 'مطابقاتك';
+
+  @override
+  String matchingProgress(Object matched, Object total) {
+    return 'تمت مطابقة $matched من $total';
+  }
+
+  @override
+  String matchingTargetItemLabel(Object item) {
+    return 'الكلمة: $item';
+  }
+
+  @override
+  String matchingSupportItemLabel(Object item) {
+    return 'المعنى: $item';
+  }
+
+  @override
+  String get matchingTargetSelected => 'الكلمة محددة';
+
+  @override
+  String get matchingAlreadyPaired => 'تمت مطابقتها';
+
+  @override
+  String get matchingChooseTargetFirst => 'اختر كلمة أولًا';
+
+  @override
+  String matchingPairLabel(Object support, Object target) {
+    return '$target تطابق $support';
+  }
+
+  @override
+  String get matchingTentativePair => 'مطابقة مؤقتة';
+
+  @override
+  String get matchingCorrectPair => 'مطابقة صحيحة';
+
+  @override
+  String get matchingIncorrectPair => 'مطابقة غير صحيحة';
+
+  @override
+  String matchingRemovePair(Object target) {
+    return 'إزالة مطابقة $target';
+  }
+
+  @override
+  String get matchingCorrectMappingHeading => 'المطابقة الصحيحة';
+
+  @override
+  String get matchingFeedbackUnavailable =>
+      'لم تُحفظ مطابقاتك السابقة على هذا الجهاز. تظهر أدناه المطابقة الصحيحة الكاملة التي أرسلها الخادم.';
 }

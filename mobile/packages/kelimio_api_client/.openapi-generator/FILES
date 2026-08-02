@@ -21,6 +21,8 @@ doc/EnrollmentResponse.md
 doc/FinishAttemptResponse.md
 doc/LearningApi.md
 doc/LocalStarterCourseResponse.md
+doc/MatchingItem.md
+doc/MatchingSelection.md
 doc/MeResponse.md
 doc/Problem.md
 doc/ProfileApi.md
@@ -55,6 +57,8 @@ lib/src/model/energy_response.dart
 lib/src/model/enrollment_response.dart
 lib/src/model/finish_attempt_response.dart
 lib/src/model/local_starter_course_response.dart
+lib/src/model/matching_item.dart
+lib/src/model/matching_selection.dart
 lib/src/model/me_response.dart
 lib/src/model/problem.dart
 lib/src/model/profile_setup_request.dart
@@ -80,6 +84,8 @@ test/enrollment_response_test.dart
 test/finish_attempt_response_test.dart
 test/learning_api_test.dart
 test/local_starter_course_response_test.dart
+test/matching_item_test.dart
+test/matching_selection_test.dart
 test/me_response_test.dart
 test/problem_test.dart
 test/profile_api_test.dart

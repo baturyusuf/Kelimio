@@ -14,6 +14,7 @@ AttemptResponse _$AttemptResponseFromJson(Map<String, dynamic> json) =>
           'id',
           'testId',
           'testRevisionId',
+          'supportLanguage',
           'state',
           'questions',
           'startedAt',
@@ -23,6 +24,7 @@ AttemptResponse _$AttemptResponseFromJson(Map<String, dynamic> json) =>
         id: $checkedConvert('id', (v) => v as String),
         testId: $checkedConvert('testId', (v) => v as String),
         testRevisionId: $checkedConvert('testRevisionId', (v) => v as String),
+        supportLanguage: $checkedConvert('supportLanguage', (v) => v as String),
         state: $checkedConvert(
           'state',
           (v) => $enumDecode(_$AttemptStateEnumMap, v),
@@ -46,6 +48,7 @@ Map<String, dynamic> _$AttemptResponseToJson(AttemptResponse instance) =>
       'id': instance.id,
       'testId': instance.testId,
       'testRevisionId': instance.testRevisionId,
+      'supportLanguage': instance.supportLanguage,
       'state': _$AttemptStateEnumMap[instance.state]!,
       'questions': instance.questions.map((e) => e.toJson()).toList(),
       'startedAt': instance.startedAt.toIso8601String(),

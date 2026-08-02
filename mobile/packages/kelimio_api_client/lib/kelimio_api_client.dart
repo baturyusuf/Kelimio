@@ -28,6 +28,8 @@ export 'package:kelimio_api_client/src/model/energy_response.dart';
 export 'package:kelimio_api_client/src/model/enrollment_response.dart';
 export 'package:kelimio_api_client/src/model/finish_attempt_response.dart';
 export 'package:kelimio_api_client/src/model/local_starter_course_response.dart';
+export 'package:kelimio_api_client/src/model/matching_item.dart';
+export 'package:kelimio_api_client/src/model/matching_selection.dart';
 export 'package:kelimio_api_client/src/model/me_response.dart';
 export 'package:kelimio_api_client/src/model/problem.dart';
 export 'package:kelimio_api_client/src/model/profile_setup_request.dart';

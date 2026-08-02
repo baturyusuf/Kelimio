@@ -27,9 +27,16 @@ import {
     AttemptStateToJSON,
     AttemptStateToJSONTyped,
 } from './AttemptState';
+import type { MatchingSelection } from './MatchingSelection';
+import {
+    MatchingSelectionFromJSON,
+    MatchingSelectionFromJSONTyped,
+    MatchingSelectionToJSON,
+    MatchingSelectionToJSONTyped,
+} from './MatchingSelection';
 
 /**
- * Post-commit feedback for exactly one submitted question. Multiple-choice responses contain correctOptionId; typed-cloze responses contain only the primary authored correctAnswerText. Neither appears before commit.
+ * Post-commit feedback for exactly one submitted question. Multiple-choice responses contain correctOptionId; typed-cloze responses contain only the primary authored correctAnswerText; matching responses contain the complete correctMatches mapping. None appears before commit.
  * @export
  * @interface AnswerRecordedResponse
  */
@@ -58,6 +65,12 @@ export interface AnswerRecordedResponse {
      * @memberof AnswerRecordedResponse
      */
     correctAnswerText?: string;
+    /**
+     *
+     * @type {Array<MatchingSelection>}
+     * @memberof AnswerRecordedResponse
+     */
+    correctMatches?: Array<MatchingSelection>;
     /**
      *
      * @type {number}
@@ -125,6 +138,7 @@ export function AnswerRecordedResponseFromJSONTyped(json: any, ignoreDiscriminat
         'correct': json['correct'],
         'correctOptionId': json['correctOptionId'] == null ? undefined : json['correctOptionId'],
         'correctAnswerText': json['correctAnswerText'] == null ? undefined : json['correctAnswerText'],
+        'correctMatches': json['correctMatches'] == null ? undefined : ((json['correctMatches'] as Array<any>).map(MatchingSelectionFromJSON)),
         'activeScoreDelta': json['activeScoreDelta'],
         'lifetimeScoreDelta': json['lifetimeScoreDelta'],
         'activeQuestionScore': json['activeQuestionScore'],
@@ -149,6 +163,7 @@ export function AnswerRecordedResponseToJSONTyped(value?: AnswerRecordedResponse
         'correct': value['correct'],
         'correctOptionId': value['correctOptionId'],
         'correctAnswerText': value['correctAnswerText'],
+        'correctMatches': value['correctMatches'] == null ? undefined : ((value['correctMatches'] as Array<any>).map(MatchingSelectionToJSON)),
         'activeScoreDelta': value['activeScoreDelta'],
         'lifetimeScoreDelta': value['lifetimeScoreDelta'],
         'activeQuestionScore': value['activeQuestionScore'],

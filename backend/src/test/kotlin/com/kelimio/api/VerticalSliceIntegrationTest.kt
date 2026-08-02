@@ -2,6 +2,7 @@ package com.kelimio.api
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.kelimio.api.language.TypedAnswerPolicy
+import com.kelimio.api.language.MatchingLabelPolicy
 import com.kelimio.api.progress.LearningProgressProjectionWorker
 import com.kelimio.api.web.AnswerSubmissionBodyLimitFilter
 import org.assertj.core.api.Assertions.assertThat
@@ -25,6 +26,7 @@ import org.testcontainers.junit.jupiter.Testcontainers
 import org.testcontainers.utility.DockerImageName
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
+import java.util.Base64
 import java.util.UUID
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
@@ -315,7 +317,7 @@ class VerticalSliceIntegrationTest {
                 status { isOk() }
                 jsonPath("$.name") { value("Örnek Türkçe Kelime Kursu") }
                 jsonPath("$.supportLanguages[0]") { value("en") }
-                jsonPath("$.tests[0].questionCount") { value(7) }
+                jsonPath("$.tests[0].questionCount") { value(8) }
             }
 
         assertThat(
@@ -338,7 +340,7 @@ class VerticalSliceIntegrationTest {
                 String::class.java,
                 courseId,
             ),
-        ).isEqualTo("kurs-excel-plani-v3-type-a-b-c-en-v3")
+        ).isEqualTo("kurs-excel-plani-v3-type-a-b-c-d-en-v4")
         val typedQuestion = jdbcTemplate.queryForMap(
             """
             select prompt, correct_answer, alternative_correct_answer,
@@ -366,6 +368,77 @@ class VerticalSliceIntegrationTest {
                 """.trimIndent(),
                 Int::class.java,
                 courseId,
+            ),
+        ).isZero()
+
+        val matchingQuestion = jdbcTemplate.queryForMap(
+            """
+            select prompt, correct_answer, matching_policy, matching_label_policy,
+                   matching_order_policy, matching_target_language
+              from question_revision
+             where course_id = ? and question_type = 'D'
+            """.trimIndent(),
+            courseId,
+        )
+        assertThat(matchingQuestion["prompt"]).isNull()
+        assertThat(matchingQuestion["correct_answer"]).isNull()
+        assertThat(matchingQuestion["matching_policy"]).isEqualTo("matching-v1")
+        assertThat(matchingQuestion["matching_label_policy"]).isEqualTo("matching-label-v1")
+        assertThat(matchingQuestion["matching_order_policy"]).isEqualTo("matching-order-v1")
+        assertThat(matchingQuestion["matching_target_language"]).isEqualTo("tr")
+        val starterPairs = jdbcTemplate.queryForList(
+            """
+            select pair.target_item_id, pair.target_text,
+                   translation.support_item_id, translation.support_text
+              from question_revision_matching_pair pair
+              join question_revision_matching_translation translation
+                on translation.question_revision_id = pair.question_revision_id
+               and translation.target_item_id = pair.target_item_id
+               and translation.course_id = pair.course_id
+             where pair.course_id = ? and translation.support_language = 'en'
+             order by pair.position
+            """.trimIndent(),
+            courseId,
+        )
+        assertThat(starterPairs.map { it["target_text"] to it["support_text"] }).containsExactly(
+            "Pencere" to "Window",
+            "Kapı" to "Door",
+            "Masa" to "Table",
+            "Sandalye" to "Chair",
+        )
+        val targetItemIds = starterPairs.map { it["target_item_id"] as UUID }
+        val supportItemIds = starterPairs.map { it["support_item_id"] as UUID }
+        assertThat(targetItemIds + supportItemIds).allSatisfy { assertThat(it.version()).isEqualTo(4) }
+        assertThat(targetItemIds.toSet().intersect(supportItemIds.toSet())).isEmpty()
+
+        val secondOwnerJwt = jwt().jwt {
+            it.subject("local-starter-second-owner")
+                .claim("email", "starter-second-owner@integration.invalid")
+                .claim("preferred_username", "starter-second-owner")
+                .audience(listOf("kelimio-mobile"))
+        }
+        completeProfileSetup(secondOwnerJwt, displayName = "Second Starter Owner")
+        val secondBody = mockMvc.post("/v1/development/starter-course") {
+            with(secondOwnerJwt)
+            header("Idempotency-Key", UUID.randomUUID().toString())
+        }.andExpect {
+            status { isCreated() }
+            jsonPath("$.created") { value(true) }
+        }.andReturn().response.contentAsString
+        val secondCourseId = UUID.fromString(objectMapper.readTree(secondBody)["courseId"].asText())
+        assertThat(secondCourseId).isNotEqualTo(courseId)
+        assertThat(
+            jdbcTemplate.queryForObject(
+                """
+                select count(*)
+                  from question_revision_matching_pair first_pair
+                  join question_revision_matching_pair second_pair
+                    on second_pair.target_item_id = first_pair.target_item_id
+                 where first_pair.course_id = ? and second_pair.course_id = ?
+                """.trimIndent(),
+                Int::class.java,
+                courseId,
+                secondCourseId,
             ),
         ).isZero()
 
@@ -907,20 +980,525 @@ class VerticalSliceIntegrationTest {
         ).isEqualTo(1)
     }
 
+    @Test
+    fun `matching is answer key free complete server authoritative and replay safe`() {
+        val fixture = createCourseFixture(
+            questionType = "D",
+            prompt = null,
+            correctAnswer = null,
+        )
+        val learnerJwt = jwt().jwt {
+            it.subject("matching-learner-${fixture.courseId}")
+                .claim("email", "matching-learner@integration.invalid")
+                .claim("preferred_username", "matching-learner")
+                .audience(listOf("kelimio-mobile"))
+        }
+        mockMvc.get("/v1/me") { with(learnerJwt) }.andExpect { status { isOk() } }
+        completeProfileSetup(learnerJwt, displayName = "Matching Learner")
+        mockMvc.post("/v1/courses/${fixture.courseId}/enrollments") {
+            with(learnerJwt)
+            header("Idempotency-Key", UUID.randomUUID().toString())
+            contentType = MediaType.APPLICATION_JSON
+            content = """{"supportLanguage":"en"}"""
+        }.andExpect { status { isCreated() } }
+
+        val startKey = UUID.randomUUID()
+        fun startAttempt(): String = mockMvc.post("/v1/tests/${fixture.testId}/attempts") {
+            with(learnerJwt)
+            header("Idempotency-Key", startKey.toString())
+        }.andExpect {
+            status { isCreated() }
+            jsonPath("$.supportLanguage") { value("en") }
+            jsonPath("$.questions[0].type") { value("MATCHING") }
+            jsonPath("$.questions[0].options.length()") { value(0) }
+            jsonPath("$.questions[0].targetItems.length()") { value(4) }
+            jsonPath("$.questions[0].supportItems.length()") { value(4) }
+            jsonPath("$.questions[0].matchingPolicy") { doesNotExist() }
+            jsonPath("$.questions[0].correctMatches") { doesNotExist() }
+        }.andReturn().response.contentAsString
+
+        val firstStartBody = startAttempt()
+        val replayedStartBody = startAttempt()
+        val firstStart = objectMapper.readTree(firstStartBody)
+        val replayedStart = objectMapper.readTree(replayedStartBody)
+        val attemptId = UUID.fromString(firstStart["id"].asText())
+        val question = firstStart["questions"].single()
+        assertThat(question.has("prompt")).isTrue()
+        assertThat(question["prompt"].isNull).isTrue()
+        assertThat(question["targetItems"]).isEqualTo(replayedStart["questions"].single()["targetItems"])
+        assertThat(question["supportItems"]).isEqualTo(replayedStart["questions"].single()["supportItems"])
+        assertThat(replayedStart["id"].asText()).isEqualTo(attemptId.toString())
+        assertThat(question["targetItems"].map { it["text"].asText() }).containsExactlyInAnyOrder(
+            "Pencere",
+            "Kapı",
+            "Masa",
+            "Sandalye",
+        )
+        assertThat(question["supportItems"].map { it["text"].asText() }).containsExactlyInAnyOrder(
+            "Window",
+            "Door",
+            "Table",
+            "Chair",
+        )
+        val issuedTargetIds = question["targetItems"].map { UUID.fromString(it["id"].asText()) }.toSet()
+        val issuedSupportIds = question["supportItems"].map { UUID.fromString(it["id"].asText()) }.toSet()
+        assertThat(issuedTargetIds.intersect(issuedSupportIds)).isEmpty()
+        assertThat(
+            jdbcTemplate.queryForObject(
+                "select support_language from test_attempt where id = ?",
+                String::class.java,
+                attemptId,
+            ),
+        ).isEqualTo("en")
+        assertThat(
+            jdbcTemplate.update(
+                "update enrollment set support_language = 'de' where course_id = ? and status = 'ACTIVE'",
+                fixture.courseId,
+            ),
+        ).isEqualTo(1)
+        assertThat(
+            jdbcTemplate.queryForObject(
+                "select support_language from test_attempt where id = ?",
+                String::class.java,
+                attemptId,
+            ),
+        ).isEqualTo("en")
+        val replayAfterEnrollmentChange = objectMapper.readTree(startAttempt())
+        assertThat(replayAfterEnrollmentChange["supportLanguage"].asText()).isEqualTo("en")
+        assertThat(replayAfterEnrollmentChange["questions"].single()["targetItems"])
+            .isEqualTo(question["targetItems"])
+        assertThat(replayAfterEnrollmentChange["questions"].single()["supportItems"])
+            .isEqualTo(question["supportItems"])
+
+        val nullElementSubmissionId = UUID.randomUUID()
+        val nullElementSensitiveId = UUID.randomUUID()
+        val nullElementResponse = mockMvc.post("/v1/attempts/$attemptId/answers") {
+            with(learnerJwt)
+            header("Idempotency-Key", nullElementSubmissionId.toString())
+            contentType = MediaType.APPLICATION_JSON
+            content =
+                """
+                {
+                  "submissionId":"$nullElementSubmissionId",
+                  "questionRevisionId":"${fixture.questionRevisionId}",
+                  "matches":[null,{"targetItemId":"$nullElementSensitiveId","supportItemId":"${UUID.randomUUID()}"}]
+                }
+                """.trimIndent()
+        }.andExpect {
+            status { isUnprocessableEntity() }
+            header { string("Cache-Control", "no-store") }
+            jsonPath("$.detail") { value("The matching answer must be a complete bijection.") }
+        }.andReturn().response.contentAsString
+        assertThat(nullElementResponse).doesNotContain(nullElementSensitiveId.toString())
+
+        val missingFieldSubmissionId = UUID.randomUUID()
+        val missingFieldSensitiveId = UUID.randomUUID()
+        val missingFieldResponse = mockMvc.post("/v1/attempts/$attemptId/answers") {
+            with(learnerJwt)
+            header("Idempotency-Key", missingFieldSubmissionId.toString())
+            contentType = MediaType.APPLICATION_JSON
+            content =
+                """
+                {
+                  "submissionId":"$missingFieldSubmissionId",
+                  "questionRevisionId":"${fixture.questionRevisionId}",
+                  "matches":[
+                    {"targetItemId":"$missingFieldSensitiveId"},
+                    {"targetItemId":"${UUID.randomUUID()}","supportItemId":"${UUID.randomUUID()}"}
+                  ]
+                }
+                """.trimIndent()
+        }.andExpect { status { isBadRequest() } }
+            .andReturn().response.contentAsString
+        assertThat(missingFieldResponse).doesNotContain(missingFieldSensitiveId.toString())
+
+        val duplicateSubmissionId = UUID.randomUUID()
+        val duplicateTargetId = issuedTargetIds.first()
+        val issuedSupports = issuedSupportIds.toList()
+        mockMvc.post("/v1/attempts/$attemptId/answers") {
+            with(learnerJwt)
+            header("Idempotency-Key", duplicateSubmissionId.toString())
+            contentType = MediaType.APPLICATION_JSON
+            content = objectMapper.writeValueAsString(
+                mapOf(
+                    "submissionId" to duplicateSubmissionId,
+                    "questionRevisionId" to fixture.questionRevisionId,
+                    "matches" to listOf(
+                        mapOf("targetItemId" to duplicateTargetId, "supportItemId" to issuedSupports[0]),
+                        mapOf("targetItemId" to duplicateTargetId, "supportItemId" to issuedSupports[1]),
+                    ),
+                ),
+            )
+        }.andExpect { status { isUnprocessableEntity() } }
+
+        val foreignSubmissionId = UUID.randomUUID()
+        val issuedTargets = issuedTargetIds.toList()
+        mockMvc.post("/v1/attempts/$attemptId/answers") {
+            with(learnerJwt)
+            header("Idempotency-Key", foreignSubmissionId.toString())
+            contentType = MediaType.APPLICATION_JSON
+            content = objectMapper.writeValueAsString(
+                mapOf(
+                    "submissionId" to foreignSubmissionId,
+                    "questionRevisionId" to fixture.questionRevisionId,
+                    "matches" to issuedTargets.mapIndexed { index, targetId ->
+                        mapOf(
+                            "targetItemId" to targetId,
+                            "supportItemId" to if (index == 0) UUID.randomUUID() else issuedSupports[index],
+                        )
+                    },
+                ),
+            )
+        }.andExpect { status { isUnprocessableEntity() } }
+        assertThat(count("answer_submission", "attempt_id", attemptId)).isZero()
+        assertThat(count("energy_event", "attempt_id", attemptId)).isZero()
+
+        val targetIdByText = question["targetItems"].associate { it["text"].asText() to it["id"].asText() }
+        val supportIdByText = question["supportItems"].associate { it["text"].asText() to it["id"].asText() }
+        val correctMatches = fixture.matchingPairs.map { pair ->
+            mapOf(
+                "targetItemId" to targetIdByText.getValue(pair.targetText),
+                "supportItemId" to supportIdByText.getValue(pair.supportText),
+            )
+        }
+        val submissionId = UUID.randomUUID()
+        fun matchingBody(matches: List<Map<String, String>>) = objectMapper.writeValueAsString(
+            mapOf(
+                "submissionId" to submissionId,
+                "questionRevisionId" to fixture.questionRevisionId,
+                "matches" to matches,
+            ),
+        )
+        val firstAnswerBody = mockMvc.post("/v1/attempts/$attemptId/answers") {
+            with(learnerJwt)
+            header("Idempotency-Key", submissionId.toString())
+            contentType = MediaType.APPLICATION_JSON
+            content = matchingBody(correctMatches.reversed())
+        }.andExpect {
+            status { isOk() }
+            header { string("Cache-Control", "no-store") }
+            jsonPath("$.correct") { value(true) }
+            jsonPath("$.correctOptionId") { doesNotExist() }
+            jsonPath("$.correctAnswerText") { doesNotExist() }
+            jsonPath("$.correctMatches.length()") { value(4) }
+            jsonPath("$.activeScoreDelta") { value(60) }
+            jsonPath("$.lifetimeScoreDelta") { value(60) }
+            jsonPath("$.energy.balance") { value(5) }
+        }.andReturn().response.contentAsString
+        val authoritativeMatches = objectMapper.readTree(firstAnswerBody)["correctMatches"].map {
+            it["targetItemId"].asText() to it["supportItemId"].asText()
+        }.toSet()
+        assertThat(authoritativeMatches).isEqualTo(
+            correctMatches.map { it.getValue("targetItemId") to it.getValue("supportItemId") }.toSet(),
+        )
+
+        mockMvc.post("/v1/attempts/$attemptId/answers") {
+            with(learnerJwt)
+            header("Idempotency-Key", submissionId.toString())
+            contentType = MediaType.APPLICATION_JSON
+            content = matchingBody(correctMatches)
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$.correct") { value(true) }
+        }
+
+        val changedMatches = correctMatches.toMutableList().also { matches ->
+            val firstSupport = matches[0].getValue("supportItemId")
+            val secondSupport = matches[1].getValue("supportItemId")
+            matches[0] = matches[0] + ("supportItemId" to secondSupport)
+            matches[1] = matches[1] + ("supportItemId" to firstSupport)
+        }
+        mockMvc.post("/v1/attempts/$attemptId/answers") {
+            with(learnerJwt)
+            header("Idempotency-Key", submissionId.toString())
+            contentType = MediaType.APPLICATION_JSON
+            content = matchingBody(changedMatches)
+        }.andExpect { status { isConflict() } }
+
+        mockMvc.get("/v1/attempts/$attemptId/answers/$submissionId") {
+            with(learnerJwt)
+        }.andExpect {
+            status { isOk() }
+            header { string("Cache-Control", "no-store") }
+            jsonPath("$.correct") { value(true) }
+            jsonPath("$.correctMatches.length()") { value(4) }
+        }
+
+        val evidence = jdbcTemplate.queryForMap(
+            """
+            select answer_kind, selected_option_id,
+                   typed_answer_salt, typed_answer_digest, typed_match_ordinal,
+                   matching_answer_salt, matching_answer_digest, matching_replay_key_version
+              from answer_submission
+             where submission_id = ?
+            """.trimIndent(),
+            submissionId,
+        )
+        assertThat(evidence["answer_kind"]).isEqualTo("MATCHING")
+        assertThat(evidence["selected_option_id"]).isNull()
+        assertThat(evidence["typed_answer_salt"]).isNull()
+        assertThat(evidence["typed_answer_digest"]).isNull()
+        assertThat(evidence["typed_match_ordinal"]).isNull()
+        val matchingSalt = evidence["matching_answer_salt"] as ByteArray
+        val matchingDigest = evidence["matching_answer_digest"] as ByteArray
+        assertThat(matchingSalt).hasSize(16)
+        assertThat(matchingDigest).hasSize(32)
+        assertThat(evidence["matching_replay_key_version"]).isEqualTo("integration-v1")
+        assertThat(
+            jdbcTemplate.queryForObject(
+                """
+                select count(*)
+                  from information_schema.columns
+                 where table_schema = current_schema()
+                   and table_name = 'answer_submission'
+                   and column_name = 'matching_correct_pair_count'
+                """.trimIndent(),
+                Int::class.java,
+            ),
+        ).isZero()
+        assertThat(count("answer_submission", "submission_id", submissionId)).isEqualTo(1)
+        assertThat(count("score_event", "submission_id", submissionId)).isEqualTo(1)
+        assertThat(count("energy_event", "submission_id", submissionId)).isZero()
+        assertThat(
+            jdbcTemplate.queryForObject(
+                "select count(*) from outbox_event where aggregate_id = ? and event_type = 'learning.answer-recorded.v1'",
+                Int::class.java,
+                attemptId,
+            ),
+        ).isEqualTo(1)
+        assertThat(
+            jdbcTemplate.queryForObject(
+                "select answered_count from test_attempt where id = ?",
+                Int::class.java,
+                attemptId,
+            ),
+        ).isEqualTo(1)
+        assertThat(
+            jdbcTemplate.queryForObject(
+                "select count(*) from attempt_event where submission_id = ? and event_type = 'ANSWER_RECORDED'",
+                Int::class.java,
+                submissionId,
+            ),
+        ).isEqualTo(1)
+        val eventText = jdbcTemplate.queryForObject(
+            """
+            select coalesce(string_agg(payload::text, ' '), '')
+              from (
+                    select payload from attempt_event where submission_id = ?
+                    union all
+                    select payload from outbox_event where aggregate_id = ?
+              ) answer_events
+            """.trimIndent(),
+            String::class.java,
+            submissionId,
+            attemptId,
+        )!!
+        fixture.matchingPairs.forEach { pair ->
+            assertThat(eventText)
+                .doesNotContain(pair.targetItemId.toString())
+                .doesNotContain(pair.supportItemId.toString())
+                .doesNotContain(pair.targetText)
+                .doesNotContain(pair.supportText)
+        }
+        assertThat(eventText)
+            .doesNotContain("integration-v1")
+            .doesNotContain(Base64.getEncoder().encodeToString(matchingSalt))
+            .doesNotContain(Base64.getEncoder().encodeToString(matchingDigest))
+
+        assertThat(
+            jdbcTemplate.update(
+                "update enrollment set support_language = 'en' where course_id = ? and status = 'ACTIVE'",
+                fixture.courseId,
+            ),
+        ).isEqualTo(1)
+
+        val wrongStartBody = mockMvc.post("/v1/tests/${fixture.testId}/attempts") {
+            with(learnerJwt)
+            header("Idempotency-Key", UUID.randomUUID().toString())
+        }.andExpect { status { isCreated() } }
+            .andReturn().response.contentAsString
+        val wrongStart = objectMapper.readTree(wrongStartBody)
+        val wrongAttemptId = UUID.fromString(wrongStart["id"].asText())
+        val wrongQuestion = wrongStart["questions"].single()
+        val wrongTargetIdByText = wrongQuestion["targetItems"].associate {
+            it["text"].asText() to it["id"].asText()
+        }
+        val wrongSupportIdByText = wrongQuestion["supportItems"].associate {
+            it["text"].asText() to it["id"].asText()
+        }
+        val wrongMatches = fixture.matchingPairs.mapIndexed { index, pair ->
+            val rotatedSupport = fixture.matchingPairs[(index + 1) % fixture.matchingPairs.size]
+            mapOf(
+                "targetItemId" to wrongTargetIdByText.getValue(pair.targetText),
+                "supportItemId" to wrongSupportIdByText.getValue(rotatedSupport.supportText),
+            )
+        }
+        val wrongSubmissionId = UUID.randomUUID()
+        mockMvc.post("/v1/attempts/$wrongAttemptId/answers") {
+            with(learnerJwt)
+            header("Idempotency-Key", wrongSubmissionId.toString())
+            contentType = MediaType.APPLICATION_JSON
+            content = objectMapper.writeValueAsString(
+                mapOf(
+                    "submissionId" to wrongSubmissionId,
+                    "questionRevisionId" to fixture.questionRevisionId,
+                    "matches" to wrongMatches,
+                ),
+            )
+        }.andExpect {
+            status { isOk() }
+            header { string("Cache-Control", "no-store") }
+            jsonPath("$.correct") { value(false) }
+            jsonPath("$.correctMatches.length()") { value(4) }
+            jsonPath("$.activeScoreDelta") { value(0) }
+            jsonPath("$.lifetimeScoreDelta") { value(0) }
+            jsonPath("$.energy.balance") { value(4) }
+        }
+        val wrongEvidence = jdbcTemplate.queryForMap(
+            """
+            select is_correct, matching_replay_key_version,
+                   octet_length(matching_answer_salt) as salt_length,
+                   octet_length(matching_answer_digest) as digest_length
+              from answer_submission
+             where submission_id = ?
+            """.trimIndent(),
+            wrongSubmissionId,
+        )
+        assertThat(wrongEvidence["is_correct"]).isEqualTo(false)
+        assertThat(wrongEvidence["matching_replay_key_version"]).isEqualTo("integration-v1")
+        assertThat((wrongEvidence["salt_length"] as Number).toInt()).isEqualTo(16)
+        assertThat((wrongEvidence["digest_length"] as Number).toInt()).isEqualTo(32)
+        assertThat(count("answer_submission", "submission_id", wrongSubmissionId)).isEqualTo(1)
+        assertThat(count("score_event", "submission_id", wrongSubmissionId)).isEqualTo(1)
+        assertThat(
+            jdbcTemplate.queryForObject(
+                "select count(*) from energy_event where submission_id = ? and event_type = 'WRONG_ANSWER_DEBIT'",
+                Int::class.java,
+                wrongSubmissionId,
+            ),
+        ).isEqualTo(1)
+        assertThat(
+            jdbcTemplate.queryForObject(
+                "select count(*) from outbox_event where aggregate_id = ? and event_type = 'learning.answer-recorded.v1'",
+                Int::class.java,
+                wrongAttemptId,
+            ),
+        ).isEqualTo(1)
+
+        val missingKeyStart = objectMapper.readTree(
+            mockMvc.post("/v1/tests/${fixture.testId}/attempts") {
+                with(learnerJwt)
+                header("Idempotency-Key", UUID.randomUUID().toString())
+            }.andExpect { status { isCreated() } }
+                .andReturn().response.contentAsString,
+        )
+        val missingKeyAttemptId = UUID.fromString(missingKeyStart["id"].asText())
+        val missingKeyQuestion = missingKeyStart["questions"].single()
+        val missingKeyTargets = missingKeyQuestion["targetItems"].associate {
+            it["text"].asText() to it["id"].asText()
+        }
+        val missingKeySupports = missingKeyQuestion["supportItems"].associate {
+            it["text"].asText() to it["id"].asText()
+        }
+        val missingKeyMatches = fixture.matchingPairs.map { pair ->
+            mapOf(
+                "targetItemId" to missingKeyTargets.getValue(pair.targetText),
+                "supportItemId" to missingKeySupports.getValue(pair.supportText),
+            )
+        }
+        val missingKeySubmissionId = UUID.randomUUID()
+        transactionTemplate.executeWithoutResult {
+            jdbcTemplate.update(
+                """
+                insert into answer_submission(
+                    submission_id, attempt_id, user_id, question_revision_id,
+                    selected_option_id, answer_kind, typed_answer_salt,
+                    typed_answer_digest, typed_match_ordinal, matching_answer_salt,
+                    matching_answer_digest, matching_replay_key_version, is_correct,
+                    active_score_delta, lifetime_score_delta, active_question_score,
+                    lifetime_score, energy_balance_after, energy_unlimited,
+                    energy_next_regeneration_at, attempt_status_after, submitted_at
+                ) values (?, ?, (select user_id from test_attempt where id = ?), ?,
+                    null, 'MATCHING', null, null, null, decode(repeat('11', 16), 'hex'),
+                    decode(repeat('22', 32), 'hex'), 'retired-v1', true,
+                    0, 0, 60, 60, 4, false, null, 'IN_PROGRESS', now())
+                """.trimIndent(),
+                missingKeySubmissionId,
+                missingKeyAttemptId,
+                missingKeyAttemptId,
+                fixture.questionRevisionId,
+            )
+            jdbcTemplate.update(
+                """
+                update test_attempt
+                   set answered_count = 1, correct_count = 1, version = 1
+                 where id = ?
+                """.trimIndent(),
+                missingKeyAttemptId,
+            )
+        }
+        val missingKeyResponse = mockMvc.post("/v1/attempts/$missingKeyAttemptId/answers") {
+            with(learnerJwt)
+            header("Idempotency-Key", missingKeySubmissionId.toString())
+            contentType = MediaType.APPLICATION_JSON
+            content = objectMapper.writeValueAsString(
+                mapOf(
+                    "submissionId" to missingKeySubmissionId,
+                    "questionRevisionId" to fixture.questionRevisionId,
+                    "matches" to missingKeyMatches,
+                ),
+            )
+        }.andExpect {
+            status { isInternalServerError() }
+            header { string("Cache-Control", "no-store") }
+            jsonPath("$.type") { value("https://api.kelimio.invalid/problems/internal-error") }
+            jsonPath("$.detail") { value("An unexpected error occurred.") }
+        }.andReturn().response.contentAsString
+        assertThat(missingKeyResponse)
+            .doesNotContain("retired-v1")
+            .doesNotContain("matching_replay_key_version")
+            .doesNotContain("11111111111111111111111111111111")
+            .doesNotContain("2222222222222222222222222222222222222222222222222222222222222222")
+        assertThat(count("answer_submission", "submission_id", missingKeySubmissionId)).isEqualTo(1)
+    }
+
     private fun createCourseFixture(
         questionType: String = "A",
-        prompt: String = "Pencere",
-        correctAnswer: String = "Window",
+        prompt: String? = "Pencere",
+        correctAnswer: String? = "Window",
         wrongAnswers: List<String> = listOf("Door", "Table", "Chair"),
         alternativeCorrectAnswer: String? = null,
+        matchingLabels: List<Pair<String, String>> = listOf(
+            "Pencere" to "Window",
+            "Kapı" to "Door",
+            "Masa" to "Table",
+            "Sandalye" to "Chair",
+        ),
     ): Fixture {
-        require(questionType == "C" || wrongAnswers.size == 3)
+        require(questionType in setOf("A", "B", "C", "D"))
+        require(questionType in setOf("C", "D") || wrongAnswers.size == 3)
+        require(questionType != "D" || matchingLabels.size in 2..6)
+        val matchingPairs = if (questionType == "D") {
+            matchingLabels.map { (targetText, supportText) ->
+                MatchingFixturePair(
+                    targetItemId = UUID.randomUUID(),
+                    targetText = targetText,
+                    supportItemId = UUID.randomUUID(),
+                    supportText = supportText,
+                    alternateSupportItemId = UUID.randomUUID(),
+                    alternateSupportText = "de-$supportText",
+                )
+            }
+        } else {
+            emptyList()
+        }
         val fixture = Fixture(
             courseId = UUID.randomUUID(),
             testId = UUID.randomUUID(),
             questionRevisionId = UUID.randomUUID(),
             correctOptionId = UUID.randomUUID(),
             wrongOptionId = UUID.randomUUID(),
+            matchingPairs = matchingPairs,
         )
         transactionTemplate.executeWithoutResult {
             val now = OffsetDateTime.now(ZoneOffset.UTC)
@@ -952,6 +1530,12 @@ class VerticalSliceIntegrationTest {
                 "insert into course_support_language(course_id, language_code) values (?, 'en')",
                 fixture.courseId,
             )
+            if (questionType == "D") {
+                jdbcTemplate.update(
+                    "insert into course_support_language(course_id, language_code) values (?, 'de')",
+                    fixture.courseId,
+                )
+            }
             jdbcTemplate.update(
                 "insert into course_release(id, course_id, revision_number, status, created_at) values (?, ?, 1, 'DRAFT', ?)",
                 releaseId,
@@ -980,7 +1564,7 @@ class VerticalSliceIntegrationTest {
             val answerPolicy = questionType.takeIf { it == "C" }?.let { TypedAnswerPolicy.VERSION }
             val answerLanguage = questionType.takeIf { it == "C" }?.let { "tr" }
             val primaryMatchKey = answerLanguage?.let {
-                TypedAnswerPolicy.canonicalize(correctAnswer, it, checkNotNull(answerPolicy))
+                TypedAnswerPolicy.canonicalize(checkNotNull(correctAnswer), it, checkNotNull(answerPolicy))
             }
             val alternativeMatchKey = answerLanguage?.let { language ->
                 alternativeCorrectAnswer?.let {
@@ -994,8 +1578,10 @@ class VerticalSliceIntegrationTest {
                     prompt, correct_answer, alternative_correct_answer,
                     answer_match_policy, answer_match_language,
                     correct_answer_match_key, alternative_answer_match_key,
+                    matching_policy, matching_label_policy, matching_order_policy,
+                    matching_target_language,
                     status, created_at
-                ) values (?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, 'DRAFT', ?)
+                ) values (?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'DRAFT', ?)
                 """.trimIndent(),
                 fixture.questionRevisionId,
                 questionId,
@@ -1008,9 +1594,13 @@ class VerticalSliceIntegrationTest {
                 answerLanguage,
                 primaryMatchKey,
                 alternativeMatchKey,
+                questionType.takeIf { it == "D" }?.let { "matching-v1" },
+                questionType.takeIf { it == "D" }?.let { MatchingLabelPolicy.VERSION },
+                questionType.takeIf { it == "D" }?.let { "matching-order-v1" },
+                questionType.takeIf { it == "D" }?.let { "tr" },
                 now,
             )
-            val options = if (questionType == "C") {
+            val options = if (questionType == "C" || questionType == "D") {
                 emptyList()
             } else {
                 listOf(
@@ -1028,6 +1618,50 @@ class VerticalSliceIntegrationTest {
                     text,
                     id == fixture.correctOptionId,
                     index + 1,
+                )
+            }
+            fixture.matchingPairs.forEachIndexed { index, pair ->
+                jdbcTemplate.update(
+                    """
+                    insert into question_revision_matching_pair(
+                        target_item_id, question_revision_id, course_id, position,
+                        target_text, target_label_key
+                    ) values (?, ?, ?, ?, ?, ?)
+                    """.trimIndent(),
+                    pair.targetItemId,
+                    fixture.questionRevisionId,
+                    fixture.courseId,
+                    index + 1,
+                    pair.targetText,
+                    MatchingLabelPolicy.canonicalize(pair.targetText, "tr"),
+                )
+                jdbcTemplate.update(
+                    """
+                    insert into question_revision_matching_translation(
+                        support_item_id, question_revision_id, course_id, target_item_id,
+                        support_language, support_text, support_label_key
+                    ) values (?, ?, ?, ?, 'en', ?, ?)
+                    """.trimIndent(),
+                    pair.supportItemId,
+                    fixture.questionRevisionId,
+                    fixture.courseId,
+                    pair.targetItemId,
+                    pair.supportText,
+                    MatchingLabelPolicy.canonicalize(pair.supportText, "en"),
+                )
+                jdbcTemplate.update(
+                    """
+                    insert into question_revision_matching_translation(
+                        support_item_id, question_revision_id, course_id, target_item_id,
+                        support_language, support_text, support_label_key
+                    ) values (?, ?, ?, ?, 'de', ?, ?)
+                    """.trimIndent(),
+                    pair.alternateSupportItemId,
+                    fixture.questionRevisionId,
+                    fixture.courseId,
+                    pair.targetItemId,
+                    pair.alternateSupportText,
+                    MatchingLabelPolicy.canonicalize(pair.alternateSupportText, "de"),
                 )
             }
             jdbcTemplate.update(
@@ -1107,6 +1741,16 @@ class VerticalSliceIntegrationTest {
         val questionRevisionId: UUID,
         val correctOptionId: UUID,
         val wrongOptionId: UUID,
+        val matchingPairs: List<MatchingFixturePair>,
+    )
+
+    data class MatchingFixturePair(
+        val targetItemId: UUID,
+        val targetText: String,
+        val supportItemId: UUID,
+        val supportText: String,
+        val alternateSupportItemId: UUID,
+        val alternateSupportText: String,
     )
 
     private class KPostgreSQLContainer(image: DockerImageName) : PostgreSQLContainer<KPostgreSQLContainer>(image)
@@ -1132,6 +1776,10 @@ class VerticalSliceIntegrationTest {
             registry.add("KELIMIO_OIDC_ISSUER") { "https://issuer.integration.invalid" }
             registry.add("KELIMIO_OIDC_AUDIENCE") { "kelimio-mobile" }
             registry.add("KELIMIO_OIDC_JWK_SET_URI") { "https://127.0.0.1:9/jwks" }
+            registry.add("KELIMIO_MATCHING_REPLAY_ACTIVE_KEY_VERSION") { "integration-v1" }
+            registry.add("KELIMIO_MATCHING_REPLAY_KEYS") {
+                "integration-v1=AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8="
+            }
         }
     }
 }

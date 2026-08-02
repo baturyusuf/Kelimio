@@ -24,6 +24,8 @@ class AttemptResponse {
 
     required this.testRevisionId,
 
+    required this.supportLanguage,
+
     required this.state,
 
     required this.questions,
@@ -39,6 +41,10 @@ class AttemptResponse {
 
   @JsonKey(name: r'testRevisionId', required: true, includeIfNull: false)
   final String testRevisionId;
+
+  /// Canonically cased BCP 47 subset: lowercase primary language, optional title-case script, uppercase region, and lowercase variants. Extensions and private-use subtags are outside the initial API contract.
+  @JsonKey(name: r'supportLanguage', required: true, includeIfNull: false)
+  final String supportLanguage;
 
   @JsonKey(name: r'state', required: true, includeIfNull: false)
   final AttemptState state;
@@ -56,6 +62,7 @@ class AttemptResponse {
           other.id == id &&
           other.testId == testId &&
           other.testRevisionId == testRevisionId &&
+          other.supportLanguage == supportLanguage &&
           other.state == state &&
           other.questions == questions &&
           other.startedAt == startedAt;
@@ -65,6 +72,7 @@ class AttemptResponse {
       id.hashCode +
       testId.hashCode +
       testRevisionId.hashCode +
+      supportLanguage.hashCode +
       state.hashCode +
       questions.hashCode +
       startedAt.hashCode;

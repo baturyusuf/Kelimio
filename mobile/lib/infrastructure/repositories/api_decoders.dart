@@ -93,6 +93,11 @@ Energy mapEnergy(api.EnergyResponse value) {
 }
 
 AttemptSession mapAttempt(api.AttemptResponse value) {
+  if (value.supportLanguage.length < 2 ||
+      value.supportLanguage.length > 35 ||
+      !_canonicalLanguageTag.hasMatch(value.supportLanguage)) {
+    throw const ProtocolFailure('Invalid attempt support language');
+  }
   final questions =
       value.questions
           .map((question) {
@@ -103,6 +108,7 @@ AttemptSession mapAttempt(api.AttemptResponse value) {
                 QuestionType.multipleChoiceCloze,
               api.QuestionPayloadTypeEnum.TYPED_CLOZE =>
                 QuestionType.typedCloze,
+              api.QuestionPayloadTypeEnum.MATCHING => QuestionType.matching,
             };
             try {
               return Question(
@@ -117,6 +123,12 @@ AttemptSession mapAttempt(api.AttemptResponse value) {
                           AnswerOption(id: option.id, text: option.text),
                     )
                     .toList(growable: false),
+                targetItems: question.targetItems
+                    .map((item) => MatchingItem(id: item.id, text: item.text))
+                    .toList(growable: false),
+                supportItems: question.supportItems
+                    .map((item) => MatchingItem(id: item.id, text: item.text))
+                    .toList(growable: false),
               );
             } on ArgumentError {
               throw const ProtocolFailure('Invalid question payload');
@@ -128,6 +140,7 @@ AttemptSession mapAttempt(api.AttemptResponse value) {
     id: value.id,
     testId: value.testId,
     testRevisionId: value.testRevisionId,
+    supportLanguage: value.supportLanguage,
     status: mapAttemptStatus(value.state),
     questions: questions,
     startedAt: value.startedAt.toUtc(),
@@ -141,6 +154,14 @@ AnswerFeedback mapAnswerFeedback(api.AnswerRecordedResponse value) {
       correct: value.correct,
       correctOptionId: value.correctOptionId,
       correctAnswerText: value.correctAnswerText,
+      correctMatches: value.correctMatches
+          ?.map(
+            (match) => MatchingPair(
+              targetItemId: match.targetItemId,
+              supportItemId: match.supportItemId,
+            ),
+          )
+          .toList(growable: false),
       activeScoreDelta: value.activeScoreDelta,
       lifetimeScoreDelta: value.lifetimeScoreDelta,
       activeQuestionScore: value.activeQuestionScore,
@@ -170,3 +191,8 @@ ServerAttemptStatus mapAttemptStatus(api.AttemptState value) => switch (value) {
   api.AttemptState.COMPLETED_FAIL => ServerAttemptStatus.completedFail,
   api.AttemptState.INTERRUPTED_ENERGY => ServerAttemptStatus.interruptedEnergy,
 };
+
+final _canonicalLanguageTag = RegExp(
+  r'^[a-z]{2,8}(?:-[A-Z][a-z]{3})?(?:-(?:[A-Z]{2}|[0-9]{3}))?'
+  r'(?:-(?:[a-z0-9]{5,8}|[0-9][a-z0-9]{3}))*$',
+);

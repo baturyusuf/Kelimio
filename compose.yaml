@@ -9,6 +9,9 @@ x-local-only-environment: &local-only-environment
   KELIMIO_OIDC_ISSUER: ${KELIMIO_LOCAL_OIDC_ISSUER:-http://localhost:8081/realms/kelimio}
   KELIMIO_OIDC_JWK_SET_URI: http://keycloak:8080/realms/kelimio/protocol/openid-connect/certs
   KELIMIO_OIDC_AUDIENCE: kelimio-api
+  # Public, local-only defaults. Production and staging must inject a secret key ring.
+  KELIMIO_MATCHING_REPLAY_ACTIVE_KEY_VERSION: ${KELIMIO_MATCHING_REPLAY_ACTIVE_KEY_VERSION:-local-v1}
+  KELIMIO_MATCHING_REPLAY_KEYS: ${KELIMIO_MATCHING_REPLAY_KEYS:-local-v1=a2VsaW1pby1sb2NhbC1vbmx5LWhtYWMta2V5LTAwMDE=}
   KELIMIO_LOCAL_STARTER_COURSE_ENABLED: "true"
   AWS_REGION: eu-central-1
   AWS_ACCESS_KEY_ID: localstack

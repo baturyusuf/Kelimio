@@ -75,5 +75,22 @@
   "accessibilityBlank": "boşluk",
   "typedAnswerLabel": "Cevabın",
   "typedAnswerReentry": "Önceki cevap cihazda saklanmadı. Aynı gönderimi sürdürmek için cevabı yeniden yaz.",
-  "correctAnswerLabel": "Doğru cevap"
+  "correctAnswerLabel": "Doğru cevap",
+  "matchingInstructions": "Her kelimeyi iki adımda eşleştir: önce öğrenilen dildeki kelimeyi, sonra anlamını seç.",
+  "matchingTargetsHeading": "Eşleştirilecek kelimeler",
+  "matchingSupportsHeading": "Anlamlar",
+  "matchingPairsHeading": "Eşleştirmelerin",
+  "matchingProgress": "{matched} / {total} eşleştirme tamamlandı",
+  "matchingTargetItemLabel": "Kelime: {item}",
+  "matchingSupportItemLabel": "Anlam: {item}",
+  "matchingTargetSelected": "Seçili kelime",
+  "matchingAlreadyPaired": "Daha önce eşleştirildi",
+  "matchingChooseTargetFirst": "Önce bir kelime seç",
+  "matchingPairLabel": "{target}, {support} ile eşleşiyor",
+  "matchingTentativePair": "Geçici eşleştirme",
+  "matchingCorrectPair": "Doğru eşleştirme",
+  "matchingIncorrectPair": "Yanlış eşleştirme",
+  "matchingRemovePair": "{target} eşleştirmesini kaldır",
+  "matchingCorrectMappingHeading": "Doğru eşleştirme",
+  "matchingFeedbackUnavailable": "Önceki eşleştirmelerin bu cihazda saklanmadı. Sunucunun bildirdiği doğru eşleştirmenin tamamı aşağıda gösteriliyor."
 }

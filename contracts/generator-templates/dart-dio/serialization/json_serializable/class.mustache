@@ -46,7 +46,7 @@ class {{{classname}}} {
     {{#defaultValue}}defaultValue: {{{defaultValue}}},{{/defaultValue}}
     name: r'{{{baseName}}}',
     required: {{#required}}true{{/required}}{{^required}}false{{/required}},
-    includeIfNull: {{#required}}{{#isNullable}}true{{/isNullable}}{{^isNullable}}false{{/isNullable}}{{/required}}{{^required}}false{{/required}},
+    includeIfNull: {{#required}}{{#vendorExtensions.x-kelimio-required-nullable}}true{{/vendorExtensions.x-kelimio-required-nullable}}{{^vendorExtensions.x-kelimio-required-nullable}}{{#isNullable}}true{{/isNullable}}{{^isNullable}}false{{/isNullable}}{{/vendorExtensions.x-kelimio-required-nullable}}{{/required}}{{^required}}false{{/required}},
   {{#isEnumOrRef}}
   {{#enumUnknownDefaultCase}}
   unknownEnumValue: {{{datatypeWithEnum}}}.unknownDefaultOpenApi,
@@ -60,7 +60,7 @@ class {{{classname}}} {
 
 
   {{#required}}
-  {{#finalProperties}}final {{/finalProperties}}{{{datatypeWithEnum}}}{{#isNullable}}?{{/isNullable}} {{{name}}};
+  {{#finalProperties}}final {{/finalProperties}}{{{datatypeWithEnum}}}{{#vendorExtensions.x-kelimio-required-nullable}}?{{/vendorExtensions.x-kelimio-required-nullable}}{{^vendorExtensions.x-kelimio-required-nullable}}{{#isNullable}}?{{/isNullable}}{{/vendorExtensions.x-kelimio-required-nullable}} {{{name}}};
   {{/required}}
   {{^required}}
   {{#finalProperties}}final {{/finalProperties}}{{{datatypeWithEnum}}}? {{{name}}};

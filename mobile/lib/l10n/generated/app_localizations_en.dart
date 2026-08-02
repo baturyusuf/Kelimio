@@ -274,4 +274,67 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get correctAnswerLabel => 'Correct answer';
+
+  @override
+  String get matchingInstructions =>
+      'Match each word in two steps: choose a learning-language word, then choose its meaning.';
+
+  @override
+  String get matchingTargetsHeading => 'Words to match';
+
+  @override
+  String get matchingSupportsHeading => 'Meanings';
+
+  @override
+  String get matchingPairsHeading => 'Your matches';
+
+  @override
+  String matchingProgress(Object matched, Object total) {
+    return '$matched of $total pairs matched';
+  }
+
+  @override
+  String matchingTargetItemLabel(Object item) {
+    return 'Word: $item';
+  }
+
+  @override
+  String matchingSupportItemLabel(Object item) {
+    return 'Meaning: $item';
+  }
+
+  @override
+  String get matchingTargetSelected => 'Selected word';
+
+  @override
+  String get matchingAlreadyPaired => 'Already matched';
+
+  @override
+  String get matchingChooseTargetFirst => 'Choose a word first';
+
+  @override
+  String matchingPairLabel(Object support, Object target) {
+    return '$target matches $support';
+  }
+
+  @override
+  String get matchingTentativePair => 'Tentative match';
+
+  @override
+  String get matchingCorrectPair => 'Correct match';
+
+  @override
+  String get matchingIncorrectPair => 'Incorrect match';
+
+  @override
+  String matchingRemovePair(Object target) {
+    return 'Remove match for $target';
+  }
+
+  @override
+  String get matchingCorrectMappingHeading => 'Correct matching';
+
+  @override
+  String get matchingFeedbackUnavailable =>
+      'Your earlier matches are not stored on this device. The complete correct matching from the server is shown below.';
 }

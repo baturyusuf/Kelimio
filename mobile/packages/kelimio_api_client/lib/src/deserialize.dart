@@ -10,6 +10,8 @@ import 'package:kelimio_api_client/src/model/energy_response.dart';
 import 'package:kelimio_api_client/src/model/enrollment_response.dart';
 import 'package:kelimio_api_client/src/model/finish_attempt_response.dart';
 import 'package:kelimio_api_client/src/model/local_starter_course_response.dart';
+import 'package:kelimio_api_client/src/model/matching_item.dart';
+import 'package:kelimio_api_client/src/model/matching_selection.dart';
 import 'package:kelimio_api_client/src/model/me_response.dart';
 import 'package:kelimio_api_client/src/model/problem.dart';
 import 'package:kelimio_api_client/src/model/profile_setup_request.dart';
@@ -72,6 +74,11 @@ ReturnType deserialize<ReturnType, BaseType>(
           as ReturnType;
     case 'LocalStarterCourseResponse':
       return LocalStarterCourseResponse.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'MatchingItem':
+      return MatchingItem.fromJson(value as Map<String, dynamic>) as ReturnType;
+    case 'MatchingSelection':
+      return MatchingSelection.fromJson(value as Map<String, dynamic>)
           as ReturnType;
     case 'MeResponse':
       return MeResponse.fromJson(value as Map<String, dynamic>) as ReturnType;

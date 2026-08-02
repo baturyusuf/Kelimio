@@ -7,12 +7,15 @@ import java.util.UUID
 interface LearningContentQuery {
     fun findActiveTest(testId: UUID): TestContext?
 
-    fun hasActiveEnrollment(
+    fun lockActiveEnrollmentSupportLanguage(
         courseId: UUID,
         userId: UUID,
-    ): Boolean
+    ): String?
 
-    fun findAttemptQuestions(testRevisionId: UUID): List<AttemptQuestionSource>
+    fun findAttemptQuestions(
+        testRevisionId: UUID,
+        supportLanguage: String,
+    ): List<AttemptQuestionSource>
 }
 
 @Service
@@ -21,11 +24,13 @@ class CatalogLearningContentQuery(
 ) : LearningContentQuery {
     override fun findActiveTest(testId: UUID): TestContext? = repository.findActiveTest(testId)
 
-    override fun hasActiveEnrollment(
+    override fun lockActiveEnrollmentSupportLanguage(
         courseId: UUID,
         userId: UUID,
-    ): Boolean = repository.hasActiveEnrollment(courseId, userId)
+    ): String? = repository.lockActiveEnrollmentSupportLanguage(courseId, userId)
 
-    override fun findAttemptQuestions(testRevisionId: UUID): List<AttemptQuestionSource> =
-        repository.findAttemptQuestions(testRevisionId)
+    override fun findAttemptQuestions(
+        testRevisionId: UUID,
+        supportLanguage: String,
+    ): List<AttemptQuestionSource> = repository.findAttemptQuestions(testRevisionId, supportLanguage)
 }

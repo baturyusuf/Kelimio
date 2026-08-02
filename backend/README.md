@@ -14,6 +14,8 @@ KELIMIO_DB_PASSWORD=<local-or-secret-store-value>
 KELIMIO_ENVIRONMENT=local
 KELIMIO_OIDC_ISSUER=http://localhost:8081/realms/kelimio
 KELIMIO_OIDC_AUDIENCE=kelimio-api
+KELIMIO_MATCHING_REPLAY_ACTIVE_KEY_VERSION=<canonical-active-version>
+KELIMIO_MATCHING_REPLAY_KEYS=<version>=<base64-encoded-32-byte-key>[,...]
 ```
 
 `KELIMIO_OIDC_JWK_SET_URI` is optional for a private network path to the same
@@ -22,6 +24,17 @@ database password, client secret, access token, or provider credential.
 Only the explicit `local` environment permits HTTP OIDC endpoints; test,
 development, staging, and production fail startup unless issuer/key endpoints
 use HTTPS.
+
+Matching replay configuration is mandatory in every environment. Versions use
+one to 32 lowercase ASCII letters, digits, `.`, `_`, or `-`; the first character
+must be alphanumeric. The comma-separated key ring must contain the active
+version exactly once, is limited to eight unique versions, and every value must
+Base64-decode to exactly 32 bytes. Missing or invalid configuration fails
+startup. Keep real values in the environment's secret store; the Compose default
+is an intentionally public local-only test key. A retired verification key must
+remain in the ring while any fact bearing its version is replayable. Before a
+ninth version is needed, accept a new ADR and migration/key-provider design
+rather than deleting a still-required key or weakening replay behavior.
 
 The root Compose stack supplies local-only values. After its dependencies are
 healthy, run the API directly with:
@@ -35,11 +48,11 @@ Flyway applies the schema on startup. Readiness is exposed at
 No course or user is seeded on startup. When Compose explicitly enables
 `KELIMIO_LOCAL_STARTER_COURSE_ENABLED`, an authenticated local user can invoke
 `POST /v1/development/starter-course` to install one idempotent immutable mixed
-Type-A/Type-B/Type-C course derived from the reviewed workbook subset using
-English as its support language. Immutable starter release v3 contains five
-Type-A questions, one Type-B question, and the exact reviewed Type-C row. The
-route returns not found outside enabled local mode and is separate from the
-import core described below.
+Type-A/Type-B/Type-C/Type-D course using English as its support language.
+Immutable starter release v4 contains five Type-A questions, one Type-B
+question, the exact reviewed Type-C row, and one four-pair Type-D question from
+the reviewed `EV` group. The route returns not found outside enabled local mode
+and is separate from the production import core described below.
 
 ## Typed-cloze boundary
 
@@ -60,6 +73,40 @@ answer lookup supports lost-response reconciliation without exposing whether
 another user owns a submission. Primary correct-answer text is returned only in
 transaction-specific post-commit feedback; diagnostic string representations
 redact it.
+
+## Matching boundary
+
+Flyway V7 adds immutable Type-D pair/translation content and pins the active
+enrollment support language onto each attempt. Flyway V8 hardens matching replay
+evidence before release: it rejects an upgrade containing an existing unkeyed
+matching fact, removes the revealing correct-pair count, and adds the replay-key
+version. Before submission, a matching question has a required null prompt, no
+options, and independently ordered `targetItems` and `supportItems`; no pair
+identity or correlated ordering field is public.
+
+The answer endpoint accepts exactly one complete two-to-six-item bijection and
+grades the whole question all-or-nothing inside the existing authoritative
+answer transaction. Duplicate, foreign, incomplete, or cross-side-overlapping
+IDs fail with `422` before score, energy, answer, attempt, or outbox facts are
+written. Reordered retries compare an identity-bound, key-version-bound salted
+HMAC-SHA-256 token in constant time. PostgreSQL retains only the non-secret salt,
+HMAC token, key version, and unavoidable question-level `is_correct` fact—not
+the submitted mapping or a correct-pair count—while the HMAC key remains outside
+the database. This token protects equality replay against database-only offline
+enumeration; it is not anonymity or full-compromise protection. A true
+`is_correct` necessarily identifies the submitted mapping as the authored one;
+for a two-item complete bijection, a false value identifies the only swapped
+mapping. Both are unavoidable consequences of retaining authoritative
+correctness.
+One wrong mapping can debit at most one energy unit. The only client/API
+responses that may contain the correct mapping are no-store post-commit feedback
+and the ownership-scoped no-store reconciliation response; request, feedback,
+domain, and persistence diagnostics
+redact mapping evidence and key metadata.
+
+This local runtime does not authorize production workbook matching conversion.
+That path remains fail-closed until group allocation semantics and a stored
+minimum-client/capability gate are implemented and verified.
 
 ## Secure Excel preview core
 
@@ -85,6 +132,13 @@ Run the focused evidence with:
 ```powershell
 .\gradlew.bat clean build
 ```
+
+The current Type-D backend checks include V7 content/language migration evidence,
+the V8 empty/upgrade/precondition rehearsal, HMAC key-ring and fail-closed
+configuration tests, matching privacy/order/replay tests, real-PostgreSQL
+authoritative answer flows, support-language pinning, and local starter v4
+multi-user installation. The complete unskipped backend run passes 28 suites
+and 135/135 tests.
 
 The vertical-slice integration test uses Testcontainers and a real PostgreSQL
 image. It is explicitly skipped when Docker is unavailable; a green build with

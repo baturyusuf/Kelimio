@@ -412,6 +412,19 @@ components:
     Id:
       type: string
       format: uuid
+    MatchingItemId:
+      type: string
+      format: uuid
+      pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+      description: >-
+        Independently generated random UUIDv4 for one public matching-side
+        item. It is unrelated to text, authored pair identity, insertion
+        order, the opposite-side item ID, or any shared namespace.
+    QuestionPrompt:
+      type: [string, "null"]
+      description: >-
+        Required question prompt value. MATCHING carries an explicit null;
+        every other question type carries nonblank target-language text.
     LanguageTag:
       type: string
       description: >-
@@ -676,7 +689,7 @@ components:
     AttemptResponse:
       type: object
       additionalProperties: false
-      required: [id, testId, testRevisionId, state, questions, startedAt]
+      required: [id, testId, testRevisionId, supportLanguage, state, questions, startedAt]
       properties:
         id:
           $ref: "#/components/schemas/Id"
@@ -684,6 +697,8 @@ components:
           $ref: "#/components/schemas/Id"
         testRevisionId:
           $ref: "#/components/schemas/Id"
+        supportLanguage:
+          $ref: "#/components/schemas/LanguageTag"
         state:
           $ref: "#/components/schemas/AttemptState"
         questions:
@@ -697,15 +712,19 @@ components:
     QuestionPayload:
       type: object
       additionalProperties: false
+      x-kelimio-test-nullable-matching-prompt: true
       description: >-
         Answer-key-free online question payload. MULTIPLE_CHOICE_CLOZE and
         TYPED_CLOZE carry a raw target-language sentence and exactly one literal
         ASCII --- marker; the client renders that marker as an accessible
-        visual blank. TYPED_CLOZE always carries an empty options array.
+        visual blank. MATCHING has a null prompt, no options, and independently
+        ordered target/support item arrays with no field linking the two sides.
       x-kelimio-cross-field-invariants:
         - MULTIPLE_CHOICE_CLOZE and TYPED_CLOZE prompts contain exactly one literal ASCII ---; overlapping occurrences count.
-        - WORD_MULTIPLE_CHOICE and MULTIPLE_CHOICE_CLOZE contain exactly four options; TYPED_CLOZE contains none.
-      required: [questionId, questionRevisionId, type, position, prompt, options]
+        - WORD_MULTIPLE_CHOICE and MULTIPLE_CHOICE_CLOZE contain exactly four options; TYPED_CLOZE and MATCHING contain none.
+        - MATCHING contains two through six target items and the same number of support items; all item IDs are unique per side and the two ID sets are disjoint.
+        - Non-MATCHING questions contain no target or support items.
+      required: [questionId, questionRevisionId, type, position, prompt, options, targetItems, supportItems]
       allOf:
         - if:
             properties:
@@ -719,17 +738,53 @@ components:
         - if:
             properties:
               type:
-                const: TYPED_CLOZE
+                enum: [WORD_MULTIPLE_CHOICE, MULTIPLE_CHOICE_CLOZE]
             required: [type]
           then:
             properties:
               options:
-                maxItems: 0
+                minItems: 4
+                maxItems: 4
           else:
             properties:
               options:
-                minItems: 4
-                maxItems: 4
+                maxItems: 0
+        - if:
+            properties:
+              type:
+                const: MATCHING
+            required: [type]
+          then:
+            allOf:
+              - properties:
+                  prompt:
+                    type: "null"
+              - oneOf:
+                  - properties:
+                      targetItems: { minItems: 2, maxItems: 2 }
+                      supportItems: { minItems: 2, maxItems: 2 }
+                  - properties:
+                      targetItems: { minItems: 3, maxItems: 3 }
+                      supportItems: { minItems: 3, maxItems: 3 }
+                  - properties:
+                      targetItems: { minItems: 4, maxItems: 4 }
+                      supportItems: { minItems: 4, maxItems: 4 }
+                  - properties:
+                      targetItems: { minItems: 5, maxItems: 5 }
+                      supportItems: { minItems: 5, maxItems: 5 }
+                  - properties:
+                      targetItems: { minItems: 6, maxItems: 6 }
+                      supportItems: { minItems: 6, maxItems: 6 }
+          else:
+            properties:
+              prompt:
+                type: string
+                minLength: 1
+                maxLength: 1000
+              targetItems:
+                maxItems: 0
+              supportItems:
+                maxItems: 0
       properties:
         questionId:
           $ref: "#/components/schemas/Id"
@@ -737,18 +792,25 @@ components:
           $ref: "#/components/schemas/Id"
         type:
           type: string
-          enum: [WORD_MULTIPLE_CHOICE, MULTIPLE_CHOICE_CLOZE, TYPED_CLOZE]
+          enum: [WORD_MULTIPLE_CHOICE, MULTIPLE_CHOICE_CLOZE, TYPED_CLOZE, MATCHING]
         position:
           type: integer
           minimum: 1
         prompt:
-          type: string
-          minLength: 1
-          maxLength: 1000
+          $ref: "#/components/schemas/QuestionPrompt"
+          x-kelimio-required-nullable: true
         options:
           type: array
           items:
             $ref: "#/components/schemas/AnswerOption"
+        targetItems:
+          type: array
+          items:
+            $ref: "#/components/schemas/MatchingItem"
+        supportItems:
+          type: array
+          items:
+            $ref: "#/components/schemas/MatchingItem"
     AnswerOption:
       type: object
       additionalProperties: false
@@ -760,25 +822,61 @@ components:
           type: string
           minLength: 1
           maxLength: 500
+    MatchingItem:
+      type: object
+      additionalProperties: false
+      required: [id, text]
+      properties:
+        id:
+          $ref: "#/components/schemas/MatchingItemId"
+        text:
+          type: string
+          minLength: 1
+          maxLength: 500
+    MatchingSelection:
+      type: object
+      additionalProperties: false
+      x-kelimio-redacted-to-string: true
+      x-kelimio-redaction-test-matching-selection: true
+      required: [targetItemId, supportItemId]
+      properties:
+        targetItemId:
+          x-kelimio-sensitive: true
+          allOf:
+            - $ref: "#/components/schemas/MatchingItemId"
+        supportItemId:
+          x-kelimio-sensitive: true
+          allOf:
+            - $ref: "#/components/schemas/MatchingItemId"
     SubmitAnswerRequest:
       type: object
       additionalProperties: false
       description: >-
-        Carries exactly one answer form. typedAnswer is sensitive, is evaluated
-        only by the server, and must never be logged or emitted to analytics or
-        outbox events.
+        Carries exactly one answer form. typedAnswer and matches are sensitive,
+        are evaluated only by the server, and must never be logged or emitted
+        to analytics or outbox events.
       x-kelimio-cross-field-invariants:
-        - Exactly one of selectedOptionId and typedAnswer is present.
+        - Exactly one of selectedOptionId, typedAnswer, and matches is present.
+        - matches is a complete bijection over the server-issued matching item IDs, with no duplicate target or support ID.
       x-kelimio-redacted-to-string: true
       x-kelimio-redaction-test-submit-answer-request: true
       required: [submissionId, questionRevisionId]
       oneOf:
         - required: [selectedOptionId]
           not:
-            required: [typedAnswer]
+            anyOf:
+              - required: [typedAnswer]
+              - required: [matches]
         - required: [typedAnswer]
           not:
-            required: [selectedOptionId]
+            anyOf:
+              - required: [selectedOptionId]
+              - required: [matches]
+        - required: [matches]
+          not:
+            anyOf:
+              - required: [selectedOptionId]
+              - required: [typedAnswer]
       properties:
         submissionId:
           $ref: "#/components/schemas/Id"
@@ -792,15 +890,25 @@ components:
           maxLength: 500
           writeOnly: true
           x-kelimio-sensitive: true
+        matches:
+          type: array
+          minItems: 2
+          maxItems: 6
+          items:
+            $ref: "#/components/schemas/MatchingSelection"
+          writeOnly: true
+          x-kelimio-sensitive: true
     AnswerRecordedResponse:
       type: object
       additionalProperties: false
       description: >-
         Post-commit feedback for exactly one submitted question. Multiple-choice
         responses contain correctOptionId; typed-cloze responses contain only
-        the primary authored correctAnswerText. Neither appears before commit.
+        the primary authored correctAnswerText; matching responses contain the
+        complete correctMatches mapping. None appears before commit.
       x-kelimio-cross-field-invariants:
-        - Exactly one of correctOptionId and correctAnswerText is present.
+        - Exactly one of correctOptionId, correctAnswerText, and correctMatches is present.
+        - correctMatches exactly covers the target and support item IDs issued for the submitted matching question.
       x-kelimio-redacted-to-string: true
       x-kelimio-redaction-test-answer-recorded-response: true
       required:
@@ -815,10 +923,19 @@ components:
       oneOf:
         - required: [correctOptionId]
           not:
-            required: [correctAnswerText]
+            anyOf:
+              - required: [correctAnswerText]
+              - required: [correctMatches]
         - required: [correctAnswerText]
           not:
-            required: [correctOptionId]
+            anyOf:
+              - required: [correctOptionId]
+              - required: [correctMatches]
+        - required: [correctMatches]
+          not:
+            anyOf:
+              - required: [correctOptionId]
+              - required: [correctAnswerText]
       properties:
         submissionId:
           $ref: "#/components/schemas/Id"
@@ -832,6 +949,13 @@ components:
           type: string
           minLength: 1
           maxLength: 500
+          x-kelimio-sensitive: true
+        correctMatches:
+          type: array
+          minItems: 2
+          maxItems: 6
+          items:
+            $ref: "#/components/schemas/MatchingSelection"
           x-kelimio-sensitive: true
         activeScoreDelta:
           type: integer

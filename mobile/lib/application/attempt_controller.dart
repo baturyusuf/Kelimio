@@ -52,6 +52,48 @@ final class AttemptController extends Notifier<AttemptState> {
     unawaited(_persistCurrent());
   }
 
+  void selectMatchingTarget(String targetItemId) {
+    final current = state;
+    if (current is! AttemptPresenting ||
+        current.question.answerKind != AnswerKind.matching ||
+        _operationActive) {
+      return;
+    }
+    state = AttemptMachine.reduce(
+      current,
+      AttemptMatchingTargetSelected(targetItemId),
+    );
+    unawaited(_persistCurrent());
+  }
+
+  void selectMatchingSupport(String supportItemId) {
+    final current = state;
+    if (current is! AttemptPresenting ||
+        current.question.answerKind != AnswerKind.matching ||
+        _operationActive) {
+      return;
+    }
+    state = AttemptMachine.reduce(
+      current,
+      AttemptMatchingSupportSelected(supportItemId),
+    );
+    unawaited(_persistCurrent());
+  }
+
+  void removeMatchingPair(String targetItemId) {
+    final current = state;
+    if (current is! AttemptPresenting ||
+        current.question.answerKind != AnswerKind.matching ||
+        _operationActive) {
+      return;
+    }
+    state = AttemptMachine.reduce(
+      current,
+      AttemptMatchingPairRemoved(targetItemId),
+    );
+    unawaited(_persistCurrent());
+  }
+
   Future<void> submitSelected() async {
     final current = state;
     if (_operationActive ||
@@ -101,6 +143,38 @@ final class AttemptController extends Notifier<AttemptState> {
     state = AttemptMachine.reduce(
       current,
       AttemptTypedSubmitRequested(submissionId, answer),
+    );
+    _operationActive = true;
+    try {
+      await _persistCurrent();
+      await _submitCurrent();
+    } on Object catch (error) {
+      final submitting = state;
+      if (submitting is AttemptSubmitting) {
+        state = AttemptMachine.reduce(
+          submitting,
+          AttemptSubmissionFailed(_failure(error)),
+        );
+      }
+    } finally {
+      _operationActive = false;
+    }
+  }
+
+  Future<void> submitMatching() async {
+    final current = state;
+    if (_operationActive ||
+        current is! AttemptPresenting ||
+        current.question.answerKind != AnswerKind.matching ||
+        !current.matchingDraft.isCompleteFor(current.question)) {
+      return;
+    }
+    final submissionId =
+        current.resumeSubmissionId ??
+        ref.read(identifierFactoryProvider).create();
+    state = AttemptMachine.reduce(
+      current,
+      AttemptMatchingSubmitRequested(submissionId),
     );
     _operationActive = true;
     try {
@@ -260,8 +334,11 @@ final class AttemptController extends Notifier<AttemptState> {
         final questionKind = presenting.question.answerKind;
         final recoveredKind = snapshot.answerKind;
         if ((recoveredKind != null && recoveredKind != questionKind) ||
-            (questionKind == AnswerKind.typed &&
-                snapshot.selectedOptionId != null)) {
+            (questionKind != AnswerKind.option &&
+                snapshot.selectedOptionId != null) ||
+            (questionKind != AnswerKind.option &&
+                snapshot.submissionId != null &&
+                recoveredKind != questionKind)) {
           await _invalidateRecoveredAttempt(
             presenting,
             'Recovered answer kind does not match the question',
@@ -297,10 +374,10 @@ final class AttemptController extends Notifier<AttemptState> {
           if (snapshot.phase == RecoveryPhase.submitting ||
               snapshot.phase == RecoveryPhase.feedback) {
             final submissionId = snapshot.submissionId;
-            if (submissionId == null) {
+            if (submissionId == null || recoveredKind != questionKind) {
               await _invalidateRecoveredAttempt(
                 presenting,
-                'Recovered typed submission has no identifier',
+                'Recovered private submission metadata is incomplete',
               );
               return;
             }
@@ -308,7 +385,7 @@ final class AttemptController extends Notifier<AttemptState> {
               presenting,
               AttemptReconciliationRequested(
                 submissionId: submissionId,
-                answerKind: AnswerKind.typed,
+                answerKind: questionKind,
               ),
             );
             await _reconcileCurrent();
@@ -318,7 +395,9 @@ final class AttemptController extends Notifier<AttemptState> {
               snapshot.submissionId != null) {
             state = AttemptMachine.reduce(
               presenting,
-              AttemptTypedSubmissionReserved(snapshot.submissionId!),
+              questionKind == AnswerKind.typed
+                  ? AttemptTypedSubmissionReserved(snapshot.submissionId!)
+                  : AttemptMatchingSubmissionReserved(snapshot.submissionId!),
             );
           }
         }
@@ -409,6 +488,11 @@ final class AttemptController extends Notifier<AttemptState> {
             ? const AttemptReconciliationMissing()
             : AttemptReconciliationRecorded(feedback),
       );
+      if (state is AttemptSubmitting) {
+        await _persistCurrent();
+        await _submitCurrent();
+        return;
+      }
       if (state is AttemptFeedback || state is AttemptPresenting) {
         await _persistCurrent();
       }
@@ -516,7 +600,7 @@ final class AttemptController extends Notifier<AttemptState> {
         answerKind: submitting.pending.kind,
         selectedOptionId: switch (submitting.pending.input) {
           final OptionAnswerInput option => option.selectedOptionId,
-          TypedAnswerInput() => null,
+          TypedAnswerInput() || MatchingAnswerInput() => null,
         },
         submissionId: submitting.pending.submissionId,
         updatedAt: now,
@@ -538,9 +622,9 @@ final class AttemptController extends Notifier<AttemptState> {
       final AttemptFeedback feedback => AttemptRecoverySnapshot(
         testId: feedback.testId,
         startCommandId: feedback.context.startCommandId,
-        phase: feedback.answerKind == AnswerKind.typed
-            ? RecoveryPhase.feedback
-            : RecoveryPhase.submitting,
+        phase: feedback.answerKind == AnswerKind.option
+            ? RecoveryPhase.submitting
+            : RecoveryPhase.feedback,
         attemptId: feedback.context.session.id,
         questionIndex: feedback.questionIndex,
         answerKind: feedback.answerKind,
@@ -582,7 +666,7 @@ final class AttemptController extends Notifier<AttemptState> {
       answerKind: submission.pending.kind,
       selectedOptionId: switch (submission.pending.input) {
         final OptionAnswerInput option => option.selectedOptionId,
-        TypedAnswerInput() => null,
+        TypedAnswerInput() || MatchingAnswerInput() => null,
       },
       submissionId: submission.pending.submissionId,
       updatedAt: now,

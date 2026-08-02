@@ -11,19 +11,31 @@ data class LocalStarterCourseResult(
 
 internal data class StarterQuestion(
     val type: LearningQuestionType,
-    val prompt: String,
-    val correctAnswer: String,
+    val prompt: String?,
+    val correctAnswer: String?,
     val options: List<String>,
     val alternativeCorrectAnswer: String? = null,
-)
+    val matchingPairs: List<StarterMatchingPair> = emptyList(),
+) {
+    override fun toString(): String =
+        "StarterQuestion(type=$type, prompt=[REDACTED], correctAnswer=[REDACTED], " +
+            "options=[REDACTED], alternativeCorrectAnswer=[REDACTED], matchingPairs=[REDACTED])"
+}
+
+internal data class StarterMatchingPair(
+    val targetText: String,
+    val supportText: String,
+) {
+    override fun toString(): String = "StarterMatchingPair([REDACTED])"
+}
 
 internal object LocalStarterCourseDefinition {
     const val ORIGIN_TYPE = "LOCAL_STARTER"
-    const val ORIGIN_KEY = "kurs-excel-plani-v3-type-a-b-c-en-v3"
+    const val ORIGIN_KEY = "kurs-excel-plani-v3-type-a-b-c-d-en-v4"
     const val SOURCE_WORKBOOK_SHA256 = "9fb87f680505e949304257e43e09ab0ce7f71324b4a06bcfae919260ab9f889e"
     const val COURSE_NAME = "Örnek Türkçe Kelime Kursu"
     const val COURSE_DESCRIPTION =
-        "Yerel geliştirme için kaynak çalışma kitabındaki Type-A, Type-B ve Type-C satırlarından oluşturulan başlangıç kursu."
+        "Yerel geliştirme için Type-A, Type-B, Type-C ve Type-D örneklerinden oluşturulan başlangıç kursu."
     const val TEST_TITLE = "Giriş Seviyesi · Başlangıç Kelimeleri"
 
     private val words = listOf(
@@ -56,5 +68,17 @@ internal object LocalStarterCourseDefinition {
                 correctAnswer = "içerim",
                 alternativeCorrectAnswer = "içiyorum",
                 options = emptyList(),
+            ) +
+            StarterQuestion(
+                type = LearningQuestionType.MATCHING,
+                prompt = null,
+                correctAnswer = null,
+                options = emptyList(),
+                matchingPairs = listOf(
+                    StarterMatchingPair("Pencere", "Window"),
+                    StarterMatchingPair("Kapı", "Door"),
+                    StarterMatchingPair("Masa", "Table"),
+                    StarterMatchingPair("Sandalye", "Chair"),
+                ),
             )
 }

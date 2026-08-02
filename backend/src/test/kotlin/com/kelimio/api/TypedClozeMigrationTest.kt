@@ -351,6 +351,18 @@ class TypedClozeMigrationTest {
             execute(
                 connection,
                 """
+                insert into enrollment(
+                    id, course_id, user_id, support_language, status, enrolled_at
+                ) values (?, ?, ?, 'en', 'ACTIVE', ?)
+                """.trimIndent(),
+                UUID.randomUUID(),
+                courseId,
+                userId,
+                now,
+            )
+            execute(
+                connection,
+                """
                 insert into test_attempt(
                     id, user_id, course_id, course_release_id, course_access_type,
                     test_revision_id, status, shuffle_seed, total_questions,

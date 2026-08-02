@@ -22,6 +22,12 @@ void main() {
       // TODO
     });
 
+    // Canonically cased BCP 47 subset: lowercase primary language, optional title-case script, uppercase region, and lowercase variants. Extensions and private-use subtags are outside the initial API contract.
+    // String supportLanguage
+    test('to test the property `supportLanguage`', () async {
+      // TODO
+    });
+
     // AttemptState state
     test('to test the property `state`', () async {
       // TODO

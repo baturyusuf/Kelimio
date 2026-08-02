@@ -21,8 +21,9 @@ Optional configuration:
 
 `KELIMIO_LOCAL_DEVELOPMENT_TOOLS` is accepted only by non-production builds.
 It reveals an explicit local-only action that installs the reviewed mixed
-Type-A/Type-B/Type-C starter course through the local backend; it never creates
-users or learning results, and the backend rejects the command outside its
+Type-A/Type-B/Type-C/Type-D starter release v4 through the local backend; it
+contains eight questions (five A, one B, one C, and the four-pair `EV` Type-D
+question), never creates users or learning results, and is rejected outside
 enabled local mode.
 
 After a valid OIDC session, the app loads `/v1/me`. Provisional users must
@@ -73,13 +74,17 @@ AVD contains Google APIs but intentionally has no Play Store; store billing and
 Play Integrity remain separate release-stage tests.
 
 From the repository root, `scripts\local-android-e2e.cmd` runs the isolated
-real-registration acceptance flow. It uses separate Compose volumes and ports,
+real-registration acceptance flow. It uses a fresh Flyway V8 database, a
+per-run random 32-byte matching-replay key, separate Compose volumes and ports,
 public Keycloak registration, Mailpit verification, a genuine S256 PKCE token,
 the generated API repositories, real Drift storage, and the production Flutter
 UI. It verifies profile gating, starter-course installation, enrollment, all
-seven server-scored answers, Type-B replay plus Type-C replay/reconciliation,
-the final 7/7 and 420/420 projection at version 8, sign-out, and private-cache
-removal. It is skipped by ordinary
+eight server-scored answers, Type-B replay, Type-C replay/reconciliation,
+Type-D matching, reordered same-map replay and owner-scoped reconciliation, the
+final 8/8 and 480/480 projection at version 9, sign-out, and private-cache
+removal. It also proves that changing a submitted matching edge returns `409`
+without mutation, isolated cleanup leaves no project resources or test images,
+and the normal Compose services and ADB mappings remain unchanged. It is skipped by ordinary
 integration-test invocations unless the guarded runner enables it.
 
 Type-C entry sends the word or phrase only as learner-answer content, alongside
@@ -91,6 +96,22 @@ submission ID; this permits safe correction without retaining the rejected text
 or weakening idempotency. After an ambiguous network failure or restart, the app
 uses the ownership-scoped recorded-answer endpoint to reconcile a committed
 result before allowing a new submission.
+
+Type-D uses an accessible two-stage path: select one target item, then one
+support item. The two sides arrive as independent ordered arrays, and the client
+submits only after it holds one complete bijection. It never grades a tentative
+pair locally; the entire question is correct only after authoritative feedback.
+The attempt's pinned support language controls the support labels across retry,
+replay, and reconciliation. Submitted and correct mappings remain in live
+memory only and are excluded from Drift recovery and diagnostic strings. A
+recoverable process restart keeps only the normal submission identity/state;
+the board is rebuilt empty unless reconciliation returns the no-store committed
+correct mapping.
+
+Flutter analysis is clean and the full suite passes 117/117 tests, including
+the focused 18/18 Type-D domain/controller/widget/accessibility coverage. The
+guarded eight-question Android E2E also passes against fresh Flyway V8 services
+with zero isolated resources or images left after cleanup.
 
 Android has explicit `production`, `smoke`, and `e2e` flavors. Normal Android
 run/build commands select `production`; ordinary device tests select `smoke`,

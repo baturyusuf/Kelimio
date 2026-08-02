@@ -9,6 +9,7 @@ import 'package:kelimio_mobile/application/catalog_controller.dart';
 import 'package:kelimio_mobile/application/profile_controller.dart';
 import 'package:kelimio_mobile/application/providers.dart';
 import 'package:kelimio_mobile/core/config/app_config.dart';
+import 'package:kelimio_mobile/domain/catalog/catalog.dart';
 import 'package:kelimio_mobile/domain/failures.dart';
 import 'package:kelimio_mobile/domain/learning/attempt_machine.dart';
 import 'package:kelimio_mobile/domain/learning/learning.dart';
@@ -45,6 +46,12 @@ const _typedStarterPrompt = 'Sabah kahvaltıda çay ---.';
 const _typedStarterInput = '  İÇİYORUM  ';
 const _typedStarterCanonicalAlternative = 'içiyorum';
 const _typedStarterPrimaryAnswer = 'içerim';
+const _matchingStarterAnswers = <String, String>{
+  'Pencere': 'Window',
+  'Kapı': 'Door',
+  'Masa': 'Table',
+  'Sandalye': 'Chair',
+};
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -189,7 +196,7 @@ void main() {
         () => container.read(courseDetailProvider(course.id).future),
       );
       expect(detail.tests, hasLength(1));
-      expect(detail.tests.single.questionCount, 7);
+      expect(detail.tests.single.questionCount, 8);
       final testId = detail.tests.single.id;
 
       await _pumpUntil(
@@ -208,9 +215,11 @@ void main() {
 
       var renderedMultipleChoiceClozeQuestions = 0;
       var renderedTypedClozeQuestions = 0;
+      var renderedMatchingQuestions = 0;
       var replayedMultipleChoiceClozeSubmission = false;
       var replayedTypedClozeSubmission = false;
-      for (var index = 0; index < 7; index += 1) {
+      var replayedMatchingSubmission = false;
+      for (var index = 0; index < 8; index += 1) {
         await _pumpUntil(tester, () {
           final state = container.read(attemptControllerProvider);
           return state is AttemptPresenting && state.questionIndex == index;
@@ -244,63 +253,131 @@ void main() {
               findsOneWidget,
             );
             break;
+          case QuestionType.matching:
+            renderedMatchingQuestions += 1;
+            expect(presenting.context.session.supportLanguage, 'en');
+            expect(presenting.question.prompt, isNull);
+            expect(presenting.question.options, isEmpty);
+            expect(presenting.question.targetItems, hasLength(4));
+            expect(presenting.question.supportItems, hasLength(4));
+            expect(
+              presenting.question.targetItems.map((item) => item.text),
+              unorderedEquals(_matchingStarterAnswers.keys),
+            );
+            expect(
+              presenting.question.supportItems.map((item) => item.text),
+              unorderedEquals(_matchingStarterAnswers.values),
+            );
+            expect(
+              presenting.question.targetItems
+                  .map((item) => item.id)
+                  .toSet()
+                  .intersection(
+                    presenting.question.supportItems
+                        .map((item) => item.id)
+                        .toSet(),
+                  ),
+              isEmpty,
+            );
+            for (final item in presenting.question.targetItems) {
+              expect(
+                find.byKey(Key('matching-target-${item.id}')),
+                findsOneWidget,
+              );
+            }
+            for (final item in presenting.question.supportItems) {
+              expect(
+                find.byKey(Key('matching-support-${item.id}')),
+                findsOneWidget,
+              );
+            }
+            break;
         }
         String? selectedOptionId;
-        if (presenting.question.answerKind == AnswerKind.option) {
-          final expectedAnswer =
-              _starterOptionAnswers[presenting.question.prompt];
-          expect(expectedAnswer, isNotNull);
-          final selected = presenting.question.options.singleWhere(
-            (option) => option.text == expectedAnswer,
-          );
-          selectedOptionId = selected.id;
-          await _tapVisible(
-            tester,
-            find.byKey(Key('answer-${selected.id}')),
-            label: 'answer ${index + 1}',
-          );
-          await _pumpUntil(
-            tester,
-            () {
-              final state = container.read(attemptControllerProvider);
-              return state is AttemptPresenting &&
-                  state.questionIndex == index &&
-                  state.selectedOptionId == selected.id;
-            },
-            label: 'selected answer ${index + 1}',
-            timeout: const Duration(seconds: 5),
-            diagnostic: () => _describeAttemptState(
-              container.read(attemptControllerProvider),
-              timeline: attemptTimeline,
-            ),
-          );
-          await _tapVisible(
-            tester,
-            find.byKey(const Key('attempt-primary-button')),
-            label: 'answer submit ${index + 1}',
-          );
-        } else {
-          await tester.enterText(
-            find.byKey(const Key('attempt-typed-answer')),
-            _typedStarterInput,
-          );
-          await _pumpUntil(
-            tester,
-            () =>
-                tester
-                    .widget<TextField>(
-                      find.byKey(const Key('attempt-typed-answer')),
-                    )
-                    .onSubmitted !=
-                null,
-            label: 'typed answer submission readiness ${index + 1}',
-            timeout: const Duration(seconds: 5),
-            diagnostic: () => _describeAttemptState(
-              container.read(attemptControllerProvider),
-              timeline: attemptTimeline,
-            ),
-          );
-          await tester.testTextInput.receiveAction(TextInputAction.done);
+        MatchingAnswerInput? submittedMatchingAnswer;
+        switch (presenting.question.answerKind) {
+          case AnswerKind.option:
+            final expectedAnswer =
+                _starterOptionAnswers[presenting.question.prompt];
+            expect(expectedAnswer, isNotNull);
+            final selected = presenting.question.options.singleWhere(
+              (option) => option.text == expectedAnswer,
+            );
+            selectedOptionId = selected.id;
+            await _tapVisible(
+              tester,
+              find.byKey(Key('answer-${selected.id}')),
+              label: 'answer ${index + 1}',
+            );
+            await _pumpUntil(
+              tester,
+              () {
+                final state = container.read(attemptControllerProvider);
+                return state is AttemptPresenting &&
+                    state.questionIndex == index &&
+                    state.selectedOptionId == selected.id;
+              },
+              label: 'selected answer ${index + 1}',
+              timeout: const Duration(seconds: 5),
+              diagnostic: () => _describeAttemptState(
+                container.read(attemptControllerProvider),
+                timeline: attemptTimeline,
+              ),
+            );
+            await _tapVisible(
+              tester,
+              find.byKey(const Key('attempt-primary-button')),
+              label: 'answer submit ${index + 1}',
+            );
+          case AnswerKind.typed:
+            await tester.enterText(
+              find.byKey(const Key('attempt-typed-answer')),
+              _typedStarterInput,
+            );
+            await _pumpUntil(
+              tester,
+              () =>
+                  tester
+                      .widget<TextField>(
+                        find.byKey(const Key('attempt-typed-answer')),
+                      )
+                      .onSubmitted !=
+                  null,
+              label: 'typed answer submission readiness ${index + 1}',
+              timeout: const Duration(seconds: 5),
+              diagnostic: () => _describeAttemptState(
+                container.read(attemptControllerProvider),
+                timeline: attemptTimeline,
+              ),
+            );
+            await tester.testTextInput.receiveAction(TextInputAction.done);
+          case AnswerKind.matching:
+            submittedMatchingAnswer = _matchingAnswerFor(presenting.question);
+            await _enterMatchingAnswer(
+              tester,
+              presenting.question,
+              submittedMatchingAnswer,
+            );
+            await _pumpUntil(
+              tester,
+              () {
+                final state = container.read(attemptControllerProvider);
+                return state is AttemptPresenting &&
+                    state.questionIndex == index &&
+                    state.matchingDraft.isCompleteFor(state.question);
+              },
+              label: 'complete matching selection ${index + 1}',
+              timeout: const Duration(seconds: 5),
+              diagnostic: () => _describeAttemptState(
+                container.read(attemptControllerProvider),
+                timeline: attemptTimeline,
+              ),
+            );
+            await _tapVisible(
+              tester,
+              find.byKey(const Key('attempt-primary-button')),
+              label: 'matching answer submit ${index + 1}',
+            );
         }
         await _pumpUntil(
           tester,
@@ -333,20 +410,38 @@ void main() {
         final feedback =
             container.read(attemptControllerProvider) as AttemptFeedback;
         expect(feedback.feedback.correct, isTrue);
-        if (feedback.question.answerKind == AnswerKind.option) {
-          expect(feedback.feedback.correctOptionId, selectedOptionId);
-          expect(feedback.feedback.correctAnswerText, isNull);
-        } else {
-          expect(feedback.feedback.correctOptionId, isNull);
-          expect(
-            feedback.feedback.correctAnswerText,
-            _typedStarterPrimaryAnswer,
-          );
-          expect(
-            find.byKey(const Key('attempt-correct-answer-text')),
-            findsOneWidget,
-          );
-          expect(find.text(_typedStarterPrimaryAnswer), findsOneWidget);
+        switch (feedback.question.answerKind) {
+          case AnswerKind.option:
+            expect(feedback.feedback.correctOptionId, selectedOptionId);
+            expect(feedback.feedback.correctAnswerText, isNull);
+            expect(feedback.feedback.correctMatches, isNull);
+          case AnswerKind.typed:
+            expect(feedback.feedback.correctOptionId, isNull);
+            expect(
+              feedback.feedback.correctAnswerText,
+              _typedStarterPrimaryAnswer,
+            );
+            expect(feedback.feedback.correctMatches, isNull);
+            expect(
+              find.byKey(const Key('attempt-correct-answer-text')),
+              findsOneWidget,
+            );
+            expect(find.text(_typedStarterPrimaryAnswer), findsOneWidget);
+          case AnswerKind.matching:
+            final submitted = submittedMatchingAnswer;
+            final correctMatches = feedback.feedback.correctMatches;
+            expect(submitted, isNotNull);
+            expect(feedback.selectedOptionId, isNull);
+            expect(feedback.feedback.correctOptionId, isNull);
+            expect(feedback.feedback.correctAnswerText, isNull);
+            expect(correctMatches, isNotNull);
+            expect(
+              MatchingAnswerInput(
+                correctMatches!,
+              ).hasExactCoverageOf(feedback.question),
+              isTrue,
+            );
+            expect(submitted!.hasSameMappingAs(correctMatches), isTrue);
         }
         expect(feedback.feedback.activeScoreDelta, 60);
         expect(feedback.feedback.lifetimeScoreDelta, 60);
@@ -411,6 +506,85 @@ void main() {
           replayedTypedClozeSubmission = true;
         }
 
+        if (feedback.question.type == QuestionType.matching &&
+            !replayedMatchingSubmission) {
+          final submitted = submittedMatchingAnswer!;
+          final repository = container.read(learningRepositoryProvider);
+          final replay = await _runIo(
+            tester,
+            () => repository.submitAnswer(
+              attemptId: feedback.context.session.id,
+              questionRevisionId: feedback.question.revisionId,
+              answer: MatchingAnswerInput(submitted.pairs.reversed),
+              submissionId: feedback.feedback.submissionId,
+            ),
+          );
+          _expectSameMatchingFeedback(replay, feedback.feedback);
+
+          final recorded = await _runIo(
+            tester,
+            () => repository.getRecordedAnswer(
+              attemptId: feedback.context.session.id,
+              submissionId: feedback.feedback.submissionId,
+            ),
+          );
+          expect(recorded, isNotNull);
+          _expectSameMatchingFeedback(recorded!, feedback.feedback);
+
+          final progressBeforeConflict = await _waitForSettledProgress(
+            tester,
+            container.read(catalogRepositoryProvider),
+            course.id,
+          );
+          final energyBeforeConflict = await _runIo(
+            tester,
+            () => container.read(energyRepositoryProvider).getEnergy(),
+          );
+          await _expectIoFailure<ConflictFailure>(
+            tester,
+            () => repository.submitAnswer(
+              attemptId: feedback.context.session.id,
+              questionRevisionId: feedback.question.revisionId,
+              answer: _changedMatchingAnswerFor(feedback.question, submitted),
+              submissionId: feedback.feedback.submissionId,
+            ),
+          );
+
+          final recordedAfterConflict = await _runIo(
+            tester,
+            () => repository.getRecordedAnswer(
+              attemptId: feedback.context.session.id,
+              submissionId: feedback.feedback.submissionId,
+            ),
+          );
+          expect(recordedAfterConflict, isNotNull);
+          _expectSameMatchingFeedback(
+            recordedAfterConflict!,
+            feedback.feedback,
+          );
+          final progressAfterConflict = await _waitForSettledProgress(
+            tester,
+            container.read(catalogRepositoryProvider),
+            course.id,
+          );
+          final energyAfterConflict = await _runIo(
+            tester,
+            () => container.read(energyRepositoryProvider).getEnergy(),
+          );
+          expect(
+            _progressFactSnapshot(progressAfterConflict),
+            _progressFactSnapshot(progressBeforeConflict),
+          );
+          expect(energyAfterConflict.balance, energyBeforeConflict.balance);
+          expect(energyAfterConflict.maximum, energyBeforeConflict.maximum);
+          expect(energyAfterConflict.unlimited, energyBeforeConflict.unlimited);
+          expect(
+            energyAfterConflict.nextRegenerationAt,
+            energyBeforeConflict.nextRegenerationAt,
+          );
+          replayedMatchingSubmission = true;
+        }
+
         await _tapVisible(
           tester,
           find.byKey(const Key('attempt-primary-button')),
@@ -419,8 +593,10 @@ void main() {
       }
       expect(renderedMultipleChoiceClozeQuestions, 1);
       expect(renderedTypedClozeQuestions, 1);
+      expect(renderedMatchingQuestions, 1);
       expect(replayedMultipleChoiceClozeSubmission, isTrue);
       expect(replayedTypedClozeSubmission, isTrue);
+      expect(replayedMatchingSubmission, isTrue);
 
       await _pumpUntil(
         tester,
@@ -429,8 +605,8 @@ void main() {
       );
       final passed = container.read(attemptControllerProvider) as AttemptPassed;
       expect(passed.result.status, ServerAttemptStatus.completedPass);
-      expect(passed.result.correctCount, 7);
-      expect(passed.result.questionCount, 7);
+      expect(passed.result.correctCount, 8);
+      expect(passed.result.questionCount, 8);
       expect(passed.result.correctRatio, 1);
 
       await _tapVisible(
@@ -452,13 +628,13 @@ void main() {
           }
           final progress = value.requireValue;
           return !progress.updating &&
-              progress.answeredQuestions == 7 &&
-              progress.correctAnswers == 7 &&
+              progress.answeredQuestions == 8 &&
+              progress.correctAnswers == 8 &&
               progress.completedAttempts == 1 &&
               progress.passedAttempts == 1 &&
-              progress.activeScore == 420 &&
-              progress.lifetimeScore == 420 &&
-              progress.projectionVersion == 8;
+              progress.activeScore == 480 &&
+              progress.lifetimeScore == 480 &&
+              progress.projectionVersion == 9;
         },
         timeout: const Duration(seconds: 20),
         label: 'completed outbox projection',
@@ -645,6 +821,181 @@ final class _CapturedFailure {
 
   final Object? error;
 }
+
+MatchingAnswerInput _matchingAnswerFor(Question question) {
+  if (question.type != QuestionType.matching ||
+      question.targetItems.length != _matchingStarterAnswers.length ||
+      question.supportItems.length != _matchingStarterAnswers.length) {
+    throw StateError('The isolated starter matching question was malformed.');
+  }
+  final targetTexts = question.targetItems.map((item) => item.text).toSet();
+  final supportByText = <String, MatchingItem>{
+    for (final item in question.supportItems) item.text: item,
+  };
+  if (targetTexts.length != _matchingStarterAnswers.length ||
+      !targetTexts.containsAll(_matchingStarterAnswers.keys) ||
+      supportByText.length != _matchingStarterAnswers.length ||
+      !supportByText.keys.toSet().containsAll(_matchingStarterAnswers.values)) {
+    throw StateError(
+      'The isolated starter matching vocabulary was not the expected fixture.',
+    );
+  }
+
+  final answer = MatchingAnswerInput(
+    question.targetItems.map((target) {
+      final expectedSupportText = _matchingStarterAnswers[target.text];
+      final support = supportByText[expectedSupportText];
+      if (expectedSupportText == null || support == null) {
+        throw StateError(
+          'The isolated starter matching vocabulary was incomplete.',
+        );
+      }
+      return MatchingPair(targetItemId: target.id, supportItemId: support.id);
+    }),
+  );
+  if (!answer.hasExactCoverageOf(question)) {
+    throw StateError('The isolated starter matching answer lacked coverage.');
+  }
+  return answer;
+}
+
+MatchingAnswerInput _changedMatchingAnswerFor(
+  Question question,
+  MatchingAnswerInput submitted,
+) {
+  final firstTarget = question.targetItems.singleWhere(
+    (item) => item.text == 'Pencere',
+  );
+  final secondTarget = question.targetItems.singleWhere(
+    (item) => item.text == 'Kapı',
+  );
+  final submittedByTarget = <String, MatchingPair>{
+    for (final pair in submitted.pairs) pair.targetItemId: pair,
+  };
+  final firstPair = submittedByTarget[firstTarget.id];
+  final secondPair = submittedByTarget[secondTarget.id];
+  if (firstPair == null || secondPair == null) {
+    throw StateError('The isolated matching conflict fixture was incomplete.');
+  }
+  final changed = MatchingAnswerInput(
+    submitted.pairs.map(
+      (pair) => switch (pair.targetItemId) {
+        final id when id == firstTarget.id => MatchingPair(
+          targetItemId: pair.targetItemId,
+          supportItemId: secondPair.supportItemId,
+        ),
+        final id when id == secondTarget.id => MatchingPair(
+          targetItemId: pair.targetItemId,
+          supportItemId: firstPair.supportItemId,
+        ),
+        _ => pair,
+      },
+    ),
+  );
+  if (!changed.hasExactCoverageOf(question) ||
+      changed.hasSameMappingAs(submitted.pairs)) {
+    throw StateError('The isolated matching conflict fixture was invalid.');
+  }
+  return changed;
+}
+
+Future<void> _enterMatchingAnswer(
+  WidgetTester tester,
+  Question question,
+  MatchingAnswerInput answer,
+) async {
+  final removableTarget = question.targetItems.singleWhere(
+    (item) => item.text == 'Pencere',
+  );
+  final removablePair = answer.pairs.singleWhere(
+    (pair) => pair.targetItemId == removableTarget.id,
+  );
+  await _tapVisible(
+    tester,
+    find.byKey(Key('matching-target-${removablePair.targetItemId}')),
+    label: 'matching target selection check',
+  );
+  await _tapVisible(
+    tester,
+    find.byKey(Key('matching-support-${removablePair.supportItemId}')),
+    label: 'matching support selection check',
+  );
+  final remove = find.byKey(
+    Key('matching-remove-${removablePair.targetItemId}'),
+  );
+  await _pumpUntil(
+    tester,
+    () => remove.evaluate().length == 1,
+    label: 'matching selection removal control',
+  );
+  await _tapVisible(tester, remove, label: 'matching selection removal');
+
+  for (final pair in answer.pairs) {
+    await _tapVisible(
+      tester,
+      find.byKey(Key('matching-target-${pair.targetItemId}')),
+      label: 'matching target selection',
+    );
+    await _tapVisible(
+      tester,
+      find.byKey(Key('matching-support-${pair.supportItemId}')),
+      label: 'matching support selection',
+    );
+  }
+}
+
+void _expectSameMatchingFeedback(
+  AnswerFeedback actual,
+  AnswerFeedback expected,
+) {
+  expect(actual.submissionId, expected.submissionId);
+  expect(actual.correct, expected.correct);
+  expect(actual.correctOptionId, isNull);
+  expect(actual.correctAnswerText, isNull);
+  expect(actual.correctMatches, isNotNull);
+  expect(expected.correctMatches, isNotNull);
+  expect(
+    MatchingAnswerInput(
+      actual.correctMatches!,
+    ).hasSameMappingAs(expected.correctMatches!),
+    isTrue,
+  );
+  expect(actual.activeScoreDelta, expected.activeScoreDelta);
+  expect(actual.lifetimeScoreDelta, expected.lifetimeScoreDelta);
+  expect(actual.activeQuestionScore, expected.activeQuestionScore);
+  expect(actual.lifetimeScore, expected.lifetimeScore);
+  expect(actual.energy.balance, expected.energy.balance);
+  expect(actual.energy.maximum, expected.energy.maximum);
+  expect(actual.energy.unlimited, expected.energy.unlimited);
+  expect(actual.energy.nextRegenerationAt, expected.energy.nextRegenerationAt);
+  expect(actual.attemptStatus, expected.attemptStatus);
+}
+
+Future<CourseProgress> _waitForSettledProgress(
+  WidgetTester tester,
+  CatalogRepository repository,
+  String courseId,
+) => _runIo(tester, () async {
+  final deadline = DateTime.now().add(const Duration(seconds: 20));
+  do {
+    final progress = await repository.getProgress(courseId);
+    if (!progress.updating) {
+      return progress;
+    }
+    await Future<void>.delayed(const Duration(milliseconds: 250));
+  } while (DateTime.now().isBefore(deadline));
+  throw StateError('The isolated progress projection did not settle.');
+});
+
+Object _progressFactSnapshot(CourseProgress progress) => (
+  progress.answeredQuestions,
+  progress.correctAnswers,
+  progress.completedAttempts,
+  progress.passedAttempts,
+  progress.activeScore,
+  progress.lifetimeScore,
+  progress.projectionVersion,
+);
 
 Future<void> _pumpUntil(
   WidgetTester tester,

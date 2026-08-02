@@ -50,13 +50,25 @@ final class _AttemptScreenState extends ConsumerState<AttemptScreen> {
             questionIndex: presenting.questionIndex,
             questionCount: presenting.context.session.questions.length,
             selectedOptionId: presenting.selectedOptionId,
+            matchingDraft: presenting.matchingDraft,
             locked: false,
             onOptionSelected: controller.selectOption,
             onTypedSubmitted: controller.submitTyped,
+            onMatchingTargetSelected: controller.selectMatchingTarget,
+            onMatchingSupportSelected: controller.selectMatchingSupport,
+            onMatchingPairRemoved: controller.removeMatchingPair,
             typedAnswerNeedsReentry: presenting.resumeSubmissionId != null,
-            onPrimary: presenting.selectedOptionId == null
-                ? null
-                : () => unawaited(controller.submitSelected()),
+            onPrimary: switch (presenting.question.answerKind) {
+              AnswerKind.option =>
+                presenting.selectedOptionId == null
+                    ? null
+                    : () => unawaited(controller.submitSelected()),
+              AnswerKind.typed => null,
+              AnswerKind.matching =>
+                presenting.matchingDraft.isCompleteFor(presenting.question)
+                    ? () => unawaited(controller.submitMatching())
+                    : null,
+            },
           ),
           final AttemptSubmitting submitting => AttemptQuestionView(
             question: submitting.question,
@@ -64,7 +76,11 @@ final class _AttemptScreenState extends ConsumerState<AttemptScreen> {
             questionCount: submitting.context.session.questions.length,
             selectedOptionId: switch (submitting.pending.input) {
               final OptionAnswerInput option => option.selectedOptionId,
-              TypedAnswerInput() => null,
+              TypedAnswerInput() || MatchingAnswerInput() => null,
+            },
+            submittedMatches: switch (submitting.pending.input) {
+              final MatchingAnswerInput matching => matching,
+              _ => null,
             },
             locked: true,
             onOptionSelected: null,
@@ -79,6 +95,10 @@ final class _AttemptScreenState extends ConsumerState<AttemptScreen> {
               final OptionAnswerInput option => option.selectedOptionId,
               _ => null,
             },
+            submittedMatches: switch (reconciling.pending?.input) {
+              final MatchingAnswerInput matching => matching,
+              _ => null,
+            },
             locked: true,
             onOptionSelected: null,
             onTypedSubmitted: null,
@@ -89,6 +109,7 @@ final class _AttemptScreenState extends ConsumerState<AttemptScreen> {
             questionIndex: feedback.questionIndex,
             questionCount: feedback.context.session.questions.length,
             selectedOptionId: feedback.selectedOptionId,
+            submittedMatches: feedback.submittedMatches,
             locked: true,
             feedback: feedback.feedback,
             onOptionSelected: null,
@@ -156,6 +177,11 @@ final class AttemptQuestionView extends StatelessWidget {
     required this.onOptionSelected,
     required this.onPrimary,
     this.onTypedSubmitted,
+    this.matchingDraft = const MatchingDraft.empty(),
+    this.submittedMatches,
+    this.onMatchingTargetSelected,
+    this.onMatchingSupportSelected,
+    this.onMatchingPairRemoved,
     this.typedAnswerNeedsReentry = false,
     this.feedback,
     super.key,
@@ -168,6 +194,11 @@ final class AttemptQuestionView extends StatelessWidget {
   final bool locked;
   final ValueChanged<String>? onOptionSelected;
   final ValueChanged<String>? onTypedSubmitted;
+  final MatchingDraft matchingDraft;
+  final MatchingAnswerInput? submittedMatches;
+  final ValueChanged<String>? onMatchingTargetSelected;
+  final ValueChanged<String>? onMatchingSupportSelected;
+  final ValueChanged<String>? onMatchingPairRemoved;
   final VoidCallback? onPrimary;
   final bool typedAnswerNeedsReentry;
   final AnswerFeedback? feedback;
@@ -213,15 +244,26 @@ final class AttemptQuestionView extends StatelessWidget {
             ),
             const SizedBox(height: 10),
           ]
-        else if (result == null)
+        else if (question.answerKind == AnswerKind.typed && result == null)
           _TypedAnswerComposer(
             locked: locked,
             needsReentry: typedAnswerNeedsReentry,
             promptDirection: _firstStrongDirection(
-              question.prompt,
+              question.prompt!,
               Directionality.of(context),
             ),
             onSubmitted: onTypedSubmitted,
+          )
+        else if (question.answerKind == AnswerKind.matching)
+          _MatchingQuestionComposer(
+            question: question,
+            draft: matchingDraft,
+            submittedMatches: submittedMatches,
+            locked: locked,
+            feedback: result,
+            onTargetSelected: onMatchingTargetSelected,
+            onSupportSelected: onMatchingSupportSelected,
+            onPairRemoved: onMatchingPairRemoved,
           ),
         if (result != null) ...[
           const SizedBox(height: 8),
@@ -255,10 +297,18 @@ final class AttemptQuestionView extends StatelessWidget {
           _AuthoritativeTypedAnswer(answer: correctAnswer),
         ],
         const SizedBox(height: 20),
-        if (question.answerKind == AnswerKind.option || feedback != null)
+        if (question.answerKind != AnswerKind.typed || feedback != null)
           FilledButton(
             key: const Key('attempt-primary-button'),
-            onPressed: onPrimary,
+            onPressed:
+                question.answerKind == AnswerKind.matching && feedback == null
+                ? matchingDraft.isCompleteFor(question) && !locked
+                      ? onPrimary
+                      : null
+                : onPrimary,
+            style: FilledButton.styleFrom(
+              minimumSize: const Size.fromHeight(48),
+            ),
             child: locked && feedback == null
                 ? const SizedBox.square(
                     dimension: 20,
@@ -283,13 +333,19 @@ final class _QuestionPrompt extends StatelessWidget {
   @override
   Widget build(BuildContext context) => switch (question.type) {
     QuestionType.wordMultipleChoice => Text(
-      question.prompt,
+      question.prompt!,
       key: const Key('attempt-word-prompt'),
       style: Theme.of(context).textTheme.headlineSmall,
       textAlign: TextAlign.center,
     ),
     QuestionType.multipleChoiceCloze ||
     QuestionType.typedCloze => _ClozePrompt(question: question),
+    QuestionType.matching => Text(
+      context.l10n.matchingInstructions,
+      key: const Key('attempt-matching-prompt'),
+      style: Theme.of(context).textTheme.titleLarge,
+      textAlign: TextAlign.start,
+    ),
   };
 }
 
@@ -302,7 +358,7 @@ final class _ClozePrompt extends StatelessWidget {
   Widget build(BuildContext context) {
     final segments = question.clozePromptSegments;
     final textDirection = _firstStrongDirection(
-      question.prompt,
+      question.prompt!,
       Directionality.of(context),
     );
     final blankLabel = context.l10n.accessibilityBlank;
@@ -326,6 +382,423 @@ final class _ClozePrompt extends StatelessWidget {
       textDirection: textDirection,
       softWrap: true,
       semanticsLabel: '${segments.before}$blankLabel${segments.after}',
+    );
+  }
+}
+
+final class _MatchingQuestionComposer extends StatelessWidget {
+  const _MatchingQuestionComposer({
+    required this.question,
+    required this.draft,
+    required this.submittedMatches,
+    required this.locked,
+    required this.feedback,
+    required this.onTargetSelected,
+    required this.onSupportSelected,
+    required this.onPairRemoved,
+  });
+
+  final Question question;
+  final MatchingDraft draft;
+  final MatchingAnswerInput? submittedMatches;
+  final bool locked;
+  final AnswerFeedback? feedback;
+  final ValueChanged<String>? onTargetSelected;
+  final ValueChanged<String>? onSupportSelected;
+  final ValueChanged<String>? onPairRemoved;
+
+  @override
+  Widget build(BuildContext context) {
+    final visiblePairs = feedback != null && submittedMatches == null
+        ? const <MatchingPair>[]
+        : submittedMatches?.pairs ?? draft.pairs;
+    final activeTargetItemId = locked ? null : draft.activeTargetItemId;
+    final pairedTargetIds = visiblePairs
+        .map((pair) => pair.targetItemId)
+        .toSet();
+    final pairedSupportIds = visiblePairs
+        .map((pair) => pair.supportItemId)
+        .toSet();
+    final targetById = {for (final item in question.targetItems) item.id: item};
+    final supportById = {
+      for (final item in question.supportItems) item.id: item,
+    };
+    final correctSupportByTarget = {
+      for (final pair in feedback?.correctMatches ?? const <MatchingPair>[])
+        pair.targetItemId: pair.supportItemId,
+    };
+    final hasRecoverableLearnerPairs = submittedMatches != null;
+
+    return FocusTraversalGroup(
+      policy: OrderedTraversalPolicy(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (feedback == null || hasRecoverableLearnerPairs) ...[
+            _MatchingProgress(
+              matchedCount: visiblePairs.length,
+              totalCount: question.targetItems.length,
+              announceChanges: !locked,
+            ),
+            const SizedBox(height: 20),
+          ],
+          Text(
+            context.l10n.matchingTargetsHeading,
+            key: const Key('matching-targets-heading'),
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 8),
+          for (final item in question.targetItems) ...[
+            _MatchingChoiceButton(
+              controlKey: Key('matching-target-${item.id}'),
+              item: item,
+              semanticPrefix: context.l10n.matchingTargetItemLabel(item.text),
+              active: activeTargetItemId == item.id,
+              paired: pairedTargetIds.contains(item.id),
+              locked: locked,
+              blockedStatus: null,
+              onPressed:
+                  !locked &&
+                      !pairedTargetIds.contains(item.id) &&
+                      onTargetSelected != null
+                  ? () => onTargetSelected!(item.id)
+                  : null,
+            ),
+            const SizedBox(height: 8),
+          ],
+          const SizedBox(height: 12),
+          Text(
+            context.l10n.matchingSupportsHeading,
+            key: const Key('matching-supports-heading'),
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 8),
+          for (final item in question.supportItems) ...[
+            _MatchingChoiceButton(
+              controlKey: Key('matching-support-${item.id}'),
+              item: item,
+              semanticPrefix: context.l10n.matchingSupportItemLabel(item.text),
+              active: false,
+              paired: pairedSupportIds.contains(item.id),
+              locked: locked,
+              blockedStatus:
+                  !locked &&
+                      activeTargetItemId == null &&
+                      !pairedSupportIds.contains(item.id)
+                  ? context.l10n.matchingChooseTargetFirst
+                  : null,
+              onPressed:
+                  !locked &&
+                      activeTargetItemId != null &&
+                      !pairedSupportIds.contains(item.id) &&
+                      onSupportSelected != null
+                  ? () => onSupportSelected!(item.id)
+                  : null,
+            ),
+            const SizedBox(height: 8),
+          ],
+          if (visiblePairs.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Text(
+              context.l10n.matchingPairsHeading,
+              key: const Key('matching-pairs-heading'),
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            for (final pair in visiblePairs) ...[
+              _MatchingPairCard(
+                pair: pair,
+                target: targetById[pair.targetItemId]!,
+                support: supportById[pair.supportItemId]!,
+                correctness: feedback == null
+                    ? null
+                    : correctSupportByTarget[pair.targetItemId] ==
+                          pair.supportItemId,
+                onRemove: !locked && onPairRemoved != null
+                    ? () => onPairRemoved!(pair.targetItemId)
+                    : null,
+              ),
+              const SizedBox(height: 8),
+            ],
+          ],
+          if (feedback != null && !hasRecoverableLearnerPairs) ...[
+            const SizedBox(height: 12),
+            Semantics(
+              liveRegion: true,
+              label: context.l10n.matchingFeedbackUnavailable,
+              child: ExcludeSemantics(
+                child: Text(
+                  context.l10n.matchingFeedbackUnavailable,
+                  key: const Key('matching-feedback-unavailable'),
+                ),
+              ),
+            ),
+          ],
+          if (feedback?.correctMatches case final correctMatches?) ...[
+            const SizedBox(height: 20),
+            Text(
+              context.l10n.matchingCorrectMappingHeading,
+              key: const Key('matching-correct-mapping-heading'),
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            for (final pair in correctMatches) ...[
+              _MatchingPairCard(
+                pair: pair,
+                target: targetById[pair.targetItemId]!,
+                support: supportById[pair.supportItemId]!,
+                correctness: true,
+                authoritative: true,
+                onRemove: null,
+              ),
+              const SizedBox(height: 8),
+            ],
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+final class _MatchingProgress extends StatelessWidget {
+  const _MatchingProgress({
+    required this.matchedCount,
+    required this.totalCount,
+    required this.announceChanges,
+  });
+
+  final int matchedCount;
+  final int totalCount;
+  final bool announceChanges;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = context.l10n.matchingProgress(matchedCount, totalCount);
+    return Semantics(
+      container: true,
+      liveRegion: announceChanges,
+      label: label,
+      value: '$matchedCount/$totalCount',
+      child: ExcludeSemantics(
+        child: Text(
+          label,
+          key: const Key('matching-progress'),
+          style: Theme.of(context).textTheme.bodyLarge,
+        ),
+      ),
+    );
+  }
+}
+
+final class _MatchingChoiceButton extends StatelessWidget {
+  const _MatchingChoiceButton({
+    required this.controlKey,
+    required this.item,
+    required this.semanticPrefix,
+    required this.active,
+    required this.paired,
+    required this.locked,
+    required this.blockedStatus,
+    required this.onPressed,
+  });
+
+  final Key controlKey;
+  final MatchingItem item;
+  final String semanticPrefix;
+  final bool active;
+  final bool paired;
+  final bool locked;
+  final String? blockedStatus;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final status = active
+        ? context.l10n.matchingTargetSelected
+        : paired
+        ? context.l10n.matchingAlreadyPaired
+        : blockedStatus;
+    final colorScheme = Theme.of(context).colorScheme;
+    final itemDirection = _firstStrongDirection(
+      item.text,
+      Directionality.of(context),
+    );
+    return Semantics(
+      container: true,
+      button: true,
+      enabled: !locked && onPressed != null,
+      selected: active || paired,
+      label: '$semanticPrefix${status == null ? '' : ', $status'}',
+      child: ExcludeSemantics(
+        child: OutlinedButton(
+          key: controlKey,
+          onPressed: onPressed,
+          style: OutlinedButton.styleFrom(
+            alignment: AlignmentDirectional.centerStart,
+            minimumSize: const Size.fromHeight(56),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            backgroundColor: active
+                ? colorScheme.secondaryContainer
+                : paired
+                ? colorScheme.surfaceContainerHighest
+                : null,
+            side: BorderSide(
+              color: active
+                  ? colorScheme.secondary
+                  : paired
+                  ? colorScheme.outline
+                  : colorScheme.outlineVariant,
+            ),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  item.text,
+                  textAlign: TextAlign.start,
+                  textDirection: itemDirection,
+                  softWrap: true,
+                ),
+              ),
+              if (active || paired) ...[
+                const SizedBox(width: 8),
+                Icon(active ? Icons.touch_app_outlined : Icons.link),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+final class _MatchingPairCard extends StatelessWidget {
+  const _MatchingPairCard({
+    required this.pair,
+    required this.target,
+    required this.support,
+    required this.correctness,
+    required this.onRemove,
+    this.authoritative = false,
+  });
+
+  final MatchingPair pair;
+  final MatchingItem target;
+  final MatchingItem support;
+  final bool? correctness;
+  final VoidCallback? onRemove;
+  final bool authoritative;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final status = switch (correctness) {
+      true => context.l10n.matchingCorrectPair,
+      false => context.l10n.matchingIncorrectPair,
+      null => context.l10n.matchingTentativePair,
+    };
+    final background = switch (correctness) {
+      true => Colors.green.withValues(alpha: 0.18),
+      false => colorScheme.errorContainer,
+      null => colorScheme.surfaceContainerHighest,
+    };
+    final border = switch (correctness) {
+      true => Colors.green,
+      false => colorScheme.error,
+      null => colorScheme.outlineVariant,
+    };
+    final targetDirection = _firstStrongDirection(
+      target.text,
+      Directionality.of(context),
+    );
+    final supportDirection = _firstStrongDirection(
+      support.text,
+      Directionality.of(context),
+    );
+    // gen-l10n emits this message's parameters alphabetically: (support, target).
+    final pairLabel = context.l10n.matchingPairLabel(support.text, target.text);
+    return DecoratedBox(
+      key: authoritative
+          ? Key('matching-correct-pair-${pair.targetItemId}')
+          : Key('matching-pair-${pair.targetItemId}'),
+      decoration: BoxDecoration(
+        color: background,
+        border: Border.all(color: border),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Semantics(
+              key: authoritative
+                  ? Key('matching-correct-pair-semantics-${pair.targetItemId}')
+                  : Key('matching-pair-semantics-${pair.targetItemId}'),
+              container: true,
+              liveRegion: correctness != null,
+              label: '$pairLabel, $status',
+              child: ExcludeSemantics(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      target.text,
+                      key: authoritative
+                          ? Key('matching-correct-target-${pair.targetItemId}')
+                          : null,
+                      textAlign: TextAlign.start,
+                      textDirection: targetDirection,
+                      style: Theme.of(context).textTheme.titleSmall,
+                    ),
+                    const SizedBox(height: 4),
+                    const Icon(Icons.arrow_downward, size: 20),
+                    const SizedBox(height: 4),
+                    Text(
+                      support.text,
+                      key: authoritative
+                          ? Key(
+                              'matching-correct-support-${pair.supportItemId}',
+                            )
+                          : null,
+                      textAlign: TextAlign.start,
+                      textDirection: supportDirection,
+                      style: Theme.of(context).textTheme.titleSmall,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(status, textAlign: TextAlign.start),
+                  ],
+                ),
+              ),
+            ),
+            if (onRemove != null) ...[
+              const SizedBox(height: 4),
+              Align(
+                alignment: AlignmentDirectional.centerEnd,
+                child: Semantics(
+                  key: Key('matching-remove-${pair.targetItemId}'),
+                  container: true,
+                  button: true,
+                  enabled: true,
+                  label: context.l10n.matchingRemovePair(target.text),
+                  onTap: onRemove,
+                  child: ExcludeSemantics(
+                    child: IconButton(
+                      onPressed: onRemove,
+                      tooltip: context.l10n.matchingRemovePair(target.text),
+                      constraints: const BoxConstraints.tightFor(
+                        width: 48,
+                        height: 48,
+                      ),
+                      icon: const Icon(Icons.link_off),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 }

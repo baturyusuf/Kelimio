@@ -56,7 +56,7 @@ OIDC provider through `localhost`. Check or stop it with `-Action status` and
 policy and does not change the workstation's persistent security settings.
 Google Play Console access is not required for this emulator.
 
-Keycloak is available at `http://localhost:8081`, the API at `http://localhost:8080`, Mailpit at `http://localhost:8025`, and LocalStack at `http://localhost:4566`. The realm has no demo user. Register through OIDC, verify the captured message in Mailpit on a fresh realm, and complete the in-app profile setup. When local development tools are enabled, an authenticated and profile-complete user can explicitly install the immutable reviewed mixed Type-A/Type-B/Type-C starter course, including when an older local starter is already present. Starter release v3 contains five Type-A questions, one Type-B question, and the exact reviewed-workbook Type-C row. This is a bounded workbook subset using English as its support language; it is local test content, not the production Excel-import workflow, and it creates no learning results. The repository also tests a side-effect-free secure preview of the exact reviewed XLSX; it does not yet expose upload, approval, persistence, or publication.
+Keycloak is available at `http://localhost:8081`, the API at `http://localhost:8080`, Mailpit at `http://localhost:8025`, and LocalStack at `http://localhost:4566`. The realm has no demo user. Register through OIDC, verify the captured message in Mailpit on a fresh realm, and complete the in-app profile setup. When local development tools are enabled, an authenticated and profile-complete user can explicitly install the immutable reviewed mixed Type-A/Type-B/Type-C/Type-D starter course, including when an older local starter is already present. Starter release v4 contains five Type-A questions, one Type-B question, the exact reviewed-workbook Type-C row, and one four-pair Type-D question from the unambiguous `EV` group (`Pencere`/`Window`, `Kapı`/`Door`, `Masa`/`Table`, and `Sandalye`/`Chair`). This is bounded local test content using English as its support language; it is not the production Excel-import workflow, creates no learning results, and does not enable the still-blocked production workbook-to-Type-D conversion. The repository also tests a side-effect-free secure preview of the exact reviewed XLSX; it does not yet expose upload, approval, persistence, or publication.
 
 Run the backend checks:
 
@@ -119,10 +119,14 @@ This runner creates a randomly named Compose project with separate ports,
 network, and volumes; registers a random user through Keycloak's public form;
 verifies the Mailpit message; exchanges a real Authorization Code + S256 PKCE
 code; and drives the production Flutter repositories, controllers, Drift store,
-and UI through profile setup, enrollment, seven answers, Type-B replay plus
-Type-C replay/reconciliation, the 7/7 and 420/420 projection at version 8,
-and sign-out. Random credentials are generated at runtime, remain
-limited to the isolated run, and are never printed or written to the repository;
+and UI through profile setup, enrollment, eight answers, Type-B replay,
+Type-C replay/reconciliation, Type-D matching replay/reconciliation, projection,
+and sign-out. The guarded run boots a fresh Flyway V8 stack with a per-run
+random 32-byte matching-replay key, passes 8/8 with 480/480 projected score at
+projection version 9, rejects a changed matching edge without mutation, purges
+private state, and verifies isolated cleanup. Random credentials and the replay
+key are generated at runtime, remain limited to the isolated run, and are never
+printed or written to the repository;
 the runner restores its process environment and deletes temporary service/app
 state during guarded cleanup. The Android build uses the separate
 `com.kelimio.app.e2e` application ID, so it cannot overwrite the normal app's
@@ -155,6 +159,10 @@ pnpm build
 pnpm test:release-gates
 ```
 
+The repository pins Node.js 24.18.0. Checks run on the currently available
+24.14.0 host do not close the exact-version gate; CI or another matching host
+must repeat them with 24.18.0.
+
 See [backend configuration](backend/README.md), [local infrastructure notes](infrastructure/local/README.md), [contract generation](contracts/README.md), [mobile configuration](mobile/README.md), and [Terraform usage](infrastructure/terraform/README.md) for environment-specific details.
 
 ## Product truth that shapes the code
@@ -163,6 +171,7 @@ See [backend configuration](backend/README.md), [local infrastructure notes](inf
 - Excel creates a course once; later content changes are made through mobile teacher authoring.
 - Online learning is server-authoritative. Signed offline packages provide scoreless practice and never sync answer history.
 - Online Type-C typed answers are graded by the backend under a pinned language policy. Raw or canonical learner text is never retained in PostgreSQL, logs, analytics, outbox events, or mobile recovery state; lost-response recovery uses an ownership-scoped committed-result lookup.
+- Online Type-D matching sends independently ordered target/support arrays before an answer, accepts one complete bijection, and grades it all-or-nothing under the attempt's pinned support language. Submitted/correct mappings never enter durable mobile recovery. A durable matching answer fact contains no explicit mapping or correct-pair count: it retains a random salt, an HMAC-SHA-256 equality token, its key version, and the required authoritative `is_correct` fact; authored correct relationships remain in immutable content tables. The staging/production secret keyring remains outside PostgreSQL, source, logs, outbox events, and diagnostics; version-specific replay uses constant-time comparison. This protects against candidate testing from a database-only compromise while the external key remains secret; it is not anonymity or full-compromise protection. Correctness necessarily leaks limited information: `true` identifies the authored mapping, and with exactly two pairs `false` identifies the sole swapped mapping. The only client/API responses that may contain the explicit post-commit correct mapping are the no-store submission and ownership-scoped reconciliation responses. The checked-in Compose key is public and local-only; staging and production must inject their own retained versioned keyring from AWS Secrets Manager and fail closed when it is absent or invalid.
 - Question/test content is immutable and release-based. Active progress can be reprojected; lifetime score never falls because a teacher edited content.
 - Free-course energy, rewarded ads, store purchases, course entitlements, teacher earnings, and payouts require auditable server-side flows.
 

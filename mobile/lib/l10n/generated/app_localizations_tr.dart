@@ -268,4 +268,67 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get correctAnswerLabel => 'Doğru cevap';
+
+  @override
+  String get matchingInstructions =>
+      'Her kelimeyi iki adımda eşleştir: önce öğrenilen dildeki kelimeyi, sonra anlamını seç.';
+
+  @override
+  String get matchingTargetsHeading => 'Eşleştirilecek kelimeler';
+
+  @override
+  String get matchingSupportsHeading => 'Anlamlar';
+
+  @override
+  String get matchingPairsHeading => 'Eşleştirmelerin';
+
+  @override
+  String matchingProgress(Object matched, Object total) {
+    return '$matched / $total eşleştirme tamamlandı';
+  }
+
+  @override
+  String matchingTargetItemLabel(Object item) {
+    return 'Kelime: $item';
+  }
+
+  @override
+  String matchingSupportItemLabel(Object item) {
+    return 'Anlam: $item';
+  }
+
+  @override
+  String get matchingTargetSelected => 'Seçili kelime';
+
+  @override
+  String get matchingAlreadyPaired => 'Daha önce eşleştirildi';
+
+  @override
+  String get matchingChooseTargetFirst => 'Önce bir kelime seç';
+
+  @override
+  String matchingPairLabel(Object support, Object target) {
+    return '$target, $support ile eşleşiyor';
+  }
+
+  @override
+  String get matchingTentativePair => 'Geçici eşleştirme';
+
+  @override
+  String get matchingCorrectPair => 'Doğru eşleştirme';
+
+  @override
+  String get matchingIncorrectPair => 'Yanlış eşleştirme';
+
+  @override
+  String matchingRemovePair(Object target) {
+    return '$target eşleştirmesini kaldır';
+  }
+
+  @override
+  String get matchingCorrectMappingHeading => 'Doğru eşleştirme';
+
+  @override
+  String get matchingFeedbackUnavailable =>
+      'Önceki eşleştirmelerin bu cihazda saklanmadı. Sunucunun bildirdiği doğru eşleştirmenin tamamı aşağıda gösteriliyor.';
 }

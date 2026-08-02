@@ -3,6 +3,7 @@
 //
 
 // ignore_for_file: unused_element
+import 'package:kelimio_api_client/src/model/matching_selection.dart';
 import 'package:json_annotation/json_annotation.dart';
 
 part 'submit_answer_request.g.dart';
@@ -23,6 +24,8 @@ class SubmitAnswerRequest {
     this.selectedOptionId,
 
     this.typedAnswer,
+
+    this.matches,
   });
 
   @JsonKey(name: r'submissionId', required: true, includeIfNull: false)
@@ -37,6 +40,9 @@ class SubmitAnswerRequest {
   @JsonKey(name: r'typedAnswer', required: false, includeIfNull: false)
   final String? typedAnswer;
 
+  @JsonKey(name: r'matches', required: false, includeIfNull: false)
+  final List<MatchingSelection>? matches;
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -44,14 +50,16 @@ class SubmitAnswerRequest {
           other.submissionId == submissionId &&
           other.questionRevisionId == questionRevisionId &&
           other.selectedOptionId == selectedOptionId &&
-          other.typedAnswer == typedAnswer;
+          other.typedAnswer == typedAnswer &&
+          other.matches == matches;
 
   @override
   int get hashCode =>
       submissionId.hashCode +
       questionRevisionId.hashCode +
       selectedOptionId.hashCode +
-      typedAnswer.hashCode;
+      typedAnswer.hashCode +
+      matches.hashCode;
 
   factory SubmitAnswerRequest.fromJson(Map<String, dynamic> json) =>
       _$SubmitAnswerRequestFromJson(json);
@@ -63,6 +71,9 @@ class SubmitAnswerRequest {
     final json = toJson();
     if (json.containsKey(r'typedAnswer')) {
       json[r'typedAnswer'] = '[REDACTED]';
+    }
+    if (json.containsKey(r'matches')) {
+      json[r'matches'] = '[REDACTED]';
     }
     return json.toString();
   }

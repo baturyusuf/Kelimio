@@ -559,6 +559,108 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Correct answer'**
   String get correctAnswerLabel;
+
+  /// No description provided for @matchingInstructions.
+  ///
+  /// In en, this message translates to:
+  /// **'Match each word in two steps: choose a learning-language word, then choose its meaning.'**
+  String get matchingInstructions;
+
+  /// No description provided for @matchingTargetsHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'Words to match'**
+  String get matchingTargetsHeading;
+
+  /// No description provided for @matchingSupportsHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'Meanings'**
+  String get matchingSupportsHeading;
+
+  /// No description provided for @matchingPairsHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'Your matches'**
+  String get matchingPairsHeading;
+
+  /// No description provided for @matchingProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'{matched} of {total} pairs matched'**
+  String matchingProgress(Object matched, Object total);
+
+  /// No description provided for @matchingTargetItemLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Word: {item}'**
+  String matchingTargetItemLabel(Object item);
+
+  /// No description provided for @matchingSupportItemLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Meaning: {item}'**
+  String matchingSupportItemLabel(Object item);
+
+  /// No description provided for @matchingTargetSelected.
+  ///
+  /// In en, this message translates to:
+  /// **'Selected word'**
+  String get matchingTargetSelected;
+
+  /// No description provided for @matchingAlreadyPaired.
+  ///
+  /// In en, this message translates to:
+  /// **'Already matched'**
+  String get matchingAlreadyPaired;
+
+  /// No description provided for @matchingChooseTargetFirst.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a word first'**
+  String get matchingChooseTargetFirst;
+
+  /// No description provided for @matchingPairLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'{target} matches {support}'**
+  String matchingPairLabel(Object support, Object target);
+
+  /// No description provided for @matchingTentativePair.
+  ///
+  /// In en, this message translates to:
+  /// **'Tentative match'**
+  String get matchingTentativePair;
+
+  /// No description provided for @matchingCorrectPair.
+  ///
+  /// In en, this message translates to:
+  /// **'Correct match'**
+  String get matchingCorrectPair;
+
+  /// No description provided for @matchingIncorrectPair.
+  ///
+  /// In en, this message translates to:
+  /// **'Incorrect match'**
+  String get matchingIncorrectPair;
+
+  /// No description provided for @matchingRemovePair.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove match for {target}'**
+  String matchingRemovePair(Object target);
+
+  /// No description provided for @matchingCorrectMappingHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'Correct matching'**
+  String get matchingCorrectMappingHeading;
+
+  /// No description provided for @matchingFeedbackUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Your earlier matches are not stored on this device. The complete correct matching from the server is shown below.'**
+  String get matchingFeedbackUnavailable;
 }
 
 class _AppLocalizationsDelegate

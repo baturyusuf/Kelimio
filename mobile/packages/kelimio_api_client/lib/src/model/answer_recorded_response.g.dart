@@ -30,6 +30,12 @@ AnswerRecordedResponse _$AnswerRecordedResponseFromJson(
       'correctAnswerText',
       (v) => v as String?,
     ),
+    correctMatches: $checkedConvert(
+      'correctMatches',
+      (v) => (v as List<dynamic>?)
+          ?.map((e) => MatchingSelection.fromJson(e as Map<String, dynamic>))
+          .toList(),
+    ),
     activeScoreDelta: $checkedConvert(
       'activeScoreDelta',
       (v) => (v as num).toInt(),
@@ -62,6 +68,9 @@ Map<String, dynamic> _$AnswerRecordedResponseToJson(
   'correct': instance.correct,
   if (instance.correctOptionId case final value?) 'correctOptionId': value,
   if (instance.correctAnswerText case final value?) 'correctAnswerText': value,
+  if (instance.correctMatches?.map((e) => e.toJson()).toList()
+      case final value?)
+    'correctMatches': value,
   'activeScoreDelta': instance.activeScoreDelta,
   'lifetimeScoreDelta': instance.lifetimeScoreDelta,
   'activeQuestionScore': instance.activeQuestionScore,

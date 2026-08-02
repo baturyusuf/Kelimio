@@ -28,9 +28,11 @@ void main() {
     final body = jsonDecode(adapter.sentBodies.single) as Map<String, Object?>;
     expect(body['typedAnswer'], 'private typed answer');
     expect(body.containsKey('selectedOptionId'), isFalse);
+    expect(body.containsKey('matches'), isFalse);
     expect(body['submissionId'], submissionId);
     expect(body['questionRevisionId'], questionRevisionId);
     expect(feedback.correctAnswerText, 'server answer');
+    expect(adapter.requests.single.data, isNull);
   });
 
   test('option submit sends selectedOptionId and never typedAnswer', () async {
@@ -49,6 +51,35 @@ void main() {
     final body = jsonDecode(adapter.sentBodies.single) as Map<String, Object?>;
     expect(body['selectedOptionId'], 'option');
     expect(body.containsKey('typedAnswer'), isFalse);
+    expect(body.containsKey('matches'), isFalse);
+  });
+
+  test('matching submit sends only MatchingSelection values', () async {
+    final adapter = _RecordingAdapter([
+      _ResponseSpec(200, _answerJson(correctMatches: fixtureCorrectMatches())),
+    ]);
+    final repository = _repository(adapter);
+
+    final feedback = await repository.submitAnswer(
+      attemptId: attemptId,
+      questionRevisionId: questionRevisionId,
+      answer: MatchingAnswerInput(fixtureCorrectMatches()),
+      submissionId: submissionId,
+    );
+
+    final body = jsonDecode(adapter.sentBodies.single) as Map<String, Object?>;
+    expect(body.containsKey('selectedOptionId'), isFalse);
+    expect(body.containsKey('typedAnswer'), isFalse);
+    expect(body['matches'], [
+      {'targetItemId': targetItemOneId, 'supportItemId': supportItemOneId},
+      {'targetItemId': targetItemTwoId, 'supportItemId': supportItemTwoId},
+    ]);
+    expect(feedback.correctMatches, hasLength(2));
+    expect(adapter.requests.single.data, isNull);
+    expect(
+      adapter.requests.single.toString(),
+      isNot(contains(targetItemOneId)),
+    );
   });
 
   test(
@@ -107,6 +138,31 @@ void main() {
     expect(dioError.toString(), isNot(contains(raw)));
   });
 
+  test('matching IDs are removed before a network failure escapes', () async {
+    final adapter = _RecordingAdapter(const [], failConnection: true);
+    final repository = _repository(adapter);
+
+    Object? thrown;
+    try {
+      await repository.submitAnswer(
+        attemptId: attemptId,
+        questionRevisionId: questionRevisionId,
+        answer: MatchingAnswerInput(fixtureCorrectMatches()),
+        submissionId: submissionId,
+      );
+    } on Object catch (error) {
+      thrown = error;
+    }
+
+    expect(thrown, isA<NetworkFailure>());
+    final failure = thrown! as NetworkFailure;
+    final dioError = failure.cause! as DioException;
+    expect(dioError.requestOptions.data, isNull);
+    expect(dioError.response?.requestOptions.data, isNull);
+    expect(failure.toString(), isNot(contains(targetItemOneId)));
+    expect(dioError.toString(), isNot(contains(supportItemOneId)));
+  });
+
   test('HTTP 413 answer rejection maps to validation', () async {
     final adapter = _RecordingAdapter([
       const _ResponseSpec(413, '{"code":"PAYLOAD_TOO_LARGE"}'),
@@ -149,24 +205,35 @@ GeneratedLearningRepository _repository(_RecordingAdapter adapter) {
   );
 }
 
-String _answerJson({String? correctOptionId, String? correctAnswerText}) =>
-    jsonEncode({
-      'submissionId': submissionId,
-      'correct': true,
-      'correctOptionId': ?correctOptionId,
-      'correctAnswerText': ?correctAnswerText,
-      'activeScoreDelta': 60,
-      'lifetimeScoreDelta': 60,
-      'activeQuestionScore': 60,
-      'lifetimeScore': 60,
-      'energy': {
-        'balance': 5,
-        'maximum': 5,
-        'unlimited': false,
-        'asOf': '2026-01-01T00:00:00.000Z',
-      },
-      'attemptState': 'IN_PROGRESS',
-    });
+String _answerJson({
+  String? correctOptionId,
+  String? correctAnswerText,
+  List<MatchingPair>? correctMatches,
+}) => jsonEncode({
+  'submissionId': submissionId,
+  'correct': true,
+  'correctOptionId': ?correctOptionId,
+  'correctAnswerText': ?correctAnswerText,
+  'correctMatches': ?correctMatches
+      ?.map(
+        (match) => {
+          'targetItemId': match.targetItemId,
+          'supportItemId': match.supportItemId,
+        },
+      )
+      .toList(growable: false),
+  'activeScoreDelta': 60,
+  'lifetimeScoreDelta': 60,
+  'activeQuestionScore': 60,
+  'lifetimeScore': 60,
+  'energy': {
+    'balance': 5,
+    'maximum': 5,
+    'unlimited': false,
+    'asOf': '2026-01-01T00:00:00.000Z',
+  },
+  'attemptState': 'IN_PROGRESS',
+});
 
 final class _ResponseSpec {
   const _ResponseSpec(this.statusCode, this.body);
@@ -185,6 +252,7 @@ final class _RecordingAdapter implements HttpClientAdapter {
   final bool failConnection;
   final List<String> sentBodies = [];
   final List<String> paths = [];
+  final List<RequestOptions> requests = [];
 
   @override
   Future<ResponseBody> fetch(
@@ -193,6 +261,7 @@ final class _RecordingAdapter implements HttpClientAdapter {
     Future<void>? cancelFuture,
   ) async {
     paths.add(options.uri.path);
+    requests.add(options);
     final data = options.data;
     if (data != null) {
       sentBodies.add(data as String);

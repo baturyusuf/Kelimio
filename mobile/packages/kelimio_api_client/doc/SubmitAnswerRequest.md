@@ -12,5 +12,6 @@ Name | Type | Description | Notes
 **questionRevisionId** | **String** |  |
 **selectedOptionId** | **String** |  | [optional]
 **typedAnswer** | **String** |  | [optional]
+**matches** | [**List&lt;MatchingSelection&gt;**](MatchingSelection.md) |  | [optional]
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

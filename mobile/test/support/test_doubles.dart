@@ -31,6 +31,7 @@ final class RecordingLearningRepository implements LearningRepository {
   final AttemptSession? session;
   final List<String> submittedIds = [];
   final List<AnswerKind> submittedKinds = [];
+  final List<AnswerInput> submittedAnswers = [];
   final List<String> reconciliationIds = [];
   int startCalls = 0;
 
@@ -52,6 +53,7 @@ final class RecordingLearningRepository implements LearningRepository {
   }) {
     submittedIds.add(submissionId);
     submittedKinds.add(answer.kind);
+    submittedAnswers.add(answer);
     return answerBehaviors.removeAt(0)(submissionId, answer);
   }
 

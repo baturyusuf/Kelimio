@@ -95,6 +95,8 @@ Class | Method | HTTP request | Description
  - [EnrollmentResponse](doc/EnrollmentResponse.md)
  - [FinishAttemptResponse](doc/FinishAttemptResponse.md)
  - [LocalStarterCourseResponse](doc/LocalStarterCourseResponse.md)
+ - [MatchingItem](doc/MatchingItem.md)
+ - [MatchingSelection](doc/MatchingSelection.md)
  - [MeResponse](doc/MeResponse.md)
  - [Problem](doc/Problem.md)
  - [ProfileSetupRequest](doc/ProfileSetupRequest.md)

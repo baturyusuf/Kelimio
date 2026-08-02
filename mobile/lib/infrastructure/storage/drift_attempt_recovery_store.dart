@@ -35,7 +35,7 @@ final class DriftAttemptRecoveryStore implements AttemptRecoveryStore {
     }
     final row = rows.single;
     try {
-      return AttemptRecoverySnapshot(
+      final snapshot = AttemptRecoverySnapshot(
         testId: row['test_id']! as String,
         startCommandId: row['start_command_id']! as String,
         phase: RecoveryPhase.values.byName(row['phase']! as String),
@@ -52,6 +52,8 @@ final class DriftAttemptRecoveryStore implements AttemptRecoveryStore {
           isUtc: true,
         ),
       );
+      _validateRecoverySnapshot(snapshot);
+      return snapshot;
     } on Object catch (error) {
       throw ProtocolFailure('Invalid attempt recovery record', cause: error);
     }
@@ -59,6 +61,7 @@ final class DriftAttemptRecoveryStore implements AttemptRecoveryStore {
 
   @override
   Future<void> write(AttemptRecoverySnapshot snapshot) async {
+    _validateRecoverySnapshot(snapshot);
     await open();
     await _connection.runInsert(
       'INSERT INTO attempt_recovery ('
@@ -102,6 +105,31 @@ final class DriftAttemptRecoveryStore implements AttemptRecoveryStore {
   }
 
   Future<void> close() => _connection.close();
+}
+
+void _validateRecoverySnapshot(AttemptRecoverySnapshot snapshot) {
+  final kind = snapshot.answerKind;
+  if ((kind == AnswerKind.typed || kind == AnswerKind.matching) &&
+      snapshot.selectedOptionId != null) {
+    throw const ProtocolFailure(
+      'Private-answer recovery record contained forbidden option data',
+    );
+  }
+  if (kind == AnswerKind.matching) {
+    final phase = snapshot.phase;
+    if ((phase == RecoveryPhase.submitting ||
+            phase == RecoveryPhase.feedback) &&
+        snapshot.submissionId == null) {
+      throw const ProtocolFailure(
+        'Matching recovery record omitted its submission identity',
+      );
+    }
+    if (phase != RecoveryPhase.presenting &&
+        phase != RecoveryPhase.submitting &&
+        phase != RecoveryPhase.feedback) {
+      throw const ProtocolFailure('Invalid matching recovery phase');
+    }
+  }
 }
 
 final class _RecoverySchema implements QueryExecutorUser {

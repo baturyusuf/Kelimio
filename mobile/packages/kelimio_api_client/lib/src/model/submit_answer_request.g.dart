@@ -18,6 +18,12 @@ SubmitAnswerRequest _$SubmitAnswerRequestFromJson(
     ),
     selectedOptionId: $checkedConvert('selectedOptionId', (v) => v as String?),
     typedAnswer: $checkedConvert('typedAnswer', (v) => v as String?),
+    matches: $checkedConvert(
+      'matches',
+      (v) => (v as List<dynamic>?)
+          ?.map((e) => MatchingSelection.fromJson(e as Map<String, dynamic>))
+          .toList(),
+    ),
   );
   return val;
 });
@@ -29,4 +35,6 @@ Map<String, dynamic> _$SubmitAnswerRequestToJson(
   'questionRevisionId': instance.questionRevisionId,
   if (instance.selectedOptionId case final value?) 'selectedOptionId': value,
   if (instance.typedAnswer case final value?) 'typedAnswer': value,
+  if (instance.matches?.map((e) => e.toJson()).toList() case final value?)
+    'matches': value,
 };

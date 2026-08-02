@@ -75,5 +75,22 @@
   "accessibilityBlank": "فراغ",
   "typedAnswerLabel": "إجابتك",
   "typedAnswerReentry": "لم تُحفظ الإجابة السابقة على هذا الجهاز. أدخلها مجددًا لمتابعة الإرسال نفسه.",
-  "correctAnswerLabel": "الإجابة الصحيحة"
+  "correctAnswerLabel": "الإجابة الصحيحة",
+  "matchingInstructions": "طابق كل كلمة في خطوتين: اختر أولًا كلمة لغة التعلّم، ثم اختر معناها.",
+  "matchingTargetsHeading": "الكلمات المطلوب مطابقتها",
+  "matchingSupportsHeading": "المعاني",
+  "matchingPairsHeading": "مطابقاتك",
+  "matchingProgress": "تمت مطابقة {matched} من {total}",
+  "matchingTargetItemLabel": "الكلمة: {item}",
+  "matchingSupportItemLabel": "المعنى: {item}",
+  "matchingTargetSelected": "الكلمة محددة",
+  "matchingAlreadyPaired": "تمت مطابقتها",
+  "matchingChooseTargetFirst": "اختر كلمة أولًا",
+  "matchingPairLabel": "{target} تطابق {support}",
+  "matchingTentativePair": "مطابقة مؤقتة",
+  "matchingCorrectPair": "مطابقة صحيحة",
+  "matchingIncorrectPair": "مطابقة غير صحيحة",
+  "matchingRemovePair": "إزالة مطابقة {target}",
+  "matchingCorrectMappingHeading": "المطابقة الصحيحة",
+  "matchingFeedbackUnavailable": "لم تُحفظ مطابقاتك السابقة على هذا الجهاز. تظهر أدناه المطابقة الصحيحة الكاملة التي أرسلها الخادم."
 }

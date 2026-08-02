@@ -7,6 +7,8 @@ import com.kelimio.api.persistence.Courses
 import com.kelimio.api.persistence.Enrollments
 import com.kelimio.api.persistence.QuestionRevisions
 import com.kelimio.api.persistence.QuestionRevisionOptions
+import com.kelimio.api.persistence.QuestionRevisionMatchingPairs
+import com.kelimio.api.persistence.QuestionRevisionMatchingTranslations
 import com.kelimio.api.persistence.TestRevisionQuestions
 import com.kelimio.api.persistence.TestRevisions
 import com.kelimio.api.persistence.Users
@@ -235,6 +237,18 @@ class CatalogRepository(
                 .and(Enrollments.STATUS.eq("ACTIVE")),
         )
 
+    fun lockActiveEnrollmentSupportLanguage(
+        courseId: UUID,
+        userId: UUID,
+    ): String? =
+        dsl.select(Enrollments.SUPPORT_LANGUAGE)
+            .from(Enrollments.TABLE)
+            .where(Enrollments.COURSE_ID.eq(courseId))
+            .and(Enrollments.USER_ID.eq(userId))
+            .and(Enrollments.STATUS.eq("ACTIVE"))
+            .forUpdate()
+            .fetchOne(Enrollments.SUPPORT_LANGUAGE)
+
     fun findEnrollment(enrollmentId: UUID): EnrollmentResult? =
         dsl.select(
             Enrollments.ID,
@@ -289,7 +303,10 @@ class CatalogRepository(
                 )
             }
 
-    fun findAttemptQuestions(testRevisionId: UUID): List<AttemptQuestionSource> =
+    fun findAttemptQuestions(
+        testRevisionId: UUID,
+        supportLanguage: String,
+    ): List<AttemptQuestionSource> =
         dsl.select(
             QuestionRevisions.QUESTION_ID,
             QuestionRevisions.ID,
@@ -301,6 +318,10 @@ class CatalogRepository(
             QuestionRevisions.ANSWER_MATCH_LANGUAGE,
             QuestionRevisions.CORRECT_ANSWER_MATCH_KEY,
             QuestionRevisions.ALTERNATIVE_ANSWER_MATCH_KEY,
+            QuestionRevisions.MATCHING_POLICY,
+            QuestionRevisions.MATCHING_LABEL_POLICY,
+            QuestionRevisions.MATCHING_ORDER_POLICY,
+            QuestionRevisions.MATCHING_TARGET_LANGUAGE,
             TestRevisionQuestions.POSITION,
         ).from(TestRevisionQuestions.TABLE)
             .join(QuestionRevisions.TABLE)
@@ -315,7 +336,7 @@ class CatalogRepository(
                     questionId = it.get(QuestionRevisions.QUESTION_ID)!!,
                     questionRevisionId = it.get(QuestionRevisions.ID)!!,
                     type = type,
-                    prompt = it.get(QuestionRevisions.PROMPT)!!,
+                    prompt = it.get(QuestionRevisions.PROMPT),
                     options = findQuestionOptions(it.get(QuestionRevisions.ID)!!),
                     typedAnswer = if (type == LearningQuestionType.TYPED_CLOZE) {
                         TypedAnswerSource(
@@ -329,7 +350,52 @@ class CatalogRepository(
                     } else {
                         null
                     },
+                    matching = if (type == LearningQuestionType.MATCHING) {
+                        MatchingQuestionSource(
+                            policyVersion = it.get(QuestionRevisions.MATCHING_POLICY)!!,
+                            labelPolicyVersion = it.get(QuestionRevisions.MATCHING_LABEL_POLICY)!!,
+                            orderPolicyVersion = it.get(QuestionRevisions.MATCHING_ORDER_POLICY)!!,
+                            targetLanguage = it.get(QuestionRevisions.MATCHING_TARGET_LANGUAGE)!!,
+                            pairs = findMatchingPairs(it.get(QuestionRevisions.ID)!!, supportLanguage),
+                        )
+                    } else {
+                        null
+                    },
                     position = it.get(TestRevisionQuestions.POSITION)!!,
+                )
+            }
+
+    private fun findMatchingPairs(
+        questionRevisionId: UUID,
+        supportLanguage: String,
+    ): List<MatchingPairSource> =
+        dsl.select(
+            QuestionRevisionMatchingPairs.TARGET_ITEM_ID,
+            QuestionRevisionMatchingPairs.TARGET_TEXT,
+            QuestionRevisionMatchingTranslations.SUPPORT_ITEM_ID,
+            QuestionRevisionMatchingTranslations.SUPPORT_TEXT,
+            QuestionRevisionMatchingPairs.POSITION,
+        ).from(QuestionRevisionMatchingPairs.TABLE)
+            .join(QuestionRevisionMatchingTranslations.TABLE)
+            .on(
+                QuestionRevisionMatchingTranslations.QUESTION_REVISION_ID
+                    .eq(QuestionRevisionMatchingPairs.QUESTION_REVISION_ID),
+            )
+            .and(
+                QuestionRevisionMatchingTranslations.TARGET_ITEM_ID
+                    .eq(QuestionRevisionMatchingPairs.TARGET_ITEM_ID),
+            )
+            .and(QuestionRevisionMatchingTranslations.COURSE_ID.eq(QuestionRevisionMatchingPairs.COURSE_ID))
+            .where(QuestionRevisionMatchingPairs.QUESTION_REVISION_ID.eq(questionRevisionId))
+            .and(QuestionRevisionMatchingTranslations.SUPPORT_LANGUAGE.eq(supportLanguage))
+            .orderBy(QuestionRevisionMatchingPairs.POSITION.asc())
+            .fetch {
+                MatchingPairSource(
+                    targetItemId = it.get(QuestionRevisionMatchingPairs.TARGET_ITEM_ID)!!,
+                    targetText = it.get(QuestionRevisionMatchingPairs.TARGET_TEXT)!!,
+                    supportItemId = it.get(QuestionRevisionMatchingTranslations.SUPPORT_ITEM_ID)!!,
+                    supportText = it.get(QuestionRevisionMatchingTranslations.SUPPORT_TEXT)!!,
+                    position = it.get(QuestionRevisionMatchingPairs.POSITION)!!,
                 )
             }
 

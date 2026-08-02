@@ -24,26 +24,79 @@ void main() {
     {{#vendorExtensions.x-kelimio-redaction-test-submit-answer-request}}
     test('redacts sensitive values from toString', () {
       const sensitiveAnswer = 'private-typed-answer';
+      const targetItemId = '7c3fb0e8-0fb2-4b4e-8d41-f6bf5ebec2a9';
+      const supportItemId = 'dca8ed80-fcab-42a1-acd8-ff69cda41534';
+      const secondTargetItemId = '294d18f5-1115-499d-a51a-a97635004e91';
+      const secondSupportItemId = '5e83bf52-1ed2-41ef-ae24-09f704621f16';
       final request = SubmitAnswerRequest(
         submissionId: '00000000-0000-4000-8000-000000000001',
         questionRevisionId: '00000000-0000-4000-8000-000000000002',
         typedAnswer: sensitiveAnswer,
       );
+      final matchingRequest = SubmitAnswerRequest(
+        submissionId: '00000000-0000-4000-8000-000000000003',
+        questionRevisionId: '00000000-0000-4000-8000-000000000004',
+        matches: [
+          MatchingSelection(
+            targetItemId: targetItemId,
+            supportItemId: supportItemId,
+          ),
+          MatchingSelection(
+            targetItemId: secondTargetItemId,
+            supportItemId: secondSupportItemId,
+          ),
+        ],
+      );
 
       expect(request.toString(), contains('[REDACTED]'));
       expect(request.toString(), isNot(contains(sensitiveAnswer)));
       expect(request.toJson()['typedAnswer'], sensitiveAnswer);
+      expect(matchingRequest.toString(), contains('[REDACTED]'));
+      expect(matchingRequest.toString(), isNot(contains(targetItemId)));
+      expect(matchingRequest.toString(), isNot(contains(supportItemId)));
+      expect(matchingRequest.toString(), isNot(contains(secondTargetItemId)));
+      expect(matchingRequest.toString(), isNot(contains(secondSupportItemId)));
+      expect(matchingRequest.toJson()['matches'], isNotNull);
     });
     {{/vendorExtensions.x-kelimio-redaction-test-submit-answer-request}}
     {{#vendorExtensions.x-kelimio-redaction-test-answer-recorded-response}}
     test('redacts answer-key values from toString', () {
       const optionAnswerKey = '00000000-0000-4000-8000-000000000099';
       const typedAnswerKey = 'private-authored-answer-key';
+      const targetItemId = 'a0f8b1ca-07fd-451e-974d-98a776d2cf72';
+      const supportItemId = 'c27da0ae-6d47-47c1-bb78-2bc2a86bd394';
+      const secondTargetItemId = '13ad8f73-2a53-4c19-b8e4-dc699a498e27';
+      const secondSupportItemId = '8d215d5a-e815-4bb7-97c1-3e2c87ff5b42';
       final response = AnswerRecordedResponse(
         submissionId: '00000000-0000-4000-8000-000000000001',
         correct: true,
         correctOptionId: optionAnswerKey,
         correctAnswerText: typedAnswerKey,
+        activeScoreDelta: 60,
+        lifetimeScoreDelta: 60,
+        activeQuestionScore: 60,
+        lifetimeScore: 60,
+        energy: EnergyResponse(
+          balance: 5,
+          maximum: EnergyResponseMaximumEnum.number5,
+          unlimited: false,
+          asOf: DateTime.utc(2026, 8, 2),
+        ),
+        attemptState: AttemptState.IN_PROGRESS,
+      );
+      final matchingResponse = AnswerRecordedResponse(
+        submissionId: '00000000-0000-4000-8000-000000000003',
+        correct: true,
+        correctMatches: [
+          MatchingSelection(
+            targetItemId: targetItemId,
+            supportItemId: supportItemId,
+          ),
+          MatchingSelection(
+            targetItemId: secondTargetItemId,
+            supportItemId: secondSupportItemId,
+          ),
+        ],
         activeScoreDelta: 60,
         lifetimeScoreDelta: 60,
         activeQuestionScore: 60,
@@ -62,8 +115,66 @@ void main() {
       expect(response.toString(), isNot(contains(typedAnswerKey)));
       expect(response.toJson()['correctOptionId'], optionAnswerKey);
       expect(response.toJson()['correctAnswerText'], typedAnswerKey);
+      expect(matchingResponse.toString(), contains('[REDACTED]'));
+      expect(matchingResponse.toString(), isNot(contains(targetItemId)));
+      expect(matchingResponse.toString(), isNot(contains(supportItemId)));
+      expect(matchingResponse.toString(), isNot(contains(secondTargetItemId)));
+      expect(matchingResponse.toString(), isNot(contains(secondSupportItemId)));
+      expect(matchingResponse.toJson()['correctMatches'], isNotNull);
     });
     {{/vendorExtensions.x-kelimio-redaction-test-answer-recorded-response}}
+    {{#vendorExtensions.x-kelimio-redaction-test-matching-selection}}
+    test('redacts both matching item identifiers from toString', () {
+      const targetItemId = '6c02f4ea-3f74-481c-aaad-e842bda437e1';
+      const supportItemId = 'b8f4a21e-d895-4f3c-850f-373dd329cbe8';
+      final selection = MatchingSelection(
+        targetItemId: targetItemId,
+        supportItemId: supportItemId,
+      );
+
+      expect(selection.toString(), contains('[REDACTED]'));
+      expect(selection.toString(), isNot(contains(targetItemId)));
+      expect(selection.toString(), isNot(contains(supportItemId)));
+      expect(selection.toJson()['targetItemId'], targetItemId);
+      expect(selection.toJson()['supportItemId'], supportItemId);
+    });
+    {{/vendorExtensions.x-kelimio-redaction-test-matching-selection}}
+    {{#vendorExtensions.x-kelimio-test-nullable-matching-prompt}}
+    test('keeps the required matching prompt key with a null value', () {
+      final payload = QuestionPayload(
+        questionId: '00000000-0000-4000-8000-000000000071',
+        questionRevisionId: '00000000-0000-4000-8000-000000000072',
+        type: QuestionPayloadTypeEnum.MATCHING,
+        position: 1,
+        prompt: null,
+        options: const [],
+        targetItems: [
+          MatchingItem(
+            id: '53184dbf-a100-45ad-93bd-57b1c122fe07',
+            text: 'Pencere',
+          ),
+          MatchingItem(
+            id: 'bc4996c9-c410-4fc5-a92b-f25b1182a858',
+            text: 'Kapı',
+          ),
+        ],
+        supportItems: [
+          MatchingItem(
+            id: 'f222c9dc-d9a4-4f75-bc49-37454a2b62cd',
+            text: 'Window',
+          ),
+          MatchingItem(
+            id: '8a2d1ea7-3d79-4416-b514-7be383c91a22',
+            text: 'Door',
+          ),
+        ],
+      );
+
+      expect(payload.prompt, isNull);
+      expect(payload.toJson(), containsPair('prompt', null));
+      expect(QuestionPayload.fromJson(payload.toJson()).prompt, isNull);
+    });
+    {{/vendorExtensions.x-kelimio-test-nullable-matching-prompt}}
   });
 }
 {{/model}}

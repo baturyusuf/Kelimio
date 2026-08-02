@@ -6,12 +6,17 @@ const attemptId = '00000000-0000-4000-8000-000000000002';
 const testRevisionId = '00000000-0000-4000-8000-000000000003';
 const questionRevisionId = '00000000-0000-4000-8000-000000000004';
 const submissionId = '00000000-0000-4000-8000-000000000005';
+const targetItemOneId = '7c3fb0e8-0fb2-4b4e-8d41-f6bf5ebec2a9';
+const targetItemTwoId = '294d18f5-1115-499d-a51a-a97635004e91';
+const supportItemOneId = 'dca8ed80-fcab-42a1-acd8-ff69cda41534';
+const supportItemTwoId = '5e83bf52-1ed2-41ef-ae24-09f704621f16';
 
 AttemptSession fixtureSession({Question? question}) {
   return AttemptSession(
     id: attemptId,
     testId: testId,
     testRevisionId: testRevisionId,
+    supportLanguage: 'en',
     status: ServerAttemptStatus.inProgress,
     questions: [
       question ??
@@ -75,6 +80,43 @@ Question fixtureTypedClozeQuestion({
 AttemptSession fixtureTypedSession() =>
     fixtureSession(question: fixtureTypedClozeQuestion());
 
+Question fixtureMatchingQuestion({
+  List<MatchingItem>? targetItems,
+  List<MatchingItem>? supportItems,
+}) => Question(
+  id: '00000000-0000-4000-8000-000000000306',
+  revisionId: questionRevisionId,
+  type: QuestionType.matching,
+  position: 1,
+  prompt: null,
+  options: const [],
+  targetItems:
+      targetItems ??
+      [
+        MatchingItem(id: targetItemOneId, text: 'elma'),
+        MatchingItem(id: targetItemTwoId, text: 'armut'),
+      ],
+  supportItems:
+      supportItems ??
+      [
+        MatchingItem(id: supportItemOneId, text: 'apple'),
+        MatchingItem(id: supportItemTwoId, text: 'pear'),
+      ],
+);
+
+AttemptSession fixtureMatchingSession() =>
+    fixtureSession(question: fixtureMatchingQuestion());
+
+List<MatchingPair> fixtureCorrectMatches() => [
+  MatchingPair(targetItemId: targetItemOneId, supportItemId: supportItemOneId),
+  MatchingPair(targetItemId: targetItemTwoId, supportItemId: supportItemTwoId),
+];
+
+List<MatchingPair> fixtureIncorrectMatches() => [
+  MatchingPair(targetItemId: targetItemOneId, supportItemId: supportItemTwoId),
+  MatchingPair(targetItemId: targetItemTwoId, supportItemId: supportItemOneId),
+];
+
 AnswerFeedback fixtureFeedback({String id = submissionId}) {
   return AnswerFeedback(
     submissionId: id,
@@ -102,6 +144,29 @@ AnswerFeedback fixtureTypedFeedback({
     submissionId: id,
     correct: correct,
     correctAnswerText: 'içerim',
+    activeScoreDelta: correct ? 60 : 0,
+    lifetimeScoreDelta: correct ? 60 : 0,
+    activeQuestionScore: correct ? 60 : 0,
+    lifetimeScore: correct ? 60 : 0,
+    energy: Energy(
+      balance: correct ? 5 : 4,
+      maximum: 5,
+      unlimited: false,
+      asOf: DateTime.utc(2026),
+    ),
+    attemptStatus: ServerAttemptStatus.inProgress,
+  );
+}
+
+AnswerFeedback fixtureMatchingFeedback({
+  String id = submissionId,
+  bool correct = true,
+  List<MatchingPair>? correctMatches,
+}) {
+  return AnswerFeedback(
+    submissionId: id,
+    correct: correct,
+    correctMatches: correctMatches ?? fixtureCorrectMatches(),
     activeScoreDelta: correct ? 60 : 0,
     lifetimeScoreDelta: correct ? 60 : 0,
     activeQuestionScore: correct ? 60 : 0,

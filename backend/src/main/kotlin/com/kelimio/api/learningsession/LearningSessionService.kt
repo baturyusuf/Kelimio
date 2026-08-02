@@ -3,6 +3,7 @@ package com.kelimio.api.learningsession
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.kelimio.api.catalog.LearningContentQuery
 import com.kelimio.api.catalog.LearningQuestionType
+import com.kelimio.api.catalog.MatchingQuestionSource
 import com.kelimio.api.catalog.QuestionOptionSource
 import com.kelimio.api.catalog.TypedAnswerSource
 import com.kelimio.api.energy.EnergyService
@@ -10,6 +11,7 @@ import com.kelimio.api.energy.EnergySnapshot
 import com.kelimio.api.idempotency.IdempotencyService
 import com.kelimio.api.identityprofile.AppUser
 import com.kelimio.api.language.InvalidTypedAnswerException
+import com.kelimio.api.language.MatchingLabelPolicy
 import com.kelimio.api.language.TypedAnswerPolicy
 import com.kelimio.api.outbox.OutboxRepository
 import com.kelimio.api.scoring.ScoringService
@@ -41,6 +43,7 @@ class LearningSessionService(
     private val idempotencyService: IdempotencyService,
     private val objectMapper: ObjectMapper,
     private val clock: Clock,
+    private val matchingAnswerReplayDigest: MatchingAnswerReplayDigest,
 ) {
     private val secureRandom = SecureRandom()
 
@@ -59,31 +62,39 @@ class LearningSessionService(
         lookup.resourceId?.let { return replayStart(user, it) }
         val context = learningContentQuery.findActiveTest(testId)
             ?: throw NotFoundProblem("Test was not found.")
-        if (!learningContentQuery.hasActiveEnrollment(context.courseId, user.id)) {
-            throw ForbiddenProblem("An active course enrollment is required.")
-        }
+        val supportLanguage = learningContentQuery.lockActiveEnrollmentSupportLanguage(context.courseId, user.id)
+            ?: throw ForbiddenProblem("An active course enrollment is required.")
         if (context.courseAccessType != "FREE") {
             throw ForbiddenProblem("Paid-course learning is disabled until a verified entitlement is available.")
         }
 
-        val sourceQuestions = learningContentQuery.findAttemptQuestions(context.testRevisionId)
+        val sourceQuestions = learningContentQuery.findAttemptQuestions(context.testRevisionId, supportLanguage)
         if (sourceQuestions.isEmpty()) {
             throw ConflictProblem("The active test revision contains no questions.")
         }
         sourceQuestions.forEach { source ->
             val valid = when (source.type) {
                 LearningQuestionType.WORD_MULTIPLE_CHOICE ->
-                    source.typedAnswer == null && source.options.isValidMultipleChoiceOptions()
+                    source.prompt != null && source.typedAnswer == null && source.matching == null &&
+                        source.options.isValidMultipleChoiceOptions()
 
                 LearningQuestionType.MULTIPLE_CHOICE_CLOZE ->
                     source.typedAnswer == null &&
-                        source.prompt.hasExactlyOneClozeMarker() &&
+                        source.matching == null &&
+                        source.prompt?.hasExactlyOneClozeMarker() == true &&
                         source.options.isValidMultipleChoiceOptions()
 
                 LearningQuestionType.TYPED_CLOZE ->
-                    source.prompt.hasExactlyOneClozeMarker() &&
+                    source.prompt?.hasExactlyOneClozeMarker() == true &&
                         source.options.isEmpty() &&
+                        source.matching == null &&
                         source.typedAnswer?.isValidTypedAnswerMaterial() == true
+
+                LearningQuestionType.MATCHING ->
+                    source.prompt == null &&
+                        source.options.isEmpty() &&
+                        source.typedAnswer == null &&
+                        source.matching?.isValidMatchingMaterial(supportLanguage) == true
             }
             if (!valid) {
                 throw ConflictProblem("The active test revision contains an invalid question.")
@@ -94,19 +105,7 @@ class LearningSessionService(
         val shuffled = sourceQuestions.toMutableList()
         Collections.shuffle(shuffled, Random(shuffleSeed))
         val responseQuestions = shuffled.mapIndexed { index, source ->
-            val options = source.options.map {
-                ManifestOption(it.id, it.text, it.correct, it.position)
-            }.toMutableList()
-            Collections.shuffle(options, Random(shuffleSeed xor source.questionRevisionId.hashCode().toLong()))
-            ManifestQuestion(
-                questionId = source.questionId,
-                questionRevisionId = source.questionRevisionId,
-                type = source.type,
-                prompt = source.prompt,
-                options = options,
-                typedAnswer = source.typedAnswer,
-                position = index + 1,
-            )
+            source.toManifestQuestion(index + 1, shuffleSeed, supportLanguage)
         }
 
         val attemptId = UUID.randomUUID()
@@ -118,6 +117,7 @@ class LearningSessionService(
             context.courseReleaseId,
             context.courseAccessType,
             context.testRevisionId,
+            supportLanguage,
             shuffleSeed,
             responseQuestions.size,
             now,
@@ -161,6 +161,7 @@ class LearningSessionService(
             attemptId,
             testId,
             context.testRevisionId,
+            supportLanguage,
             "IN_PROGRESS",
             responseQuestions,
             now,
@@ -225,7 +226,7 @@ class LearningSessionService(
             throw ConflictProblem("The question was already answered with another submissionId.")
         }
 
-        val evaluation = evaluateAnswer(attemptId, submissionId, manifestQuestion, answer)
+        val evaluation = evaluateAnswer(user.id, attemptId, submissionId, manifestQuestion, answer)
         val correct = evaluation.correct
         val energyDecision = energyService.applyForAnswer(
             userId = user.id,
@@ -245,6 +246,9 @@ class LearningSessionService(
             typedAnswerSalt = evaluation.typedAnswerSalt,
             typedAnswerDigest = evaluation.typedAnswerDigest,
             typedMatchOrdinal = evaluation.typedMatchOrdinal,
+            matchingAnswerSalt = evaluation.matchingAnswerSalt,
+            matchingAnswerDigest = evaluation.matchingAnswerDigest,
+            matchingReplayKeyVersion = evaluation.matchingReplayKeyVersion,
             correct = correct,
             activeScoreDelta = appliedScore.change.activeDelta,
             lifetimeScoreDelta = appliedScore.change.lifetimeDelta,
@@ -407,32 +411,42 @@ class LearningSessionService(
         return result(stored)
     }
 
-    private fun result(stored: StoredAnswer) = SubmitAnswerResult(
-        submissionId = stored.submissionId,
-        correct = stored.correct,
-        correctOptionId = if (stored.answerKind == ANSWER_KIND_OPTION) {
-            repository.findCorrectOptionId(stored.questionRevisionId)
+    private fun result(stored: StoredAnswer): SubmitAnswerResult {
+        val correctMatches = if (stored.answerKind == ANSWER_KIND_MATCHING) {
+            val matching = repository.findManifestQuestion(stored.attemptId, stored.questionRevisionId)
+                ?.matching ?: error("Recorded matching answer has no immutable authored mapping")
+            matching.pairs.map { CorrectMatch(it.targetItemId, it.supportItemId) }
         } else {
             null
-        },
-        correctAnswerText = if (stored.answerKind == ANSWER_KIND_TYPED_TEXT) {
-            repository.findPrimaryCorrectAnswer(stored.questionRevisionId)
-        } else {
-            null
-        },
-        activeScoreDelta = stored.activeScoreDelta,
-        lifetimeScoreDelta = stored.lifetimeScoreDelta,
-        activeQuestionScore = stored.activeQuestionScore,
-        lifetimeScore = stored.lifetimeScore,
-        energy = EnergySnapshot(
-            balance = stored.energyBalanceAfter,
-            maximum = 5,
-            unlimited = stored.energyUnlimited,
-            nextRegenerationAt = stored.energyNextRegenerationAt,
-            asOf = stored.submittedAt,
-        ),
-        attemptStatus = stored.attemptStatusAfter,
-    )
+        }
+        return SubmitAnswerResult(
+            submissionId = stored.submissionId,
+            correct = stored.correct,
+            correctOptionId = if (stored.answerKind == ANSWER_KIND_OPTION) {
+                repository.findCorrectOptionId(stored.questionRevisionId)
+            } else {
+                null
+            },
+            correctAnswerText = if (stored.answerKind == ANSWER_KIND_TYPED_TEXT) {
+                repository.findPrimaryCorrectAnswer(stored.questionRevisionId)
+            } else {
+                null
+            },
+            correctMatches = correctMatches,
+            activeScoreDelta = stored.activeScoreDelta,
+            lifetimeScoreDelta = stored.lifetimeScoreDelta,
+            activeQuestionScore = stored.activeQuestionScore,
+            lifetimeScore = stored.lifetimeScore,
+            energy = EnergySnapshot(
+                balance = stored.energyBalanceAfter,
+                maximum = 5,
+                unlimited = stored.energyUnlimited,
+                nextRegenerationAt = stored.energyNextRegenerationAt,
+                asOf = stored.submittedAt,
+            ),
+            attemptStatus = stored.attemptStatusAfter,
+        )
+    }
 
     private fun answerMatchesStored(
         stored: StoredAnswer,
@@ -468,9 +482,36 @@ class LearningSessionService(
                 )
                 TypedAnswerReplayDigest.matches(expectedDigest, actualDigest)
             }
+
+            is SubmittedAnswer.Matching -> {
+                if (stored.answerKind != ANSWER_KIND_MATCHING) return false
+                val salt = stored.matchingAnswerSalt ?: return false
+                val expectedDigest = stored.matchingAnswerDigest ?: return false
+                val keyVersion = stored.matchingReplayKeyVersion
+                    ?: throw IllegalStateException("Recorded matching replay evidence is invalid.")
+                val question = repository.findManifestQuestion(stored.attemptId, stored.questionRevisionId)
+                    ?: return false
+                if (!answer.matches.isCompleteFor(question)) return false
+                val actualDigest = try {
+                    matchingAnswerReplayDigest.compute(
+                        keyVersion = keyVersion,
+                        salt = salt,
+                        userId = stored.userId,
+                        attemptId = stored.attemptId,
+                        submissionId = stored.submissionId,
+                        questionRevisionId = stored.questionRevisionId,
+                        supportLanguage = question.supportLanguage,
+                        edges = answer.matches.toReplayEdges(),
+                    )
+                } catch (_: IllegalArgumentException) {
+                    return false
+                }
+                MatchingAnswerReplayDigest.matches(expectedDigest, actualDigest)
+            }
         }
 
     private fun evaluateAnswer(
+        userId: UUID,
         attemptId: UUID,
         submissionId: UUID,
         question: ManifestQuestion,
@@ -478,7 +519,10 @@ class LearningSessionService(
     ): AnswerEvaluation =
         when (answer) {
             is SubmittedAnswer.Option -> {
-                if (question.type == LearningQuestionType.TYPED_CLOZE) {
+                if (
+                    question.type != LearningQuestionType.WORD_MULTIPLE_CHOICE &&
+                    question.type != LearningQuestionType.MULTIPLE_CHOICE_CLOZE
+                ) {
                     throw UnprocessableProblem("The submitted answer form does not match the question.")
                 }
                 val selectedOption = repository.findOption(question.questionRevisionId, answer.selectedOptionId)
@@ -489,6 +533,9 @@ class LearningSessionService(
                     typedAnswerSalt = null,
                     typedAnswerDigest = null,
                     typedMatchOrdinal = null,
+                    matchingAnswerSalt = null,
+                    matchingAnswerDigest = null,
+                    matchingReplayKeyVersion = null,
                     correct = selectedOption.correct,
                 )
             }
@@ -527,7 +574,46 @@ class LearningSessionService(
                         canonical,
                     ),
                     typedMatchOrdinal = matchOrdinal,
+                    matchingAnswerSalt = null,
+                    matchingAnswerDigest = null,
+                    matchingReplayKeyVersion = null,
                     correct = matchOrdinal != TYPED_MATCH_NONE,
+                )
+            }
+
+            is SubmittedAnswer.Matching -> {
+                if (question.type != LearningQuestionType.MATCHING) {
+                    throw UnprocessableProblem("The submitted answer form does not match the question.")
+                }
+                if (!answer.matches.isCompleteFor(question)) {
+                    throw UnprocessableProblem("The matching answer must be one complete issued bijection.")
+                }
+                val authoredByTarget = question.matching!!.pairs.associate {
+                    it.targetItemId to it.supportItemId
+                }
+                val correct = answer.matches.all {
+                    authoredByTarget[it.targetItemId] == it.supportItemId
+                }
+                val salt = ByteArray(MatchingAnswerReplayDigest.SALT_BYTES).also(secureRandom::nextBytes)
+                val replayEvidence = matchingAnswerReplayDigest.computeActive(
+                    salt = salt,
+                    userId = userId,
+                    attemptId = attemptId,
+                    submissionId = submissionId,
+                    questionRevisionId = question.questionRevisionId,
+                    supportLanguage = question.supportLanguage,
+                    edges = answer.matches.toReplayEdges(),
+                )
+                AnswerEvaluation(
+                    answerKind = ANSWER_KIND_MATCHING,
+                    selectedOptionId = null,
+                    typedAnswerSalt = null,
+                    typedAnswerDigest = null,
+                    typedMatchOrdinal = null,
+                    matchingAnswerSalt = salt,
+                    matchingAnswerDigest = replayEvidence.digest,
+                    matchingReplayKeyVersion = replayEvidence.keyVersion,
+                    correct = correct,
                 )
             }
         }
@@ -544,6 +630,9 @@ class LearningSessionService(
 
             is SubmittedAnswer.TypedText ->
                 "$attemptId|$submissionId|$questionRevisionId|$ANSWER_KIND_TYPED_TEXT"
+
+            is SubmittedAnswer.Matching ->
+                "$attemptId|$submissionId|$questionRevisionId|$ANSWER_KIND_MATCHING"
         }
 
     private fun replayStart(
@@ -553,17 +642,13 @@ class LearningSessionService(
         val attempt = repository.lockAttempt(attemptId, user.id)
             ?: throw ConflictProblem("The idempotent attempt no longer exists.")
         val questions = repository.findManifestQuestions(attemptId).map { question ->
-            val options = question.options.toMutableList()
-            Collections.shuffle(
-                options,
-                Random(attempt.shuffleSeed xor question.questionRevisionId.hashCode().toLong()),
-            )
-            question.copy(options = options)
+            question.withIssuedOrder(attempt.shuffleSeed)
         }
         return StartAttemptResult(
             attemptId = attempt.id,
             testId = attempt.testId,
             testRevisionId = attempt.testRevisionId,
+            supportLanguage = attempt.supportLanguage,
             status = "IN_PROGRESS",
             questions = questions,
             startedAt = attempt.startedAt,
@@ -608,19 +693,107 @@ class LearningSessionService(
             false
         }
 
-    private data class AnswerEvaluation(
-        val answerKind: String,
-        val selectedOptionId: UUID?,
-        val typedAnswerSalt: ByteArray?,
-        val typedAnswerDigest: ByteArray?,
-        val typedMatchOrdinal: Int?,
-        val correct: Boolean,
-    )
+    private fun MatchingQuestionSource.isValidMatchingMaterial(supportLanguage: String): Boolean =
+        try {
+            val targetIds = pairs.map { it.targetItemId }
+            val supportIds = pairs.map { it.supportItemId }
+            val targetLabels = pairs.map {
+                MatchingLabelPolicy.canonicalize(it.targetText, targetLanguage, labelPolicyVersion)
+            }
+            val supportLabels = pairs.map {
+                MatchingLabelPolicy.canonicalize(it.supportText, supportLanguage, labelPolicyVersion)
+            }
+            policyVersion == MatchingAnswerReplayDigest.POLICY_VERSION &&
+                orderPolicyVersion == MatchingOrderPolicy.VERSION &&
+                labelPolicyVersion == MatchingLabelPolicy.VERSION &&
+                pairs.size in MatchingOrderPolicy.MIN_ITEMS..MatchingOrderPolicy.MAX_ITEMS &&
+                pairs.map { it.position } == (1..pairs.size).toList() &&
+                targetIds.toSet().size == pairs.size &&
+                supportIds.toSet().size == pairs.size &&
+                targetIds.toSet().intersect(supportIds.toSet()).isEmpty() &&
+                targetLabels.toSet().size == pairs.size &&
+                supportLabels.toSet().size == pairs.size
+        } catch (_: IllegalArgumentException) {
+            false
+        }
+
+    private fun com.kelimio.api.catalog.AttemptQuestionSource.toManifestQuestion(
+        position: Int,
+        shuffleSeed: Long,
+        supportLanguage: String,
+    ): ManifestQuestion =
+        ManifestQuestion(
+            questionId = questionId,
+            questionRevisionId = questionRevisionId,
+            type = type,
+            prompt = prompt,
+            options = options.map { ManifestOption(it.id, it.text, it.correct, it.position) },
+            typedAnswer = typedAnswer,
+            matching = matching,
+            targetItems = emptyList(),
+            supportItems = emptyList(),
+            supportLanguage = supportLanguage,
+            position = position,
+        ).withIssuedOrder(shuffleSeed)
+
+    private fun ManifestQuestion.withIssuedOrder(shuffleSeed: Long): ManifestQuestion {
+        val orderedOptions = options.toMutableList().also {
+            Collections.shuffle(it, Random(shuffleSeed xor questionRevisionId.hashCode().toLong()))
+        }
+        val matchingSource = matching ?: return copy(
+            options = orderedOptions,
+            targetItems = emptyList(),
+            supportItems = emptyList(),
+        )
+        val targetById = matchingSource.pairs.associate { it.targetItemId to MatchingItem(it.targetItemId, it.targetText) }
+        val supportById = matchingSource.pairs.associate { it.supportItemId to MatchingItem(it.supportItemId, it.supportText) }
+        val orderedTargetIds = MatchingOrderPolicy.order(
+            itemIds = targetById.keys,
+            attemptSeed = shuffleSeed,
+            questionRevisionId = questionRevisionId,
+            side = MatchingSide.TARGET,
+            supportLanguage = supportLanguage,
+            policyVersion = matchingSource.orderPolicyVersion,
+        )
+        val orderedSupportIds = MatchingOrderPolicy.order(
+            itemIds = supportById.keys,
+            attemptSeed = shuffleSeed,
+            questionRevisionId = questionRevisionId,
+            side = MatchingSide.SUPPORT,
+            supportLanguage = supportLanguage,
+            policyVersion = matchingSource.orderPolicyVersion,
+        )
+        return copy(
+            options = emptyList(),
+            targetItems = orderedTargetIds.map(targetById::getValue),
+            supportItems = orderedSupportIds.map(supportById::getValue),
+        )
+    }
+
+    private fun List<SubmittedMatch>.isCompleteFor(question: ManifestQuestion): Boolean {
+        val matchingSource = question.matching ?: return false
+        if (size != matchingSource.pairs.size || size !in MatchingAnswerReplayDigest.MIN_EDGES..MatchingAnswerReplayDigest.MAX_EDGES) {
+            return false
+        }
+        val targetIds = map { it.targetItemId }
+        val supportIds = map { it.supportItemId }
+        val issuedTargetIds = matchingSource.pairs.map { it.targetItemId }.toSet()
+        val issuedSupportIds = matchingSource.pairs.map { it.supportItemId }.toSet()
+        return targetIds.toSet().size == size &&
+            supportIds.toSet().size == size &&
+            targetIds.toSet().intersect(supportIds.toSet()).isEmpty() &&
+            targetIds.toSet() == issuedTargetIds &&
+            supportIds.toSet() == issuedSupportIds
+    }
+
+    private fun List<SubmittedMatch>.toReplayEdges(): List<MatchingAnswerEdge> =
+        map { MatchingAnswerEdge(it.targetItemId, it.supportItemId) }
 
     private companion object {
         const val CLOZE_MARKER = "---"
         const val ANSWER_KIND_OPTION = "OPTION"
         const val ANSWER_KIND_TYPED_TEXT = "TYPED_TEXT"
+        const val ANSWER_KIND_MATCHING = "MATCHING"
         const val TYPED_MATCH_NONE = 0
         const val TYPED_MATCH_PRIMARY = 1
         const val TYPED_MATCH_ALTERNATIVE = 2

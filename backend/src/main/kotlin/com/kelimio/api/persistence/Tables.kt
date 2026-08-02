@@ -118,7 +118,39 @@ object QuestionRevisions {
     val CORRECT_ANSWER_MATCH_KEY = field(name("question_revision", "correct_answer_match_key"), String::class.java)
     val ALTERNATIVE_ANSWER_MATCH_KEY =
         field(name("question_revision", "alternative_answer_match_key"), String::class.java)
+    val MATCHING_POLICY = field(name("question_revision", "matching_policy"), String::class.java)
+    val MATCHING_LABEL_POLICY = field(name("question_revision", "matching_label_policy"), String::class.java)
+    val MATCHING_ORDER_POLICY = field(name("question_revision", "matching_order_policy"), String::class.java)
+    val MATCHING_TARGET_LANGUAGE = field(name("question_revision", "matching_target_language"), String::class.java)
     val STATUS = field(name("question_revision", "status"), String::class.java)
+}
+
+object QuestionRevisionMatchingPairs {
+    val TABLE = table(name("question_revision_matching_pair"))
+    val TARGET_ITEM_ID = field(name("question_revision_matching_pair", "target_item_id"), UUID::class.java)
+    val QUESTION_REVISION_ID =
+        field(name("question_revision_matching_pair", "question_revision_id"), UUID::class.java)
+    val COURSE_ID = field(name("question_revision_matching_pair", "course_id"), UUID::class.java)
+    val POSITION = field(name("question_revision_matching_pair", "position"), Int::class.java)
+    val TARGET_TEXT = field(name("question_revision_matching_pair", "target_text"), String::class.java)
+    val TARGET_LABEL_KEY = field(name("question_revision_matching_pair", "target_label_key"), String::class.java)
+}
+
+object QuestionRevisionMatchingTranslations {
+    val TABLE = table(name("question_revision_matching_translation"))
+    val SUPPORT_ITEM_ID =
+        field(name("question_revision_matching_translation", "support_item_id"), UUID::class.java)
+    val QUESTION_REVISION_ID =
+        field(name("question_revision_matching_translation", "question_revision_id"), UUID::class.java)
+    val COURSE_ID = field(name("question_revision_matching_translation", "course_id"), UUID::class.java)
+    val TARGET_ITEM_ID =
+        field(name("question_revision_matching_translation", "target_item_id"), UUID::class.java)
+    val SUPPORT_LANGUAGE =
+        field(name("question_revision_matching_translation", "support_language"), String::class.java)
+    val SUPPORT_TEXT =
+        field(name("question_revision_matching_translation", "support_text"), String::class.java)
+    val SUPPORT_LABEL_KEY =
+        field(name("question_revision_matching_translation", "support_label_key"), String::class.java)
 }
 
 object QuestionRevisionOptions {
@@ -147,6 +179,7 @@ object Attempts {
     val COURSE_RELEASE_ID = field(name("test_attempt", "course_release_id"), UUID::class.java)
     val COURSE_ACCESS_TYPE = field(name("test_attempt", "course_access_type"), String::class.java)
     val TEST_REVISION_ID = field(name("test_attempt", "test_revision_id"), UUID::class.java)
+    val SUPPORT_LANGUAGE = field(name("test_attempt", "support_language"), String::class.java)
     val STATUS = field(name("test_attempt", "status"), String::class.java)
     val SHUFFLE_SEED = field(name("test_attempt", "shuffle_seed"), Long::class.java)
     val TOTAL_QUESTIONS = field(name("test_attempt", "total_questions"), Int::class.java)
@@ -177,6 +210,9 @@ object AnswerSubmissions {
     val TYPED_ANSWER_SALT = field(name("answer_submission", "typed_answer_salt"), ByteArray::class.java)
     val TYPED_ANSWER_DIGEST = field(name("answer_submission", "typed_answer_digest"), ByteArray::class.java)
     val TYPED_MATCH_ORDINAL = field(name("answer_submission", "typed_match_ordinal"), Short::class.java)
+    val MATCHING_ANSWER_SALT = field(name("answer_submission", "matching_answer_salt"), ByteArray::class.java)
+    val MATCHING_ANSWER_DIGEST = field(name("answer_submission", "matching_answer_digest"), ByteArray::class.java)
+    val MATCHING_REPLAY_KEY_VERSION = field(name("answer_submission", "matching_replay_key_version"), String::class.java)
     val IS_CORRECT = field(name("answer_submission", "is_correct"), Boolean::class.java)
     val ACTIVE_DELTA = field(name("answer_submission", "active_score_delta"), Short::class.java)
     val LIFETIME_DELTA = field(name("answer_submission", "lifetime_score_delta"), Short::class.java)

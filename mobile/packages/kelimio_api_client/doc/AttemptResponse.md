@@ -11,6 +11,7 @@ Name | Type | Description | Notes
 **id** | **String** |  |
 **testId** | **String** |  |
 **testRevisionId** | **String** |  |
+**supportLanguage** | **String** | Canonically cased BCP 47 subset: lowercase primary language, optional title-case script, uppercase region, and lowercase variants. Extensions and private-use subtags are outside the initial API contract. |
 **state** | [**AttemptState**](AttemptState.md) |  |
 **questions** | [**List&lt;QuestionPayload&gt;**](QuestionPayload.md) |  |
 **startedAt** | [**DateTime**](DateTime.md) |  |

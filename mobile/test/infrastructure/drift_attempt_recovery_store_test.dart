@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:drift/drift.dart' hide isNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:kelimio_mobile/domain/failures.dart';
 import 'package:kelimio_mobile/domain/learning/learning.dart';
 import 'package:kelimio_mobile/infrastructure/storage/drift_attempt_recovery_store.dart';
 
@@ -34,6 +35,67 @@ void main() {
     expect(names.where((name) => '$name'.contains('typed')), isEmpty);
     expect(names.where((name) => '$name'.contains('raw')), isEmpty);
   });
+
+  test('matching recovery stores identity only and no item mapping', () async {
+    final connection = DatabaseConnection(NativeDatabase.memory());
+    final store = DriftAttemptRecoveryStore(connection: connection);
+    addTearDown(store.close);
+    final snapshot = fixtureRecovery(
+      RecoveryPhase.submitting,
+      answerKind: AnswerKind.matching,
+      recoveredSubmissionId: submissionId,
+    );
+
+    await store.write(snapshot);
+
+    final restored = await store.read();
+    expect(restored?.answerKind, AnswerKind.matching);
+    expect(restored?.submissionId, submissionId);
+    expect(restored?.selectedOptionId, isNull);
+
+    final rows = await connection.runSelect(
+      'SELECT * FROM attempt_recovery WHERE slot = 1',
+      const [],
+    );
+    final rawRecord = rows.single.values.join('|');
+    expect(rawRecord, isNot(contains(targetItemOneId)));
+    expect(rawRecord, isNot(contains(targetItemTwoId)));
+    expect(rawRecord, isNot(contains(supportItemOneId)));
+    expect(rawRecord, isNot(contains(supportItemTwoId)));
+    expect(snapshot.toString(), isNot(contains(targetItemOneId)));
+
+    final columns = await connection.runSelect(
+      'PRAGMA table_info(attempt_recovery)',
+      const [],
+    );
+    final names = columns.map((row) => '${row['name']}').toList();
+    expect(names.where((name) => name.contains('target')), isEmpty);
+    expect(names.where((name) => name.contains('support')), isEmpty);
+    expect(names.where((name) => name.contains('match')), isEmpty);
+    expect(names.where((name) => name.contains('pair')), isEmpty);
+  });
+
+  test(
+    'matching recovery with an item ID in option storage fails closed',
+    () async {
+      final connection = DatabaseConnection(NativeDatabase.memory());
+      final store = DriftAttemptRecoveryStore(connection: connection);
+      addTearDown(store.close);
+      await store.write(
+        fixtureRecovery(
+          RecoveryPhase.submitting,
+          answerKind: AnswerKind.matching,
+          recoveredSubmissionId: submissionId,
+        ),
+      );
+      await connection.runUpdate(
+        'UPDATE attempt_recovery SET selected_option_id = ? WHERE slot = 1',
+        [targetItemOneId],
+      );
+
+      await expectLater(store.read(), throwsA(isA<ProtocolFailure>()));
+    },
+  );
 
   test(
     'v1 option recovery migrates idempotently and remains readable',

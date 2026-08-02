@@ -141,11 +141,23 @@ final class GeneratedLearningRepository implements LearningRepository {
         questionRevisionId: questionRevisionId,
         selectedOptionId: switch (answer) {
           final OptionAnswerInput option => option.selectedOptionId,
-          TypedAnswerInput() => null,
+          TypedAnswerInput() || MatchingAnswerInput() => null,
         },
         typedAnswer: switch (answer) {
-          OptionAnswerInput() => null,
+          OptionAnswerInput() || MatchingAnswerInput() => null,
           final TypedAnswerInput typed => typed.rawValueForSubmission,
+        },
+        matches: switch (answer) {
+          OptionAnswerInput() || TypedAnswerInput() => null,
+          final MatchingAnswerInput matching =>
+            matching.pairs
+                .map(
+                  (pair) => api.MatchingSelection(
+                    targetItemId: pair.targetItemId,
+                    supportItemId: pair.supportItemId,
+                  ),
+                )
+                .toList(growable: false),
         },
       ),
       extra: {RequestMetadata.idempotencyKey: submissionId},

@@ -53,6 +53,12 @@ export interface AttemptResponse {
      */
     testRevisionId: string;
     /**
+     * Canonically cased BCP 47 subset: lowercase primary language, optional title-case script, uppercase region, and lowercase variants. Extensions and private-use subtags are outside the initial API contract.
+     * @type {string}
+     * @memberof AttemptResponse
+     */
+    supportLanguage: string;
+    /**
      *
      * @type {AttemptState}
      * @memberof AttemptResponse
@@ -81,6 +87,7 @@ export function instanceOfAttemptResponse(value: object): value is AttemptRespon
     if (!('id' in value) || value['id'] === undefined) return false;
     if (!('testId' in value) || value['testId'] === undefined) return false;
     if (!('testRevisionId' in value) || value['testRevisionId'] === undefined) return false;
+    if (!('supportLanguage' in value) || value['supportLanguage'] === undefined) return false;
     if (!('state' in value) || value['state'] === undefined) return false;
     if (!('questions' in value) || value['questions'] === undefined) return false;
     if (!('startedAt' in value) || value['startedAt'] === undefined) return false;
@@ -100,6 +107,7 @@ export function AttemptResponseFromJSONTyped(json: any, ignoreDiscriminator: boo
         'id': json['id'],
         'testId': json['testId'],
         'testRevisionId': json['testRevisionId'],
+        'supportLanguage': json['supportLanguage'],
         'state': AttemptStateFromJSON(json['state']),
         'questions': ((json['questions'] as Array<any>).map(QuestionPayloadFromJSON)),
         'startedAt': (new Date(json['startedAt'])),
@@ -120,6 +128,7 @@ export function AttemptResponseToJSONTyped(value?: AttemptResponse | null, ignor
         'id': value['id'],
         'testId': value['testId'],
         'testRevisionId': value['testRevisionId'],
+        'supportLanguage': value['supportLanguage'],
         'state': AttemptStateToJSON(value['state']),
         'questions': ((value['questions'] as Array<any>).map(QuestionPayloadToJSON)),
         'startedAt': ((value['startedAt']).toISOString()),
