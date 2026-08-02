@@ -38,7 +38,8 @@ This is an evidence checklist, not a statement of completion. Check an item only
 
 ## Learning, score, energy, and progress
 
-- [ ] Pre-answer, recovery, and offline payloads contain no answer key; only the already-committed answer response may reveal that question's correct option under ADR-000, and correctness is evaluated server-side.
+- [ ] Pre-answer and offline payloads plus durable/mobile recovery state contain no answer key; only transaction-specific POST or ownership-scoped reconciliation feedback may reveal that submitted question's correct option for A/B or primary correct-answer text for C under ADR-000/ADR-008, and correctness is evaluated server-side.
+- [ ] Raw/canonical typed answers never enter durable facts, logs, analytics, metrics, outbox events, problem details, or mobile recovery; bounded input, pinned-policy grading, replay, and ownership-scoped reconciliation preserve idempotency without retaining learner text.
 - [ ] The answer transaction atomically handles revision/attempt validation, submission idempotency, correctness, energy, attempt fact, score event, and outbox.
 - [ ] Property and concurrency tests prove score caps, first-answer rules, lifetime monotonicity, energy bounds/regeneration, duplicate/replay safety, and multi-device locking.
 - [ ] Completion, revision changes, interruption, repeat attempts, and reprojection semantics match accepted ADRs.

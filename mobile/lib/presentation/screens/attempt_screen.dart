@@ -52,6 +52,8 @@ final class _AttemptScreenState extends ConsumerState<AttemptScreen> {
             selectedOptionId: presenting.selectedOptionId,
             locked: false,
             onOptionSelected: controller.selectOption,
+            onTypedSubmitted: controller.submitTyped,
+            typedAnswerNeedsReentry: presenting.resumeSubmissionId != null,
             onPrimary: presenting.selectedOptionId == null
                 ? null
                 : () => unawaited(controller.submitSelected()),
@@ -60,9 +62,26 @@ final class _AttemptScreenState extends ConsumerState<AttemptScreen> {
             question: submitting.question,
             questionIndex: submitting.questionIndex,
             questionCount: submitting.context.session.questions.length,
-            selectedOptionId: submitting.pending.selectedOptionId,
+            selectedOptionId: switch (submitting.pending.input) {
+              final OptionAnswerInput option => option.selectedOptionId,
+              TypedAnswerInput() => null,
+            },
             locked: true,
             onOptionSelected: null,
+            onTypedSubmitted: null,
+            onPrimary: null,
+          ),
+          final AttemptReconciling reconciling => AttemptQuestionView(
+            question: reconciling.question,
+            questionIndex: reconciling.questionIndex,
+            questionCount: reconciling.context.session.questions.length,
+            selectedOptionId: switch (reconciling.pending?.input) {
+              final OptionAnswerInput option => option.selectedOptionId,
+              _ => null,
+            },
+            locked: true,
+            onOptionSelected: null,
+            onTypedSubmitted: null,
             onPrimary: null,
           ),
           final AttemptFeedback feedback => AttemptQuestionView(
@@ -73,6 +92,7 @@ final class _AttemptScreenState extends ConsumerState<AttemptScreen> {
             locked: true,
             feedback: feedback.feedback,
             onOptionSelected: null,
+            onTypedSubmitted: null,
             onPrimary: () => unawaited(controller.advance()),
           ),
           AttemptFinishing() => _StatusPanel(
@@ -135,6 +155,8 @@ final class AttemptQuestionView extends StatelessWidget {
     required this.locked,
     required this.onOptionSelected,
     required this.onPrimary,
+    this.onTypedSubmitted,
+    this.typedAnswerNeedsReentry = false,
     this.feedback,
     super.key,
   });
@@ -145,7 +167,9 @@ final class AttemptQuestionView extends StatelessWidget {
   final String? selectedOptionId;
   final bool locked;
   final ValueChanged<String>? onOptionSelected;
+  final ValueChanged<String>? onTypedSubmitted;
   final VoidCallback? onPrimary;
+  final bool typedAnswerNeedsReentry;
   final AnswerFeedback? feedback;
 
   @override
@@ -176,18 +200,29 @@ final class AttemptQuestionView extends StatelessWidget {
         const SizedBox(height: 28),
         _QuestionPrompt(question: question),
         const SizedBox(height: 24),
-        for (final option in question.options) ...[
-          _AnswerOptionButton(
-            option: option,
-            selected: selectedOptionId == option.id,
+        if (question.answerKind == AnswerKind.option)
+          for (final option in question.options) ...[
+            _AnswerOptionButton(
+              option: option,
+              selected: selectedOptionId == option.id,
+              locked: locked,
+              feedback: feedback,
+              onPressed: onOptionSelected == null
+                  ? null
+                  : () => onOptionSelected!(option.id),
+            ),
+            const SizedBox(height: 10),
+          ]
+        else if (result == null)
+          _TypedAnswerComposer(
             locked: locked,
-            feedback: feedback,
-            onPressed: onOptionSelected == null
-                ? null
-                : () => onOptionSelected!(option.id),
+            needsReentry: typedAnswerNeedsReentry,
+            promptDirection: _firstStrongDirection(
+              question.prompt,
+              Directionality.of(context),
+            ),
+            onSubmitted: onTypedSubmitted,
           ),
-          const SizedBox(height: 10),
-        ],
         if (result != null) ...[
           const SizedBox(height: 8),
           Semantics(
@@ -215,21 +250,26 @@ final class AttemptQuestionView extends StatelessWidget {
             ),
           ),
         ],
+        if (result?.correctAnswerText case final String correctAnswer) ...[
+          const SizedBox(height: 12),
+          _AuthoritativeTypedAnswer(answer: correctAnswer),
+        ],
         const SizedBox(height: 20),
-        FilledButton(
-          key: const Key('attempt-primary-button'),
-          onPressed: onPrimary,
-          child: locked && feedback == null
-              ? const SizedBox.square(
-                  dimension: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : Text(
-                  feedback == null
-                      ? context.l10n.submitAnswer
-                      : context.l10n.continueLabel,
-                ),
-        ),
+        if (question.answerKind == AnswerKind.option || feedback != null)
+          FilledButton(
+            key: const Key('attempt-primary-button'),
+            onPressed: onPrimary,
+            child: locked && feedback == null
+                ? const SizedBox.square(
+                    dimension: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Text(
+                    feedback == null
+                        ? context.l10n.submitAnswer
+                        : context.l10n.continueLabel,
+                  ),
+          ),
       ],
     );
   }
@@ -248,7 +288,8 @@ final class _QuestionPrompt extends StatelessWidget {
       style: Theme.of(context).textTheme.headlineSmall,
       textAlign: TextAlign.center,
     ),
-    QuestionType.multipleChoiceCloze => _ClozePrompt(question: question),
+    QuestionType.multipleChoiceCloze ||
+    QuestionType.typedCloze => _ClozePrompt(question: question),
   };
 }
 
@@ -260,12 +301,10 @@ final class _ClozePrompt extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final segments = question.clozePromptSegments;
-    final fallbackDirection = Directionality.of(context);
-    final textDirection = Bidi.startsWithRtl(question.prompt)
-        ? TextDirection.rtl
-        : Bidi.startsWithLtr(question.prompt)
-        ? TextDirection.ltr
-        : fallbackDirection;
+    final textDirection = _firstStrongDirection(
+      question.prompt,
+      Directionality.of(context),
+    );
     final blankLabel = context.l10n.accessibilityBlank;
     return Text.rich(
       TextSpan(
@@ -290,6 +329,165 @@ final class _ClozePrompt extends StatelessWidget {
     );
   }
 }
+
+final class _TypedAnswerComposer extends StatefulWidget {
+  const _TypedAnswerComposer({
+    required this.locked,
+    required this.needsReentry,
+    required this.promptDirection,
+    required this.onSubmitted,
+  });
+
+  final bool locked;
+  final bool needsReentry;
+  final TextDirection promptDirection;
+  final ValueChanged<String>? onSubmitted;
+
+  @override
+  State<_TypedAnswerComposer> createState() => _TypedAnswerComposerState();
+}
+
+final class _TypedAnswerComposerState extends State<_TypedAnswerComposer> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController()..addListener(_onTextChanged);
+  }
+
+  @override
+  void didUpdateWidget(_TypedAnswerComposer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.locked && !oldWidget.locked) {
+      _controller.clear();
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller
+      ..removeListener(_onTextChanged)
+      ..clear()
+      ..dispose();
+    super.dispose();
+  }
+
+  void _onTextChanged() {
+    setState(() {});
+  }
+
+  bool get _canSubmit {
+    final value = _controller.text;
+    return !widget.locked &&
+        widget.onSubmitted != null &&
+        TypedAnswerInput.isValid(value);
+  }
+
+  void _submit() {
+    if (!_canSubmit) {
+      return;
+    }
+    final answer = _controller.text;
+    widget.onSubmitted!(answer);
+    _controller.clear();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final inputDirection = _firstStrongDirection(
+      _controller.text,
+      widget.promptDirection,
+    );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        TextField(
+          key: const Key('attempt-typed-answer'),
+          controller: _controller,
+          enabled: !widget.locked,
+          textDirection: inputDirection,
+          textInputAction: TextInputAction.done,
+          keyboardType: TextInputType.text,
+          minLines: 1,
+          maxLines: 2,
+          maxLength: TypedAnswerInput.maxLength,
+          autocorrect: false,
+          enableSuggestions: false,
+          enableIMEPersonalizedLearning: false,
+          smartDashesType: SmartDashesType.disabled,
+          smartQuotesType: SmartQuotesType.disabled,
+          decoration: InputDecoration(
+            labelText: context.l10n.typedAnswerLabel,
+            helperText: widget.needsReentry
+                ? context.l10n.typedAnswerReentry
+                : null,
+            border: const OutlineInputBorder(),
+          ),
+          onSubmitted: _canSubmit ? (_) => _submit() : null,
+        ),
+        const SizedBox(height: 20),
+        FilledButton(
+          key: const Key('attempt-primary-button'),
+          onPressed: _canSubmit ? _submit : null,
+          child: widget.locked
+              ? const SizedBox.square(
+                  dimension: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : Text(context.l10n.submitAnswer),
+        ),
+      ],
+    );
+  }
+}
+
+final class _AuthoritativeTypedAnswer extends StatelessWidget {
+  const _AuthoritativeTypedAnswer({required this.answer});
+
+  final String answer;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = context.l10n.correctAnswerLabel;
+    final textDirection = _firstStrongDirection(
+      answer,
+      Directionality.of(context),
+    );
+    return Semantics(
+      liveRegion: true,
+      label: '$label: $answer',
+      textDirection: textDirection,
+      child: ExcludeSemantics(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              label,
+              style: Theme.of(context).textTheme.labelLarge,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              answer,
+              key: const Key('attempt-correct-answer-text'),
+              style: Theme.of(context).textTheme.titleMedium,
+              textAlign: TextAlign.center,
+              textDirection: textDirection,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+TextDirection _firstStrongDirection(String text, TextDirection fallback) =>
+    Bidi.startsWithRtl(text)
+    ? TextDirection.rtl
+    : Bidi.startsWithLtr(text)
+    ? TextDirection.ltr
+    : fallback;
 
 final class _AnswerOptionButton extends StatelessWidget {
   const _AnswerOptionButton({

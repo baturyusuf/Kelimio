@@ -14,7 +14,6 @@ AnswerRecordedResponse _$AnswerRecordedResponseFromJson(
     requiredKeys: const [
       'submissionId',
       'correct',
-      'correctOptionId',
       'activeScoreDelta',
       'lifetimeScoreDelta',
       'activeQuestionScore',
@@ -26,7 +25,11 @@ AnswerRecordedResponse _$AnswerRecordedResponseFromJson(
   final val = AnswerRecordedResponse(
     submissionId: $checkedConvert('submissionId', (v) => v as String),
     correct: $checkedConvert('correct', (v) => v as bool),
-    correctOptionId: $checkedConvert('correctOptionId', (v) => v as String),
+    correctOptionId: $checkedConvert('correctOptionId', (v) => v as String?),
+    correctAnswerText: $checkedConvert(
+      'correctAnswerText',
+      (v) => v as String?,
+    ),
     activeScoreDelta: $checkedConvert(
       'activeScoreDelta',
       (v) => (v as num).toInt(),
@@ -57,7 +60,8 @@ Map<String, dynamic> _$AnswerRecordedResponseToJson(
 ) => <String, dynamic>{
   'submissionId': instance.submissionId,
   'correct': instance.correct,
-  'correctOptionId': instance.correctOptionId,
+  if (instance.correctOptionId case final value?) 'correctOptionId': value,
+  if (instance.correctAnswerText case final value?) 'correctAnswerText': value,
   'activeScoreDelta': instance.activeScoreDelta,
   'lifetimeScoreDelta': instance.lifetimeScoreDelta,
   'activeQuestionScore': instance.activeQuestionScore,

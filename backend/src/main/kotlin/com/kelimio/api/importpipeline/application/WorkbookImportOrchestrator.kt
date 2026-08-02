@@ -13,6 +13,8 @@ import com.kelimio.api.importpipeline.infrastructure.xlsx.RawXlsxCell
 import com.kelimio.api.importpipeline.infrastructure.xlsx.RawXlsxRow
 import com.kelimio.api.importpipeline.infrastructure.xlsx.RawXlsxSheet
 import com.kelimio.api.importpipeline.infrastructure.xlsx.RawXlsxWorkbook
+import com.kelimio.api.language.InvalidTypedAnswerException
+import com.kelimio.api.language.TypedAnswerPolicy
 import java.text.Normalizer
 import java.util.Locale
 
@@ -328,7 +330,9 @@ class WorkbookImportOrchestrator {
         }
         return semanticRows
             .asSequence()
-            .mapNotNull { row -> parseContentRow(sheet, level, row, header, issues) }
+            .mapNotNull { row ->
+                parseContentRow(sheet, level, settings.targetLanguageCode, row, header, issues)
+            }
             .toList()
     }
 
@@ -394,6 +398,7 @@ class WorkbookImportOrchestrator {
     private fun parseContentRow(
         sheet: RawXlsxSheet,
         level: String,
+        targetLanguage: String,
         row: RawXlsxRow,
         header: ContentHeader,
         issues: MutableList<WorkbookImportIssue>,
@@ -462,6 +467,7 @@ class WorkbookImportOrchestrator {
                 sentence = sentence,
                 correctAnswer = correctAnswer,
                 alternativeCorrectAnswer = alternativeCorrectAnswer,
+                targetLanguage = targetLanguage,
                 wrongAnswersByColumn = wrongAnswersByColumn,
                 matchingGroup = matchingGroup,
                 issues = issues,
@@ -514,6 +520,7 @@ class WorkbookImportOrchestrator {
         sentence: String?,
         correctAnswer: String?,
         alternativeCorrectAnswer: String?,
+        targetLanguage: String,
         wrongAnswersByColumn: List<String?>,
         matchingGroup: String?,
         issues: MutableList<WorkbookImportIssue>,
@@ -593,6 +600,15 @@ class WorkbookImportOrchestrator {
                     issues,
                     "A typed cloze row contains a field reserved for another record type",
                 )
+                validateTypedAnswers(
+                    sheet,
+                    row,
+                    header.sentenceColumn + 1,
+                    correctAnswer,
+                    alternativeCorrectAnswer,
+                    targetLanguage,
+                    issues,
+                )
             }
         }
 
@@ -607,7 +623,9 @@ class WorkbookImportOrchestrator {
             row = row,
             firstWrongColumn = header.sentenceColumn + 3,
             authoredAnswers = authoredAnswers,
-            alternativeCorrectAnswer = alternativeCorrectAnswer,
+            alternativeCorrectAnswer = alternativeCorrectAnswer.takeUnless {
+                recordType == WorkbookRecordType.TYPED_CLOZE
+            },
             correctAnswer = correctAnswer,
             wrongAnswers = wrongAnswersByColumn,
             issues = issues,
@@ -648,6 +666,40 @@ class WorkbookImportOrchestrator {
                     )
                 }
             }
+        }
+    }
+
+    private fun validateTypedAnswers(
+        sheet: RawXlsxSheet,
+        row: RawXlsxRow,
+        correctAnswerColumn: Int,
+        correctAnswer: String?,
+        alternativeCorrectAnswer: String?,
+        targetLanguage: String,
+        issues: MutableList<WorkbookImportIssue>,
+    ) {
+        fun canonicalize(value: String?, column: Int): String? {
+            if (value == null) return null
+            return try {
+                TypedAnswerPolicy.canonicalize(value, targetLanguage)
+            } catch (_: InvalidTypedAnswerException) {
+                issues.error(
+                    WorkbookImportIssueCode.INVALID_TEXT,
+                    sheet.source(row.rowNumber, column),
+                    "A typed answer is outside the typed-answer-v1 policy",
+                )
+                null
+            }
+        }
+
+        val correctKey = canonicalize(correctAnswer, correctAnswerColumn)
+        val alternativeKey = canonicalize(alternativeCorrectAnswer, correctAnswerColumn + 1)
+        if (correctKey != null && alternativeKey != null && correctKey == alternativeKey) {
+            issues.error(
+                WorkbookImportIssueCode.DUPLICATE_ANSWER_OPTION,
+                sheet.source(row.rowNumber, correctAnswerColumn + 1),
+                "The alternative answer must differ from the correct answer under typed-answer-v1",
+            )
         }
     }
 

@@ -1,5 +1,7 @@
 package com.kelimio.api.development
 
+import com.kelimio.api.catalog.LearningQuestionType
+import com.kelimio.api.language.TypedAnswerPolicy
 import org.jooq.DSLContext
 import org.springframework.stereotype.Repository
 import java.time.OffsetDateTime
@@ -100,8 +102,14 @@ class LocalStarterCourseRepository(
                 """
                 insert into question_revision(
                     id, question_id, course_id, revision_number, question_type,
-                    prompt, correct_answer, status, created_at
-                ) values (?, ?, ?, 1, ?, ?, ?, 'DRAFT', cast(? as timestamptz))
+                    prompt, correct_answer, alternative_correct_answer,
+                    answer_match_policy, answer_match_language,
+                    correct_answer_match_key, alternative_answer_match_key,
+                    status, created_at
+                ) values (
+                    ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?,
+                    'DRAFT', cast(? as timestamptz)
+                )
                 """.trimIndent(),
                 questionRevisionId,
                 questionId,
@@ -109,6 +117,29 @@ class LocalStarterCourseRepository(
                 source.type.storageCode,
                 source.prompt,
                 source.correctAnswer,
+                source.alternativeCorrectAnswer,
+                source.type.takeIf { it == LearningQuestionType.TYPED_CLOZE }
+                    ?.let { TypedAnswerPolicy.VERSION },
+                source.type.takeIf { it == LearningQuestionType.TYPED_CLOZE }
+                    ?.let { TARGET_LANGUAGE },
+                source.type.takeIf { it == LearningQuestionType.TYPED_CLOZE }
+                    ?.let {
+                        TypedAnswerPolicy.canonicalize(
+                            source.correctAnswer,
+                            TARGET_LANGUAGE,
+                            TypedAnswerPolicy.VERSION,
+                        )
+                    },
+                source.type.takeIf { it == LearningQuestionType.TYPED_CLOZE }
+                    ?.let {
+                        source.alternativeCorrectAnswer?.let { alternative ->
+                            TypedAnswerPolicy.canonicalize(
+                                alternative,
+                                TARGET_LANGUAGE,
+                                TypedAnswerPolicy.VERSION,
+                            )
+                        }
+                    },
                 now,
             )
             source.options.forEachIndexed { optionIndex, option ->
@@ -176,5 +207,9 @@ class LocalStarterCourseRepository(
             now,
         )
         return courseId
+    }
+
+    private companion object {
+        const val TARGET_LANGUAGE = "tr"
     }
 }

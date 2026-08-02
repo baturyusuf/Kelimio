@@ -54,7 +54,8 @@ enum class LearningQuestionType(
     val apiValue: String,
 ) {
     WORD_MULTIPLE_CHOICE("A", "WORD_MULTIPLE_CHOICE"),
-    MULTIPLE_CHOICE_CLOZE("B", "MULTIPLE_CHOICE_CLOZE");
+    MULTIPLE_CHOICE_CLOZE("B", "MULTIPLE_CHOICE_CLOZE"),
+    TYPED_CLOZE("C", "TYPED_CLOZE");
 
     companion object {
         fun fromStorageCode(storageCode: String): LearningQuestionType =
@@ -69,7 +70,17 @@ data class AttemptQuestionSource(
     val type: LearningQuestionType,
     val prompt: String,
     val options: List<QuestionOptionSource>,
+    val typedAnswer: TypedAnswerSource?,
     val position: Int,
+)
+
+data class TypedAnswerSource(
+    val primaryAnswerText: String,
+    val alternativeAnswerText: String?,
+    val policyVersion: String,
+    val languageTag: String,
+    val primaryMatchKey: String,
+    val alternativeMatchKey: String?,
 )
 
 data class QuestionOptionSource(

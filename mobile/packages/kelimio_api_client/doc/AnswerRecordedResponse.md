@@ -10,7 +10,8 @@ Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **submissionId** | **String** |  |
 **correct** | **bool** |  |
-**correctOptionId** | **String** |  |
+**correctOptionId** | **String** |  | [optional]
+**correctAnswerText** | **String** |  | [optional]
 **activeScoreDelta** | **int** |  |
 **lifetimeScoreDelta** | **int** |  |
 **activeQuestionScore** | **int** |  |

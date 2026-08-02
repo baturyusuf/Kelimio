@@ -283,6 +283,23 @@ class WorkbookImportOrchestratorTest {
     }
 
     @Test
+    fun `uses the target language typed policy for authored answer collisions`() {
+        val collision = typedRow(2).copy(
+            cells = typedRow(2).cells.map { cell ->
+                when (cell.columnNumber) {
+                    11 -> cell.copy(value = "İÇERİM")
+                    12 -> cell.copy(value = "içerim")
+                    else -> cell
+                }
+            },
+        )
+        val preview = orchestrator.preview(workbook(contentRows = listOf(collision)))
+
+        assertThat(preview.issueCodes()).contains(WorkbookImportIssueCode.DUPLICATE_ANSWER_OPTION)
+        assertThat(preview.plan).isNull()
+    }
+
+    @Test
     fun `uses deterministic Unicode case folding for answer collisions`() {
         val word = wordRow(2, target = "Straße").copy(
             cells = wordRow(2, target = "Straße").cells + cell(2, 13, "STRASSE"),

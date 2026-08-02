@@ -37,7 +37,7 @@ export interface InstallLocalStarterCourseRequest {
  */
 export interface DevelopmentApiInterface {
     /**
-     * Available only when the backend is explicitly running in the local environment with starter-course installation enabled. It creates one immutable Type-A English-support release derived from the reviewed workbook subset and never creates users or learning results.
+     * Available only when the backend is explicitly running in the local environment with starter-course installation enabled. It creates one immutable Type-A/Type-B/Type-C English-support release derived from the reviewed workbook subset and never creates users or learning results.
      * @summary Install the authenticated owner\'s local starter course idempotently
      * @param {string} idempotencyKey Stable UUID generated once for the logical command.
      * @param {*} [options] Override http request option.
@@ -47,7 +47,7 @@ export interface DevelopmentApiInterface {
     installLocalStarterCourseRaw(requestParameters: InstallLocalStarterCourseRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<LocalStarterCourseResponse>>;
 
     /**
-     * Available only when the backend is explicitly running in the local environment with starter-course installation enabled. It creates one immutable Type-A English-support release derived from the reviewed workbook subset and never creates users or learning results.
+     * Available only when the backend is explicitly running in the local environment with starter-course installation enabled. It creates one immutable Type-A/Type-B/Type-C English-support release derived from the reviewed workbook subset and never creates users or learning results.
      * Install the authenticated owner\'s local starter course idempotently
      */
     installLocalStarterCourse(requestParameters: InstallLocalStarterCourseRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<LocalStarterCourseResponse>;
@@ -60,7 +60,7 @@ export interface DevelopmentApiInterface {
 export class DevelopmentApi extends runtime.BaseAPI implements DevelopmentApiInterface {
 
     /**
-     * Available only when the backend is explicitly running in the local environment with starter-course installation enabled. It creates one immutable Type-A English-support release derived from the reviewed workbook subset and never creates users or learning results.
+     * Available only when the backend is explicitly running in the local environment with starter-course installation enabled. It creates one immutable Type-A/Type-B/Type-C English-support release derived from the reviewed workbook subset and never creates users or learning results.
      * Install the authenticated owner\'s local starter course idempotently
      */
     async installLocalStarterCourseRaw(requestParameters: InstallLocalStarterCourseRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<LocalStarterCourseResponse>> {
@@ -101,7 +101,7 @@ export class DevelopmentApi extends runtime.BaseAPI implements DevelopmentApiInt
     }
 
     /**
-     * Available only when the backend is explicitly running in the local environment with starter-course installation enabled. It creates one immutable Type-A English-support release derived from the reviewed workbook subset and never creates users or learning results.
+     * Available only when the backend is explicitly running in the local environment with starter-course installation enabled. It creates one immutable Type-A/Type-B/Type-C English-support release derived from the reviewed workbook subset and never creates users or learning results.
      * Install the authenticated owner\'s local starter course idempotently
      */
     async installLocalStarterCourse(requestParameters: InstallLocalStarterCourseRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<LocalStarterCourseResponse> {

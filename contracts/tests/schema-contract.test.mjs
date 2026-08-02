@@ -16,6 +16,50 @@ const fixture = JSON.parse(await readFile(fixturePath, "utf8"));
 const ajv = new Ajv2020({ allErrors: true, strict: false });
 addFormats(ajv);
 
+const submitAnswerOperation = contract.paths["/v1/attempts/{attemptId}/answers"].post;
+const submitAnswerSchema = contract.components.schemas.SubmitAnswerRequest;
+const answerRecordedSchema = contract.components.schemas.AnswerRecordedResponse;
+assert.equal(
+  submitAnswerSchema["x-kelimio-redacted-to-string"],
+  true,
+  "typed answer request string forms must stay redacted",
+);
+assert.equal(
+  submitAnswerSchema.properties.typedAnswer["x-kelimio-sensitive"],
+  true,
+  "typed learner answers must stay marked sensitive",
+);
+assert.equal(
+  answerRecordedSchema["x-kelimio-redacted-to-string"],
+  true,
+  "post-commit answer feedback string forms must stay redacted",
+);
+assert.equal(
+  answerRecordedSchema.properties.correctOptionId["x-kelimio-sensitive"],
+  true,
+  "option answer keys must stay marked sensitive",
+);
+assert.equal(
+  answerRecordedSchema.properties.correctAnswerText["x-kelimio-sensitive"],
+  true,
+  "typed answer keys must stay marked sensitive",
+);
+assert.equal(
+  submitAnswerOperation["x-kelimio-max-request-body-bytes"],
+  8192,
+  "answer submission bodies must remain bounded before JSON allocation",
+);
+assert.equal(
+  submitAnswerOperation.responses["413"].headers["Cache-Control"].$ref,
+  "#/components/headers/NoStore",
+  "oversized answer responses must remain non-cacheable",
+);
+assert.equal(
+  submitAnswerOperation.responses["413"].content["application/problem+json"].schema.$ref,
+  "#/components/schemas/Problem",
+  "oversized answer responses must use the generic RFC Problem schema",
+);
+
 const validateCourseDetail = ajv.compile({
   $schema: "https://json-schema.org/draft/2020-12/schema",
   components: contract.components,
@@ -174,6 +218,14 @@ const clozeQuestion = {
   type: "MULTIPLE_CHOICE_CLOZE",
   prompt: "Ben her sabah çay ---.",
 };
+const typedClozeQuestion = {
+  ...clozeQuestion,
+  questionId: "00000000-0000-4000-8000-000000000301",
+  questionRevisionId: "00000000-0000-4000-8000-000000000302",
+  type: "TYPED_CLOZE",
+  prompt: "Sabah kahvaltıda çay ---.",
+  options: [],
+};
 const validateQuestionPayload = compileSchema("QuestionPayload");
 assert.equal(
   validateQuestionPayload(wordQuestion),
@@ -185,6 +237,11 @@ assert.equal(
   true,
   `Type-B question must be valid: ${ajv.errorsText(validateQuestionPayload.errors)}`,
 );
+assert.equal(
+  validateQuestionPayload(typedClozeQuestion),
+  true,
+  `Type-C question must be valid: ${ajv.errorsText(validateQuestionPayload.errors)}`,
+);
 for (const prompt of [
   "Ben her sabah çay içerim.",
   "--- Ben her sabah çay ---.",
@@ -194,13 +251,18 @@ for (const prompt of [
   assert.equal(
     validateQuestionPayload({ ...clozeQuestion, prompt }),
     false,
-    `Type-B prompt must contain exactly one non-overlapping marker: ${prompt}`,
+    `Type-B prompt must contain exactly one overlapping-counted marker: ${prompt}`,
+  );
+  assert.equal(
+    validateQuestionPayload({ ...typedClozeQuestion, prompt }),
+    false,
+    `Type-C prompt must contain exactly one overlapping-counted marker: ${prompt}`,
   );
 }
 assert.equal(
-  validateQuestionPayload({ ...clozeQuestion, type: "TYPED_CLOZE" }),
+  validateQuestionPayload({ ...typedClozeQuestion, options: clozeQuestion.options }),
   false,
-  "unsupported question types must fail closed",
+  "typed-cloze questions must not contain options",
 );
 assert.equal(
   validateQuestionPayload({ ...clozeQuestion, options: clozeQuestion.options.slice(0, 3) }),
@@ -212,5 +274,103 @@ assert.equal(
   false,
   "pre-answer question payloads must reject an answer key",
 );
+assert.equal(
+  validateQuestionPayload({ ...typedClozeQuestion, correctAnswerText: "içerim" }),
+  false,
+  "typed-cloze attempt payloads must reject an authored answer key",
+);
 
-console.log("Course, profile, and question schemas accept valid fixtures and reject unsafe drift.");
+const validateSubmitAnswerRequest = compileSchema("SubmitAnswerRequest");
+const submissionBase = {
+  submissionId: "00000000-0000-4000-8000-000000000401",
+  questionRevisionId: typedClozeQuestion.questionRevisionId,
+};
+assert.equal(
+  validateSubmitAnswerRequest({
+    ...submissionBase,
+    selectedOptionId: clozeQuestion.options[0].id,
+  }),
+  true,
+  `Option submission must remain valid: ${ajv.errorsText(validateSubmitAnswerRequest.errors)}`,
+);
+assert.equal(
+  validateSubmitAnswerRequest({ ...submissionBase, typedAnswer: "içerim" }),
+  true,
+  `Typed submission must be valid: ${ajv.errorsText(validateSubmitAnswerRequest.errors)}`,
+);
+assert.equal(
+  validateSubmitAnswerRequest(submissionBase),
+  false,
+  "an answer submission must contain one answer form",
+);
+assert.equal(
+  validateSubmitAnswerRequest({
+    ...submissionBase,
+    selectedOptionId: clozeQuestion.options[0].id,
+    typedAnswer: "içerim",
+  }),
+  false,
+  "an answer submission must not contain both answer forms",
+);
+assert.equal(
+  validateSubmitAnswerRequest({ ...submissionBase, typedAnswer: "" }),
+  false,
+  "typed answers must not be empty",
+);
+assert.equal(
+  validateSubmitAnswerRequest({ ...submissionBase, typedAnswer: "a".repeat(501) }),
+  false,
+  "typed answers must remain bounded",
+);
+assert.equal(
+  validateSubmitAnswerRequest({ ...submissionBase, typedAnswer: "içerim", correct: true }),
+  false,
+  "answer submissions must reject client-asserted correctness",
+);
+
+const validateAnswerRecordedResponse = compileSchema("AnswerRecordedResponse");
+const recordedBase = {
+  submissionId: submissionBase.submissionId,
+  correct: true,
+  activeScoreDelta: 60,
+  lifetimeScoreDelta: 60,
+  activeQuestionScore: 60,
+  lifetimeScore: 60,
+  energy: {
+    balance: 5,
+    maximum: 5,
+    unlimited: false,
+    nextRegenerationAt: null,
+    asOf: "2026-08-02T08:00:00Z",
+  },
+  attemptState: "IN_PROGRESS",
+};
+assert.equal(
+  validateAnswerRecordedResponse({
+    ...recordedBase,
+    correctOptionId: clozeQuestion.options[0].id,
+  }),
+  true,
+  `Option feedback must remain valid: ${ajv.errorsText(validateAnswerRecordedResponse.errors)}`,
+);
+assert.equal(
+  validateAnswerRecordedResponse({ ...recordedBase, correctAnswerText: "içerim" }),
+  true,
+  `Typed feedback must be valid: ${ajv.errorsText(validateAnswerRecordedResponse.errors)}`,
+);
+assert.equal(
+  validateAnswerRecordedResponse(recordedBase),
+  false,
+  "post-commit feedback must contain exactly one answer-key form",
+);
+assert.equal(
+  validateAnswerRecordedResponse({
+    ...recordedBase,
+    correctOptionId: clozeQuestion.options[0].id,
+    correctAnswerText: "içerim",
+  }),
+  false,
+  "post-commit feedback must not contain both answer-key forms",
+);
+
+console.log("Course, profile, question, and answer schemas accept valid fixtures and reject unsafe drift.");

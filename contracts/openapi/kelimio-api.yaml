@@ -215,6 +215,9 @@ paths:
       description: >-
         Reusing submissionId returns the previously committed response and never
         creates a second attempt fact, score event, energy event, or outbox event.
+        The complete request body is limited to 8192 bytes and is rejected before
+        JSON allocation or transactional command handling when that limit is exceeded.
+      x-kelimio-max-request-body-bytes: 8192
       parameters:
         - $ref: "#/components/parameters/AttemptId"
         - $ref: "#/components/parameters/IdempotencyKey"
@@ -227,11 +230,55 @@ paths:
       responses:
         "200":
           description: Authoritative evaluation and resulting server state
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/AnswerRecordedResponse"
         "401":
+          $ref: "#/components/responses/Problem"
+        "413":
+          description: Request body exceeds the answer-submission byte limit
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/attempts/{attemptId}/answers/{submissionId}:
+    get:
+      operationId: getRecordedAnswer
+      tags: [Learning]
+      summary: Reconcile one previously committed answer owned by the current user
+      description: >-
+        Returns the immutable committed result only when both the attempt and
+        submission belong to the authenticated user. Missing or non-owned
+        records are indistinguishable and return not found.
+      parameters:
+        - $ref: "#/components/parameters/AttemptId"
+        - name: submissionId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/Id"
+      responses:
+        "200":
+          description: Previously committed authoritative answer result
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnswerRecordedResponse"
+        "401":
+          $ref: "#/components/responses/Problem"
+        "404":
           $ref: "#/components/responses/Problem"
         default:
           $ref: "#/components/responses/Problem"
@@ -278,8 +325,8 @@ paths:
       description: >-
         Available only when the backend is explicitly running in the local
         environment with starter-course installation enabled. It creates one
-        immutable Type-A English-support release derived from the reviewed
-        workbook subset and never creates users or learning results.
+        immutable Type-A/Type-B/Type-C English-support release derived from the
+        reviewed workbook subset and never creates users or learning results.
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
       responses:
@@ -314,6 +361,11 @@ components:
       schema:
         type: string
         format: uuid
+    NoStore:
+      description: Prevents answer submissions and answer-key feedback from being cached.
+      schema:
+        type: string
+        const: no-store
   parameters:
     CourseId:
       name: courseId
@@ -646,22 +698,38 @@ components:
       type: object
       additionalProperties: false
       description: >-
-        Answer-key-free online question payload. MULTIPLE_CHOICE_CLOZE carries
-        the raw target-language sentence and exactly one literal ASCII ---
-        marker; the client renders that marker as an accessible visual blank.
+        Answer-key-free online question payload. MULTIPLE_CHOICE_CLOZE and
+        TYPED_CLOZE carry a raw target-language sentence and exactly one literal
+        ASCII --- marker; the client renders that marker as an accessible
+        visual blank. TYPED_CLOZE always carries an empty options array.
       x-kelimio-cross-field-invariants:
-        - MULTIPLE_CHOICE_CLOZE prompt contains exactly one literal ASCII ---; overlapping occurrences count.
+        - MULTIPLE_CHOICE_CLOZE and TYPED_CLOZE prompts contain exactly one literal ASCII ---; overlapping occurrences count.
+        - WORD_MULTIPLE_CHOICE and MULTIPLE_CHOICE_CLOZE contain exactly four options; TYPED_CLOZE contains none.
       required: [questionId, questionRevisionId, type, position, prompt, options]
       allOf:
         - if:
             properties:
               type:
-                const: MULTIPLE_CHOICE_CLOZE
+                enum: [MULTIPLE_CHOICE_CLOZE, TYPED_CLOZE]
             required: [type]
           then:
             properties:
               prompt:
                 pattern: '^(?![\s\S]*----)(?![\s\S]*---[\s\S]*---)[\s\S]*---[\s\S]*$'
+        - if:
+            properties:
+              type:
+                const: TYPED_CLOZE
+            required: [type]
+          then:
+            properties:
+              options:
+                maxItems: 0
+          else:
+            properties:
+              options:
+                minItems: 4
+                maxItems: 4
       properties:
         questionId:
           $ref: "#/components/schemas/Id"
@@ -669,7 +737,7 @@ components:
           $ref: "#/components/schemas/Id"
         type:
           type: string
-          enum: [WORD_MULTIPLE_CHOICE, MULTIPLE_CHOICE_CLOZE]
+          enum: [WORD_MULTIPLE_CHOICE, MULTIPLE_CHOICE_CLOZE, TYPED_CLOZE]
         position:
           type: integer
           minimum: 1
@@ -679,8 +747,6 @@ components:
           maxLength: 1000
         options:
           type: array
-          minItems: 4
-          maxItems: 4
           items:
             $ref: "#/components/schemas/AnswerOption"
     AnswerOption:
@@ -697,7 +763,22 @@ components:
     SubmitAnswerRequest:
       type: object
       additionalProperties: false
-      required: [submissionId, questionRevisionId, selectedOptionId]
+      description: >-
+        Carries exactly one answer form. typedAnswer is sensitive, is evaluated
+        only by the server, and must never be logged or emitted to analytics or
+        outbox events.
+      x-kelimio-cross-field-invariants:
+        - Exactly one of selectedOptionId and typedAnswer is present.
+      x-kelimio-redacted-to-string: true
+      x-kelimio-redaction-test-submit-answer-request: true
+      required: [submissionId, questionRevisionId]
+      oneOf:
+        - required: [selectedOptionId]
+          not:
+            required: [typedAnswer]
+        - required: [typedAnswer]
+          not:
+            required: [selectedOptionId]
       properties:
         submissionId:
           $ref: "#/components/schemas/Id"
@@ -705,26 +786,53 @@ components:
           $ref: "#/components/schemas/Id"
         selectedOptionId:
           $ref: "#/components/schemas/Id"
+        typedAnswer:
+          type: string
+          minLength: 1
+          maxLength: 500
+          writeOnly: true
+          x-kelimio-sensitive: true
     AnswerRecordedResponse:
       type: object
       additionalProperties: false
+      description: >-
+        Post-commit feedback for exactly one submitted question. Multiple-choice
+        responses contain correctOptionId; typed-cloze responses contain only
+        the primary authored correctAnswerText. Neither appears before commit.
+      x-kelimio-cross-field-invariants:
+        - Exactly one of correctOptionId and correctAnswerText is present.
+      x-kelimio-redacted-to-string: true
+      x-kelimio-redaction-test-answer-recorded-response: true
       required:
         - submissionId
         - correct
-        - correctOptionId
         - activeScoreDelta
         - lifetimeScoreDelta
         - activeQuestionScore
         - lifetimeScore
         - energy
         - attemptState
+      oneOf:
+        - required: [correctOptionId]
+          not:
+            required: [correctAnswerText]
+        - required: [correctAnswerText]
+          not:
+            required: [correctOptionId]
       properties:
         submissionId:
           $ref: "#/components/schemas/Id"
         correct:
           type: boolean
         correctOptionId:
-          $ref: "#/components/schemas/Id"
+          x-kelimio-sensitive: true
+          allOf:
+            - $ref: "#/components/schemas/Id"
+        correctAnswerText:
+          type: string
+          minLength: 1
+          maxLength: 500
+          x-kelimio-sensitive: true
         activeScoreDelta:
           type: integer
           minimum: 0

@@ -135,9 +135,8 @@ final class AnswerKeyLeakGuardInterceptor extends Interceptor {
     ResponseInterceptorHandler handler,
   ) {
     final path = response.requestOptions.uri.path;
-    final isAttemptStart =
-        path.startsWith('/v1/tests/') && path.endsWith('/attempts');
-    if (isAttemptStart && containsAnswerKeyLeak(response.data)) {
+    if (isAnswerKeyGuardedAttemptStartPath(path) &&
+        containsAnswerKeyLeak(response.data)) {
       handler.reject(
         DioException(
           requestOptions: response.requestOptions,
@@ -152,15 +151,26 @@ final class AnswerKeyLeakGuardInterceptor extends Interceptor {
   }
 }
 
+bool isAnswerKeyGuardedAttemptStartPath(String path) =>
+    path.startsWith('/v1/tests/') && path.endsWith('/attempts');
+
 bool containsAnswerKeyLeak(Object? data) {
   if (data is! Map<Object?, Object?>) {
     return false;
   }
   const forbidden = {
     'correctOptionId',
+    'correct_option_id',
     'correctAnswer',
+    'correct_answer',
+    'correctAnswerText',
+    'correct_answer_text',
     'answerKey',
+    'answer_key',
     'isCorrect',
+    'is_correct',
+    'typedAnswer',
+    'typed_answer',
   };
   if (data.keys.any(forbidden.contains)) {
     return true;
@@ -181,7 +191,8 @@ bool containsAnswerKeyLeak(Object? data) {
       for (final option in options) {
         if (option is Map<Object?, Object?> &&
             (option.containsKey('correct') ||
-                option.containsKey('isCorrect'))) {
+                option.containsKey('isCorrect') ||
+                option.containsKey('is_correct'))) {
           return true;
         }
       }

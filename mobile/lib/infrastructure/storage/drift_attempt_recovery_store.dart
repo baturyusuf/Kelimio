@@ -25,7 +25,8 @@ final class DriftAttemptRecoveryStore implements AttemptRecoveryStore {
     await open();
     final rows = await _connection.runSelect(
       'SELECT test_id, start_command_id, phase, attempt_id, question_index, '
-      'selected_option_id, submission_id, finish_command_id, updated_at_ms '
+      'answer_kind, selected_option_id, submission_id, finish_command_id, '
+      'updated_at_ms '
       'FROM attempt_recovery WHERE slot = 1',
       const [],
     );
@@ -40,6 +41,9 @@ final class DriftAttemptRecoveryStore implements AttemptRecoveryStore {
         phase: RecoveryPhase.values.byName(row['phase']! as String),
         attemptId: row['attempt_id'] as String?,
         questionIndex: row['question_index']! as int,
+        answerKind: row['answer_kind'] == null
+            ? null
+            : AnswerKind.values.byName(row['answer_kind']! as String),
         selectedOptionId: row['selected_option_id'] as String?,
         submissionId: row['submission_id'] as String?,
         finishCommandId: row['finish_command_id'] as String?,
@@ -59,14 +63,16 @@ final class DriftAttemptRecoveryStore implements AttemptRecoveryStore {
     await _connection.runInsert(
       'INSERT INTO attempt_recovery ('
       'slot, test_id, start_command_id, phase, attempt_id, question_index, '
-      'selected_option_id, submission_id, finish_command_id, updated_at_ms'
-      ') VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?) '
+      'answer_kind, selected_option_id, submission_id, finish_command_id, '
+      'updated_at_ms'
+      ') VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) '
       'ON CONFLICT(slot) DO UPDATE SET '
       'test_id = excluded.test_id, '
       'start_command_id = excluded.start_command_id, '
       'phase = excluded.phase, '
       'attempt_id = excluded.attempt_id, '
       'question_index = excluded.question_index, '
+      'answer_kind = excluded.answer_kind, '
       'selected_option_id = excluded.selected_option_id, '
       'submission_id = excluded.submission_id, '
       'finish_command_id = excluded.finish_command_id, '
@@ -77,6 +83,7 @@ final class DriftAttemptRecoveryStore implements AttemptRecoveryStore {
         snapshot.phase.name,
         snapshot.attemptId,
         snapshot.questionIndex,
+        snapshot.answerKind?.name,
         snapshot.selectedOptionId,
         snapshot.submissionId,
         snapshot.finishCommandId,
@@ -99,7 +106,7 @@ final class DriftAttemptRecoveryStore implements AttemptRecoveryStore {
 
 final class _RecoverySchema implements QueryExecutorUser {
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   Future<void> beforeOpen(
@@ -117,11 +124,24 @@ final class _RecoverySchema implements QueryExecutorUser {
       'phase TEXT NOT NULL, '
       'attempt_id TEXT NULL, '
       'question_index INTEGER NOT NULL, '
+      'answer_kind TEXT NULL, '
       'selected_option_id TEXT NULL, '
       'submission_id TEXT NULL, '
       'finish_command_id TEXT NULL, '
       'updated_at_ms INTEGER NOT NULL'
       ')',
     );
+    final columns = await executor.runSelect(
+      'PRAGMA table_info(attempt_recovery)',
+      const [],
+    );
+    final hasAnswerKind = columns.any(
+      (column) => column['name'] == 'answer_kind',
+    );
+    if (!hasAnswerKind) {
+      await executor.runCustom(
+        'ALTER TABLE attempt_recovery ADD COLUMN answer_kind TEXT NULL',
+      );
+    }
   }
 }

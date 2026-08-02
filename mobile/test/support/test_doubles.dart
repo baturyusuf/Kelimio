@@ -10,11 +10,28 @@ import 'package:kelimio_mobile/domain/profile/profile.dart';
 import 'fixtures.dart';
 
 final class RecordingLearningRepository implements LearningRepository {
-  RecordingLearningRepository({required this.answerBehaviors});
+  RecordingLearningRepository({
+    required List<
+      Future<AnswerFeedback> Function(String submissionId, AnswerInput answer)
+    >
+    answerBehaviors,
+    List<Future<AnswerFeedback?> Function(String submissionId)>
+        recordedAnswerBehaviors =
+        const [],
+    this.session,
+  }) : answerBehaviors = [...answerBehaviors],
+       recordedAnswerBehaviors = [...recordedAnswerBehaviors];
 
-  final List<Future<AnswerFeedback> Function(String submissionId)>
+  final List<
+    Future<AnswerFeedback> Function(String submissionId, AnswerInput answer)
+  >
   answerBehaviors;
+  final List<Future<AnswerFeedback?> Function(String submissionId)>
+  recordedAnswerBehaviors;
+  final AttemptSession? session;
   final List<String> submittedIds = [];
+  final List<AnswerKind> submittedKinds = [];
+  final List<String> reconciliationIds = [];
   int startCalls = 0;
 
   @override
@@ -23,18 +40,31 @@ final class RecordingLearningRepository implements LearningRepository {
     required String commandId,
   }) async {
     startCalls += 1;
-    return fixtureSession();
+    return session ?? fixtureSession();
   }
 
   @override
   Future<AnswerFeedback> submitAnswer({
     required String attemptId,
     required String questionRevisionId,
-    required String selectedOptionId,
+    required AnswerInput answer,
     required String submissionId,
   }) {
     submittedIds.add(submissionId);
-    return answerBehaviors.removeAt(0)(submissionId);
+    submittedKinds.add(answer.kind);
+    return answerBehaviors.removeAt(0)(submissionId, answer);
+  }
+
+  @override
+  Future<AnswerFeedback?> getRecordedAnswer({
+    required String attemptId,
+    required String submissionId,
+  }) async {
+    reconciliationIds.add(submissionId);
+    if (recordedAnswerBehaviors.isEmpty) {
+      return null;
+    }
+    return recordedAnswerBehaviors.removeAt(0)(submissionId);
   }
 
   @override

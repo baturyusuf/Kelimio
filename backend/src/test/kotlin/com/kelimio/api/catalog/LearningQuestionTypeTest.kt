@@ -11,15 +11,19 @@ class LearningQuestionTypeTest {
             .isEqualTo(LearningQuestionType.WORD_MULTIPLE_CHOICE)
         assertThat(LearningQuestionType.fromStorageCode("B"))
             .isEqualTo(LearningQuestionType.MULTIPLE_CHOICE_CLOZE)
+        assertThat(LearningQuestionType.fromStorageCode("C"))
+            .isEqualTo(LearningQuestionType.TYPED_CLOZE)
         assertThat(LearningQuestionType.WORD_MULTIPLE_CHOICE.apiValue)
             .isEqualTo("WORD_MULTIPLE_CHOICE")
         assertThat(LearningQuestionType.MULTIPLE_CHOICE_CLOZE.apiValue)
             .isEqualTo("MULTIPLE_CHOICE_CLOZE")
+        assertThat(LearningQuestionType.TYPED_CLOZE.apiValue)
+            .isEqualTo("TYPED_CLOZE")
     }
 
     @Test
     fun `fails closed for an unsupported storage code`() {
-        assertThatThrownBy { LearningQuestionType.fromStorageCode("C") }
+        assertThatThrownBy { LearningQuestionType.fromStorageCode("D") }
             .isInstanceOf(IllegalStateException::class.java)
             .hasMessage("Unsupported stored learning question type")
     }

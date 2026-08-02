@@ -56,7 +56,7 @@ OIDC provider through `localhost`. Check or stop it with `-Action status` and
 policy and does not change the workstation's persistent security settings.
 Google Play Console access is not required for this emulator.
 
-Keycloak is available at `http://localhost:8081`, the API at `http://localhost:8080`, Mailpit at `http://localhost:8025`, and LocalStack at `http://localhost:4566`. The realm has no demo user. Register through OIDC, verify the captured message in Mailpit on a fresh realm, and complete the in-app profile setup. When local development tools are enabled, an authenticated and profile-complete user can explicitly install the immutable reviewed mixed Type-A/Type-B starter course, including when an older local starter is already present. This is a reviewed workbook subset using English as its support language; it is local test content, not the production Excel-import workflow, and it creates no learning results. The repository also tests a side-effect-free secure preview of the exact reviewed XLSX; it does not yet expose upload, approval, persistence, or publication.
+Keycloak is available at `http://localhost:8081`, the API at `http://localhost:8080`, Mailpit at `http://localhost:8025`, and LocalStack at `http://localhost:4566`. The realm has no demo user. Register through OIDC, verify the captured message in Mailpit on a fresh realm, and complete the in-app profile setup. When local development tools are enabled, an authenticated and profile-complete user can explicitly install the immutable reviewed mixed Type-A/Type-B/Type-C starter course, including when an older local starter is already present. Starter release v3 contains five Type-A questions, one Type-B question, and the exact reviewed-workbook Type-C row. This is a bounded workbook subset using English as its support language; it is local test content, not the production Excel-import workflow, and it creates no learning results. The repository also tests a side-effect-free secure preview of the exact reviewed XLSX; it does not yet expose upload, approval, persistence, or publication.
 
 Run the backend checks:
 
@@ -119,8 +119,9 @@ This runner creates a randomly named Compose project with separate ports,
 network, and volumes; registers a random user through Keycloak's public form;
 verifies the Mailpit message; exchanges a real Authorization Code + S256 PKCE
 code; and drives the production Flutter repositories, controllers, Drift store,
-and UI through profile setup, enrollment, six answers, idempotent replay,
-projection, and sign-out. Random credentials are generated at runtime, remain
+and UI through profile setup, enrollment, seven answers, Type-B replay plus
+Type-C replay/reconciliation, the 7/7 and 420/420 projection at version 8,
+and sign-out. Random credentials are generated at runtime, remain
 limited to the isolated run, and are never printed or written to the repository;
 the runner restores its process environment and deletes temporary service/app
 state during guarded cleanup. The Android build uses the separate
@@ -161,6 +162,7 @@ See [backend configuration](backend/README.md), [local infrastructure notes](inf
 - Application locale, course target language, and course support language are independent.
 - Excel creates a course once; later content changes are made through mobile teacher authoring.
 - Online learning is server-authoritative. Signed offline packages provide scoreless practice and never sync answer history.
+- Online Type-C typed answers are graded by the backend under a pinned language policy. Raw or canonical learner text is never retained in PostgreSQL, logs, analytics, outbox events, or mobile recovery state; lost-response recovery uses an ownership-scoped committed-result lookup.
 - Question/test content is immutable and release-based. Active progress can be reprojected; lifetime score never falls because a teacher edited content.
 - Free-course energy, rewarded ads, store purchases, course entitlements, teacher earnings, and payouts require auditable server-side flows.
 

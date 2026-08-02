@@ -1,6 +1,7 @@
 package com.kelimio.api.learningsession
 
 import com.kelimio.api.catalog.LearningQuestionType
+import com.kelimio.api.catalog.TypedAnswerSource
 import com.kelimio.api.persistence.AnswerSubmissions
 import com.kelimio.api.persistence.AttemptEvents
 import com.kelimio.api.persistence.AttemptManifest
@@ -139,6 +140,12 @@ class LearningSessionRepository(
             QuestionRevisions.ID,
             QuestionRevisions.TYPE,
             QuestionRevisions.PROMPT,
+            QuestionRevisions.CORRECT_ANSWER,
+            QuestionRevisions.ALTERNATIVE_CORRECT_ANSWER,
+            QuestionRevisions.ANSWER_MATCH_POLICY,
+            QuestionRevisions.ANSWER_MATCH_LANGUAGE,
+            QuestionRevisions.CORRECT_ANSWER_MATCH_KEY,
+            QuestionRevisions.ALTERNATIVE_ANSWER_MATCH_KEY,
             AttemptManifest.POSITION,
         ).from(AttemptManifest.TABLE)
             .join(QuestionRevisions.TABLE)
@@ -146,12 +153,14 @@ class LearningSessionRepository(
             .where(AttemptManifest.ATTEMPT_ID.eq(attemptId))
             .and(AttemptManifest.QUESTION_REVISION_ID.eq(questionRevisionId))
             .fetchOne {
+                val type = LearningQuestionType.fromStorageCode(it.get(QuestionRevisions.TYPE)!!)
                 ManifestQuestion(
                     questionId = it.get(QuestionRevisions.QUESTION_ID)!!,
                     questionRevisionId = it.get(QuestionRevisions.ID)!!,
-                    type = LearningQuestionType.fromStorageCode(it.get(QuestionRevisions.TYPE)!!),
+                    type = type,
                     prompt = it.get(QuestionRevisions.PROMPT)!!,
                     options = findOptions(questionRevisionId),
+                    typedAnswer = mapTypedAnswer(it, type),
                     position = it.get(AttemptManifest.POSITION)!!,
                 )
             }
@@ -162,6 +171,12 @@ class LearningSessionRepository(
             QuestionRevisions.ID,
             QuestionRevisions.TYPE,
             QuestionRevisions.PROMPT,
+            QuestionRevisions.CORRECT_ANSWER,
+            QuestionRevisions.ALTERNATIVE_CORRECT_ANSWER,
+            QuestionRevisions.ANSWER_MATCH_POLICY,
+            QuestionRevisions.ANSWER_MATCH_LANGUAGE,
+            QuestionRevisions.CORRECT_ANSWER_MATCH_KEY,
+            QuestionRevisions.ALTERNATIVE_ANSWER_MATCH_KEY,
             AttemptManifest.POSITION,
         ).from(AttemptManifest.TABLE)
             .join(QuestionRevisions.TABLE)
@@ -170,12 +185,14 @@ class LearningSessionRepository(
             .orderBy(AttemptManifest.POSITION.asc())
             .fetch {
                 val revisionId = it.get(QuestionRevisions.ID)!!
+                val type = LearningQuestionType.fromStorageCode(it.get(QuestionRevisions.TYPE)!!)
                 ManifestQuestion(
                     questionId = it.get(QuestionRevisions.QUESTION_ID)!!,
                     questionRevisionId = revisionId,
-                    type = LearningQuestionType.fromStorageCode(it.get(QuestionRevisions.TYPE)!!),
+                    type = type,
                     prompt = it.get(QuestionRevisions.PROMPT)!!,
                     options = findOptions(revisionId),
+                    typedAnswer = mapTypedAnswer(it, type),
                     position = it.get(AttemptManifest.POSITION)!!,
                 )
             }
@@ -209,9 +226,28 @@ class LearningSessionRepository(
             .fetchOne(QuestionRevisionOptions.ID)
             ?: error("Question revision has no correct option")
 
+    fun findPrimaryCorrectAnswer(questionRevisionId: UUID): String =
+        dsl.select(QuestionRevisions.CORRECT_ANSWER)
+            .from(QuestionRevisions.TABLE)
+            .where(QuestionRevisions.ID.eq(questionRevisionId))
+            .and(QuestionRevisions.TYPE.eq(LearningQuestionType.TYPED_CLOZE.storageCode))
+            .fetchOne(QuestionRevisions.CORRECT_ANSWER)
+            ?: error("Typed-cloze revision has no primary correct answer")
+
     fun findAnswerBySubmissionId(submissionId: UUID): StoredAnswer? =
         answerSelect()
             .where(AnswerSubmissions.SUBMISSION_ID.eq(submissionId))
+            .fetchOne { mapAnswer(it) }
+
+    fun findAnswerForOwner(
+        attemptId: UUID,
+        submissionId: UUID,
+        userId: UUID,
+    ): StoredAnswer? =
+        answerSelect()
+            .where(AnswerSubmissions.ATTEMPT_ID.eq(attemptId))
+            .and(AnswerSubmissions.SUBMISSION_ID.eq(submissionId))
+            .and(AnswerSubmissions.USER_ID.eq(userId))
             .fetchOne { mapAnswer(it) }
 
     fun findAnswerForQuestion(
@@ -233,6 +269,10 @@ class LearningSessionRepository(
                 AnswerSubmissions.USER_ID,
                 AnswerSubmissions.QUESTION_REVISION_ID,
                 AnswerSubmissions.SELECTED_OPTION_ID,
+                AnswerSubmissions.ANSWER_KIND,
+                AnswerSubmissions.TYPED_ANSWER_SALT,
+                AnswerSubmissions.TYPED_ANSWER_DIGEST,
+                AnswerSubmissions.TYPED_MATCH_ORDINAL,
                 AnswerSubmissions.IS_CORRECT,
                 AnswerSubmissions.ACTIVE_DELTA,
                 AnswerSubmissions.LIFETIME_DELTA,
@@ -250,6 +290,10 @@ class LearningSessionRepository(
                 result.userId,
                 result.questionRevisionId,
                 result.selectedOptionId,
+                result.answerKind,
+                result.typedAnswerSalt,
+                result.typedAnswerDigest,
+                result.typedMatchOrdinal?.toShort(),
                 result.correct,
                 result.activeScoreDelta.toShort(),
                 result.lifetimeScoreDelta.toShort(),
@@ -370,6 +414,10 @@ class LearningSessionRepository(
             AnswerSubmissions.USER_ID,
             AnswerSubmissions.QUESTION_REVISION_ID,
             AnswerSubmissions.SELECTED_OPTION_ID,
+            AnswerSubmissions.ANSWER_KIND,
+            AnswerSubmissions.TYPED_ANSWER_SALT,
+            AnswerSubmissions.TYPED_ANSWER_DIGEST,
+            AnswerSubmissions.TYPED_MATCH_ORDINAL,
             AnswerSubmissions.IS_CORRECT,
             AnswerSubmissions.ACTIVE_DELTA,
             AnswerSubmissions.LIFETIME_DELTA,
@@ -388,7 +436,11 @@ class LearningSessionRepository(
             attemptId = record.get(AnswerSubmissions.ATTEMPT_ID)!!,
             userId = record.get(AnswerSubmissions.USER_ID)!!,
             questionRevisionId = record.get(AnswerSubmissions.QUESTION_REVISION_ID)!!,
-            selectedOptionId = record.get(AnswerSubmissions.SELECTED_OPTION_ID)!!,
+            answerKind = record.get(AnswerSubmissions.ANSWER_KIND)!!,
+            selectedOptionId = record.get(AnswerSubmissions.SELECTED_OPTION_ID),
+            typedAnswerSalt = record.get(AnswerSubmissions.TYPED_ANSWER_SALT),
+            typedAnswerDigest = record.get(AnswerSubmissions.TYPED_ANSWER_DIGEST),
+            typedMatchOrdinal = record.get(AnswerSubmissions.TYPED_MATCH_ORDINAL)?.toInt(),
             correct = record.get(AnswerSubmissions.IS_CORRECT)!!,
             activeScoreDelta = record.get(AnswerSubmissions.ACTIVE_DELTA)!!.toInt(),
             lifetimeScoreDelta = record.get(AnswerSubmissions.LIFETIME_DELTA)!!.toInt(),
@@ -400,4 +452,21 @@ class LearningSessionRepository(
             attemptStatusAfter = record.get(AnswerSubmissions.ATTEMPT_STATUS_AFTER)!!,
             submittedAt = record.get(AnswerSubmissions.SUBMITTED_AT)!!,
         )
+
+    private fun mapTypedAnswer(
+        record: org.jooq.Record,
+        type: LearningQuestionType,
+    ): TypedAnswerSource? =
+        if (type == LearningQuestionType.TYPED_CLOZE) {
+            TypedAnswerSource(
+                primaryAnswerText = record.get(QuestionRevisions.CORRECT_ANSWER)!!,
+                alternativeAnswerText = record.get(QuestionRevisions.ALTERNATIVE_CORRECT_ANSWER),
+                policyVersion = record.get(QuestionRevisions.ANSWER_MATCH_POLICY)!!,
+                languageTag = record.get(QuestionRevisions.ANSWER_MATCH_LANGUAGE)!!,
+                primaryMatchKey = record.get(QuestionRevisions.CORRECT_ANSWER_MATCH_KEY)!!,
+                alternativeMatchKey = record.get(QuestionRevisions.ALTERNATIVE_ANSWER_MATCH_KEY),
+            )
+        } else {
+            null
+        }
 }

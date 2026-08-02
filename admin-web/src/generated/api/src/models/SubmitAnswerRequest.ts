@@ -14,7 +14,7 @@
 
 import { mapValues } from '../runtime';
 /**
- *
+ * Carries exactly one answer form. typedAnswer is sensitive, is evaluated only by the server, and must never be logged or emitted to analytics or outbox events.
  * @export
  * @interface SubmitAnswerRequest
  */
@@ -36,7 +36,13 @@ export interface SubmitAnswerRequest {
      * @type {string}
      * @memberof SubmitAnswerRequest
      */
-    selectedOptionId: string;
+    selectedOptionId?: string;
+    /**
+     *
+     * @type {string}
+     * @memberof SubmitAnswerRequest
+     */
+    typedAnswer?: string;
 }
 
 /**
@@ -45,7 +51,6 @@ export interface SubmitAnswerRequest {
 export function instanceOfSubmitAnswerRequest(value: object): value is SubmitAnswerRequest {
     if (!('submissionId' in value) || value['submissionId'] === undefined) return false;
     if (!('questionRevisionId' in value) || value['questionRevisionId'] === undefined) return false;
-    if (!('selectedOptionId' in value) || value['selectedOptionId'] === undefined) return false;
     return true;
 }
 
@@ -61,7 +66,8 @@ export function SubmitAnswerRequestFromJSONTyped(json: any, ignoreDiscriminator:
 
         'submissionId': json['submissionId'],
         'questionRevisionId': json['questionRevisionId'],
-        'selectedOptionId': json['selectedOptionId'],
+        'selectedOptionId': json['selectedOptionId'] == null ? undefined : json['selectedOptionId'],
+        'typedAnswer': json['typedAnswer'] == null ? undefined : json['typedAnswer'],
     };
 }
 
@@ -79,5 +85,6 @@ export function SubmitAnswerRequestToJSONTyped(value?: SubmitAnswerRequest | nul
         'submissionId': value['submissionId'],
         'questionRevisionId': value['questionRevisionId'],
         'selectedOptionId': value['selectedOptionId'],
+        'typedAnswer': value['typedAnswer'],
     };
 }

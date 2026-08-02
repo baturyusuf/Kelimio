@@ -20,7 +20,9 @@ class SubmitAnswerRequest {
 
     required this.questionRevisionId,
 
-    required this.selectedOptionId,
+    this.selectedOptionId,
+
+    this.typedAnswer,
   });
 
   @JsonKey(name: r'submissionId', required: true, includeIfNull: false)
@@ -29,8 +31,11 @@ class SubmitAnswerRequest {
   @JsonKey(name: r'questionRevisionId', required: true, includeIfNull: false)
   final String questionRevisionId;
 
-  @JsonKey(name: r'selectedOptionId', required: true, includeIfNull: false)
-  final String selectedOptionId;
+  @JsonKey(name: r'selectedOptionId', required: false, includeIfNull: false)
+  final String? selectedOptionId;
+
+  @JsonKey(name: r'typedAnswer', required: false, includeIfNull: false)
+  final String? typedAnswer;
 
   @override
   bool operator ==(Object other) =>
@@ -38,13 +43,15 @@ class SubmitAnswerRequest {
       other is SubmitAnswerRequest &&
           other.submissionId == submissionId &&
           other.questionRevisionId == questionRevisionId &&
-          other.selectedOptionId == selectedOptionId;
+          other.selectedOptionId == selectedOptionId &&
+          other.typedAnswer == typedAnswer;
 
   @override
   int get hashCode =>
       submissionId.hashCode +
       questionRevisionId.hashCode +
-      selectedOptionId.hashCode;
+      selectedOptionId.hashCode +
+      typedAnswer.hashCode;
 
   factory SubmitAnswerRequest.fromJson(Map<String, dynamic> json) =>
       _$SubmitAnswerRequestFromJson(json);
@@ -53,6 +60,10 @@ class SubmitAnswerRequest {
 
   @override
   String toString() {
-    return toJson().toString();
+    final json = toJson();
+    if (json.containsKey(r'typedAnswer')) {
+      json[r'typedAnswer'] = '[REDACTED]';
+    }
+    return json.toString();
   }
 }

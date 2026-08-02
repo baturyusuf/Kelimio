@@ -22,7 +22,7 @@ import {
 } from './AnswerOption';
 
 /**
- * Answer-key-free online question payload. MULTIPLE_CHOICE_CLOZE carries the raw target-language sentence and exactly one literal ASCII --- marker; the client renders that marker as an accessible visual blank.
+ * Answer-key-free online question payload. MULTIPLE_CHOICE_CLOZE and TYPED_CLOZE carry a raw target-language sentence and exactly one literal ASCII --- marker; the client renders that marker as an accessible visual blank. TYPED_CLOZE always carries an empty options array.
  * @export
  * @interface QuestionPayload
  */
@@ -71,7 +71,8 @@ export interface QuestionPayload {
  */
 export const QuestionPayloadTypeEnum = {
     WordMultipleChoice: 'WORD_MULTIPLE_CHOICE',
-    MultipleChoiceCloze: 'MULTIPLE_CHOICE_CLOZE'
+    MultipleChoiceCloze: 'MULTIPLE_CHOICE_CLOZE',
+    TypedCloze: 'TYPED_CLOZE'
 } as const;
 export type QuestionPayloadTypeEnum = typeof QuestionPayloadTypeEnum[keyof typeof QuestionPayloadTypeEnum];
 

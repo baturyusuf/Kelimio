@@ -72,5 +72,8 @@
   "accessibilitySelectedAnswer": "الإجابة المحددة",
   "accessibilityCorrectAnswer": "الإجابة الصحيحة",
   "accessibilityIncorrectAnswer": "الإجابة غير الصحيحة",
-  "accessibilityBlank": "فراغ"
+  "accessibilityBlank": "فراغ",
+  "typedAnswerLabel": "إجابتك",
+  "typedAnswerReentry": "لم تُحفظ الإجابة السابقة على هذا الجهاز. أدخلها مجددًا لمتابعة الإرسال نفسه.",
+  "correctAnswerLabel": "الإجابة الصحيحة"
 }

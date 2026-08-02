@@ -33,7 +33,7 @@ const _mailpitBaseUrl = String.fromEnvironment(
 );
 const _redirectUri = 'com.kelimio.app.e2e:/oauthredirect';
 const _postLogoutRedirectUri = 'com.kelimio.app.e2e:/logout';
-const _starterAnswers = <String, String>{
+const _starterOptionAnswers = <String, String>{
   'Merhaba': 'Hello',
   'Hoşça kal': 'Goodbye',
   'Teşekkür ederim': 'Thank you',
@@ -41,6 +41,10 @@ const _starterAnswers = <String, String>{
   'Evet': 'Yes',
   'Ben her sabah çay ---.': 'içerim',
 };
+const _typedStarterPrompt = 'Sabah kahvaltıda çay ---.';
+const _typedStarterInput = '  İÇİYORUM  ';
+const _typedStarterCanonicalAlternative = 'içiyorum';
+const _typedStarterPrimaryAnswer = 'içerim';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -80,6 +84,18 @@ void main() {
       final container = ProviderScope.containerOf(
         tester.element(find.byType(KelimioApp)),
       );
+      final attemptTimeline = <String>[];
+      final attemptSubscription = container.listen<AttemptState>(
+        attemptControllerProvider,
+        (_, next) {
+          attemptTimeline.add(_describeAttemptState(next));
+          if (attemptTimeline.length > 24) {
+            attemptTimeline.removeAt(0);
+          }
+        },
+        fireImmediately: true,
+      );
+      addTearDown(attemptSubscription.close);
       final initialRecovery = await _runIo(
         tester,
         () => container.read(recoveryStoreProvider.future),
@@ -173,7 +189,7 @@ void main() {
         () => container.read(courseDetailProvider(course.id).future),
       );
       expect(detail.tests, hasLength(1));
-      expect(detail.tests.single.questionCount, 6);
+      expect(detail.tests.single.questionCount, 7);
       final testId = detail.tests.single.id;
 
       await _pumpUntil(
@@ -190,9 +206,11 @@ void main() {
       final startTest = find.byKey(Key('course-test-$testId'));
       await _tapVisible(tester, startTest, label: 'test start');
 
-      var renderedClozeQuestions = 0;
-      var replayedClozeSubmission = false;
-      for (var index = 0; index < 6; index += 1) {
+      var renderedMultipleChoiceClozeQuestions = 0;
+      var renderedTypedClozeQuestions = 0;
+      var replayedMultipleChoiceClozeSubmission = false;
+      var replayedTypedClozeSubmission = false;
+      for (var index = 0; index < 7; index += 1) {
         await _pumpUntil(tester, () {
           final state = container.read(attemptControllerProvider);
           return state is AttemptPresenting && state.questionIndex == index;
@@ -207,37 +225,129 @@ void main() {
             );
             break;
           case QuestionType.multipleChoiceCloze:
-            renderedClozeQuestions += 1;
+            renderedMultipleChoiceClozeQuestions += 1;
             final prompt = tester.widget<Text>(
               find.byKey(const Key('attempt-cloze-prompt')),
             );
             expect(prompt.textSpan!.toPlainText(), isNot(contains('---')));
             break;
+          case QuestionType.typedCloze:
+            renderedTypedClozeQuestions += 1;
+            expect(presenting.question.prompt, _typedStarterPrompt);
+            expect(presenting.question.options, isEmpty);
+            final prompt = tester.widget<Text>(
+              find.byKey(const Key('attempt-cloze-prompt')),
+            );
+            expect(prompt.textSpan!.toPlainText(), isNot(contains('---')));
+            expect(
+              find.byKey(const Key('attempt-typed-answer')),
+              findsOneWidget,
+            );
+            break;
         }
-        final expectedAnswer = _starterAnswers[presenting.question.prompt];
-        expect(expectedAnswer, isNotNull);
-        final selected = presenting.question.options.singleWhere(
-          (option) => option.text == expectedAnswer,
-        );
-        await _tapVisible(
+        String? selectedOptionId;
+        if (presenting.question.answerKind == AnswerKind.option) {
+          final expectedAnswer =
+              _starterOptionAnswers[presenting.question.prompt];
+          expect(expectedAnswer, isNotNull);
+          final selected = presenting.question.options.singleWhere(
+            (option) => option.text == expectedAnswer,
+          );
+          selectedOptionId = selected.id;
+          await _tapVisible(
+            tester,
+            find.byKey(Key('answer-${selected.id}')),
+            label: 'answer ${index + 1}',
+          );
+          await _pumpUntil(
+            tester,
+            () {
+              final state = container.read(attemptControllerProvider);
+              return state is AttemptPresenting &&
+                  state.questionIndex == index &&
+                  state.selectedOptionId == selected.id;
+            },
+            label: 'selected answer ${index + 1}',
+            timeout: const Duration(seconds: 5),
+            diagnostic: () => _describeAttemptState(
+              container.read(attemptControllerProvider),
+              timeline: attemptTimeline,
+            ),
+          );
+          await _tapVisible(
+            tester,
+            find.byKey(const Key('attempt-primary-button')),
+            label: 'answer submit ${index + 1}',
+          );
+        } else {
+          await tester.enterText(
+            find.byKey(const Key('attempt-typed-answer')),
+            _typedStarterInput,
+          );
+          await _pumpUntil(
+            tester,
+            () =>
+                tester
+                    .widget<TextField>(
+                      find.byKey(const Key('attempt-typed-answer')),
+                    )
+                    .onSubmitted !=
+                null,
+            label: 'typed answer submission readiness ${index + 1}',
+            timeout: const Duration(seconds: 5),
+            diagnostic: () => _describeAttemptState(
+              container.read(attemptControllerProvider),
+              timeline: attemptTimeline,
+            ),
+          );
+          await tester.testTextInput.receiveAction(TextInputAction.done);
+        }
+        await _pumpUntil(
           tester,
-          find.byKey(Key('answer-${selected.id}')),
-          label: 'answer ${index + 1}',
+          () {
+            final state = container.read(attemptControllerProvider);
+            return (state is AttemptSubmitting &&
+                    state.questionIndex == index) ||
+                (state is AttemptFeedback && state.questionIndex == index);
+          },
+          label: 'answer submission ${index + 1}',
+          timeout: const Duration(seconds: 5),
+          diagnostic: () => _describeAttemptState(
+            container.read(attemptControllerProvider),
+            timeline: attemptTimeline,
+          ),
         );
-        await _tapVisible(
+        await _pumpUntil(
           tester,
-          find.byKey(const Key('attempt-primary-button')),
-          label: 'answer submit ${index + 1}',
+          () {
+            final state = container.read(attemptControllerProvider);
+            return state is AttemptFeedback && state.questionIndex == index;
+          },
+          label: 'server feedback ${index + 1}',
+          diagnostic: () => _describeAttemptState(
+            container.read(attemptControllerProvider),
+            timeline: attemptTimeline,
+          ),
         );
-        await _pumpUntil(tester, () {
-          final state = container.read(attemptControllerProvider);
-          return state is AttemptFeedback && state.questionIndex == index;
-        }, label: 'server feedback ${index + 1}');
 
         final feedback =
             container.read(attemptControllerProvider) as AttemptFeedback;
         expect(feedback.feedback.correct, isTrue);
-        expect(feedback.feedback.correctOptionId, selected.id);
+        if (feedback.question.answerKind == AnswerKind.option) {
+          expect(feedback.feedback.correctOptionId, selectedOptionId);
+          expect(feedback.feedback.correctAnswerText, isNull);
+        } else {
+          expect(feedback.feedback.correctOptionId, isNull);
+          expect(
+            feedback.feedback.correctAnswerText,
+            _typedStarterPrimaryAnswer,
+          );
+          expect(
+            find.byKey(const Key('attempt-correct-answer-text')),
+            findsOneWidget,
+          );
+          expect(find.text(_typedStarterPrimaryAnswer), findsOneWidget);
+        }
         expect(feedback.feedback.activeScoreDelta, 60);
         expect(feedback.feedback.lifetimeScoreDelta, 60);
         expect(feedback.feedback.activeQuestionScore, 60);
@@ -245,7 +355,7 @@ void main() {
         expect(feedback.feedback.energy.balance, 5);
 
         if (feedback.question.type == QuestionType.multipleChoiceCloze &&
-            !replayedClozeSubmission) {
+            !replayedMultipleChoiceClozeSubmission) {
           final replay = await _runIo(
             tester,
             () => container
@@ -253,7 +363,7 @@ void main() {
                 .submitAnswer(
                   attemptId: feedback.context.session.id,
                   questionRevisionId: feedback.question.revisionId,
-                  selectedOptionId: feedback.selectedOptionId,
+                  answer: OptionAnswerInput(feedback.selectedOptionId!),
                   submissionId: feedback.feedback.submissionId,
                 ),
           );
@@ -261,7 +371,44 @@ void main() {
           expect(replay.correct, feedback.feedback.correct);
           expect(replay.lifetimeScore, feedback.feedback.lifetimeScore);
           expect(replay.energy.balance, feedback.feedback.energy.balance);
-          replayedClozeSubmission = true;
+          replayedMultipleChoiceClozeSubmission = true;
+        }
+
+        if (feedback.question.type == QuestionType.typedCloze &&
+            !replayedTypedClozeSubmission) {
+          final recorded = await _runIo(
+            tester,
+            () => container
+                .read(learningRepositoryProvider)
+                .getRecordedAnswer(
+                  attemptId: feedback.context.session.id,
+                  submissionId: feedback.feedback.submissionId,
+                ),
+          );
+          expect(recorded, isNotNull);
+          expect(recorded!.submissionId, feedback.feedback.submissionId);
+          expect(recorded.correct, feedback.feedback.correct);
+          expect(recorded.correctOptionId, isNull);
+          expect(recorded.correctAnswerText, _typedStarterPrimaryAnswer);
+
+          final replay = await _runIo(
+            tester,
+            () => container
+                .read(learningRepositoryProvider)
+                .submitAnswer(
+                  attemptId: feedback.context.session.id,
+                  questionRevisionId: feedback.question.revisionId,
+                  answer: TypedAnswerInput(_typedStarterCanonicalAlternative),
+                  submissionId: feedback.feedback.submissionId,
+                ),
+          );
+          expect(replay.submissionId, feedback.feedback.submissionId);
+          expect(replay.correct, feedback.feedback.correct);
+          expect(replay.correctOptionId, isNull);
+          expect(replay.correctAnswerText, _typedStarterPrimaryAnswer);
+          expect(replay.lifetimeScore, feedback.feedback.lifetimeScore);
+          expect(replay.energy.balance, feedback.feedback.energy.balance);
+          replayedTypedClozeSubmission = true;
         }
 
         await _tapVisible(
@@ -270,8 +417,10 @@ void main() {
           label: 'answer continue ${index + 1}',
         );
       }
-      expect(renderedClozeQuestions, 1);
-      expect(replayedClozeSubmission, isTrue);
+      expect(renderedMultipleChoiceClozeQuestions, 1);
+      expect(renderedTypedClozeQuestions, 1);
+      expect(replayedMultipleChoiceClozeSubmission, isTrue);
+      expect(replayedTypedClozeSubmission, isTrue);
 
       await _pumpUntil(
         tester,
@@ -280,8 +429,8 @@ void main() {
       );
       final passed = container.read(attemptControllerProvider) as AttemptPassed;
       expect(passed.result.status, ServerAttemptStatus.completedPass);
-      expect(passed.result.correctCount, 6);
-      expect(passed.result.questionCount, 6);
+      expect(passed.result.correctCount, 7);
+      expect(passed.result.questionCount, 7);
       expect(passed.result.correctRatio, 1);
 
       await _tapVisible(
@@ -303,13 +452,13 @@ void main() {
           }
           final progress = value.requireValue;
           return !progress.updating &&
-              progress.answeredQuestions == 6 &&
-              progress.correctAnswers == 6 &&
+              progress.answeredQuestions == 7 &&
+              progress.correctAnswers == 7 &&
               progress.completedAttempts == 1 &&
               progress.passedAttempts == 1 &&
-              progress.activeScore == 360 &&
-              progress.lifetimeScore == 360 &&
-              progress.projectionVersion == 7;
+              progress.activeScore == 420 &&
+              progress.lifetimeScore == 420 &&
+              progress.projectionVersion == 8;
         },
         timeout: const Duration(seconds: 20),
         label: 'completed outbox projection',
@@ -502,15 +651,46 @@ Future<void> _pumpUntil(
   bool Function() condition, {
   required String label,
   Duration timeout = const Duration(seconds: 15),
+  String Function()? diagnostic,
 }) async {
   final deadline = DateTime.now().add(timeout);
   while (!condition()) {
     if (DateTime.now().isAfter(deadline)) {
-      fail('Timed out waiting for $label.');
+      final suffix = diagnostic == null ? '' : ' Last state: ${diagnostic()}.';
+      fail('Timed out waiting for $label.$suffix');
     }
     await tester.pump(const Duration(milliseconds: 100));
   }
   await tester.pump();
+}
+
+String _describeAttemptState(AttemptState state, {List<String>? timeline}) {
+  final current = switch (state) {
+    final AttemptPresenting value =>
+      'AttemptPresenting(index=${value.questionIndex}, '
+          'selected=${value.selectedOptionId != null}, '
+          'resume=${value.resumeSubmissionId != null})',
+    final AttemptSubmitting value =>
+      'AttemptSubmitting(index=${value.questionIndex}, kind=${value.pending.kind.name})',
+    final AttemptReconciling value =>
+      'AttemptReconciling(index=${value.questionIndex}, kind=${value.answerKind.name})',
+    final AttemptFeedback value =>
+      'AttemptFeedback(index=${value.questionIndex}, kind=${value.answerKind.name})',
+    final AttemptRecovery value =>
+      'AttemptRecovery(context=${value.recovery.runtimeType}, '
+          'failure=${value.failure.runtimeType})',
+    final AttemptFatal value =>
+      'AttemptFatal(failure=${value.failure.runtimeType})',
+    final AttemptContentChanged value =>
+      'AttemptContentChanged(failure=${value.failure.runtimeType})',
+    final AttemptInterrupted value =>
+      'AttemptInterrupted(failure=${value.failure?.runtimeType})',
+    _ => state.runtimeType.toString(),
+  };
+  if (timeline == null || timeline.isEmpty) {
+    return current;
+  }
+  return '$current; recent=${timeline.join(' -> ')}';
 }
 
 Future<void> _ensureVisible(

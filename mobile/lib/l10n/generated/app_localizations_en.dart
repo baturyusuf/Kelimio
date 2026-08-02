@@ -264,4 +264,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get accessibilityBlank => 'blank';
+
+  @override
+  String get typedAnswerLabel => 'Your answer';
+
+  @override
+  String get typedAnswerReentry =>
+      'The previous answer was not stored on this device. Enter it again to continue the same submission.';
+
+  @override
+  String get correctAnswerLabel => 'Correct answer';
 }

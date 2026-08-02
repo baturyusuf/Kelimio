@@ -1,6 +1,7 @@
 package com.kelimio.api.learningsession
 
 import com.kelimio.api.catalog.LearningQuestionType
+import com.kelimio.api.catalog.TypedAnswerSource
 import com.kelimio.api.energy.EnergySnapshot
 import java.math.BigDecimal
 import java.time.OffsetDateTime
@@ -29,6 +30,7 @@ data class ManifestQuestion(
     val type: LearningQuestionType,
     val prompt: String,
     val options: List<ManifestOption>,
+    val typedAnswer: TypedAnswerSource?,
     val position: Int,
 )
 
@@ -44,7 +46,11 @@ data class StoredAnswer(
     val attemptId: UUID,
     val userId: UUID,
     val questionRevisionId: UUID,
-    val selectedOptionId: UUID,
+    val answerKind: String,
+    val selectedOptionId: UUID?,
+    val typedAnswerSalt: ByteArray?,
+    val typedAnswerDigest: ByteArray?,
+    val typedMatchOrdinal: Int?,
     val correct: Boolean,
     val activeScoreDelta: Int,
     val lifetimeScoreDelta: Int,
@@ -69,7 +75,8 @@ data class StartAttemptResult(
 data class SubmitAnswerResult(
     val submissionId: UUID,
     val correct: Boolean,
-    val correctOptionId: UUID,
+    val correctOptionId: UUID?,
+    val correctAnswerText: String?,
     val activeScoreDelta: Int,
     val lifetimeScoreDelta: Int,
     val activeQuestionScore: Int,
@@ -77,6 +84,14 @@ data class SubmitAnswerResult(
     val energy: EnergySnapshot,
     val attemptStatus: String,
 )
+
+sealed interface SubmittedAnswer {
+    data class Option(val selectedOptionId: UUID) : SubmittedAnswer
+
+    class TypedText(val value: String) : SubmittedAnswer {
+        override fun toString(): String = "TypedText([REDACTED])"
+    }
+}
 
 data class FinishAttemptResult(
     val attemptId: UUID,

@@ -13,12 +13,14 @@ final class PendingAnswer {
   const PendingAnswer({
     required this.submissionId,
     required this.questionRevisionId,
-    required this.selectedOptionId,
+    required this.input,
   });
 
   final String submissionId;
   final String questionRevisionId;
-  final String selectedOptionId;
+  final AnswerInput input;
+
+  AnswerKind get kind => input.kind;
 }
 
 sealed class AttemptState {
@@ -47,11 +49,13 @@ final class AttemptPresenting extends AttemptState {
     required this.context,
     required this.questionIndex,
     this.selectedOptionId,
+    this.resumeSubmissionId,
   });
 
   final ActiveAttempt context;
   final int questionIndex;
   final String? selectedOptionId;
+  final String? resumeSubmissionId;
 
   Question get question => context.session.questions[questionIndex];
 
@@ -79,17 +83,48 @@ final class AttemptSubmitting extends AttemptState {
   bool get controlsLocked => true;
 }
 
-final class AttemptFeedback extends AttemptState {
-  const AttemptFeedback({
+final class AttemptReconciling extends AttemptState {
+  const AttemptReconciling({
     required this.context,
     required this.questionIndex,
-    required this.selectedOptionId,
-    required this.feedback,
+    required this.submissionId,
+    required this.answerKind,
+    this.pending,
+    this.originalFailure,
   });
 
   final ActiveAttempt context;
   final int questionIndex;
-  final String selectedOptionId;
+  final String submissionId;
+  final AnswerKind answerKind;
+
+  /// Present only while the process that submitted the answer is still alive.
+  /// A typed [PendingAnswer] is never persisted by the recovery store.
+  final PendingAnswer? pending;
+  final AppFailure? originalFailure;
+
+  Question get question => context.session.questions[questionIndex];
+
+  @override
+  String get testId => context.session.testId;
+
+  @override
+  bool get controlsLocked => true;
+}
+
+final class AttemptFeedback extends AttemptState {
+  const AttemptFeedback({
+    required this.context,
+    required this.questionIndex,
+    required this.answerKind,
+    required this.feedback,
+    this.selectedOptionId,
+  });
+
+  final ActiveAttempt context;
+  final int questionIndex;
+  final AnswerKind answerKind;
+  final String? selectedOptionId;
   final AnswerFeedback feedback;
 
   Question get question => context.session.questions[questionIndex];
@@ -196,6 +231,27 @@ final class SubmissionRecoveryContext extends AttemptRecoveryContext {
   String get testId => context.session.testId;
 }
 
+final class ReconciliationRecoveryContext extends AttemptRecoveryContext {
+  const ReconciliationRecoveryContext({
+    required this.context,
+    required this.questionIndex,
+    required this.submissionId,
+    required this.answerKind,
+    this.pending,
+    this.originalFailure,
+  });
+
+  final ActiveAttempt context;
+  final int questionIndex;
+  final String submissionId;
+  final AnswerKind answerKind;
+  final PendingAnswer? pending;
+  final AppFailure? originalFailure;
+
+  @override
+  String get testId => context.session.testId;
+}
+
 final class FinishRecoveryContext extends AttemptRecoveryContext {
   const FinishRecoveryContext({
     required this.context,
@@ -264,6 +320,49 @@ final class AttemptSubmitRequested extends AttemptEvent {
   const AttemptSubmitRequested(this.submissionId);
 
   final String submissionId;
+}
+
+final class AttemptTypedSubmitRequested extends AttemptEvent {
+  const AttemptTypedSubmitRequested(this.submissionId, this.answer);
+
+  final String submissionId;
+  final TypedAnswerInput answer;
+}
+
+final class AttemptTypedSubmissionReserved extends AttemptEvent {
+  const AttemptTypedSubmissionReserved(this.submissionId);
+
+  final String submissionId;
+}
+
+final class AttemptReconciliationRequested extends AttemptEvent {
+  const AttemptReconciliationRequested({
+    required this.submissionId,
+    required this.answerKind,
+    this.pending,
+    this.originalFailure,
+  });
+
+  final String submissionId;
+  final AnswerKind answerKind;
+  final PendingAnswer? pending;
+  final AppFailure? originalFailure;
+}
+
+final class AttemptReconciliationRecorded extends AttemptEvent {
+  const AttemptReconciliationRecorded(this.feedback);
+
+  final AnswerFeedback feedback;
+}
+
+final class AttemptReconciliationMissing extends AttemptEvent {
+  const AttemptReconciliationMissing();
+}
+
+final class AttemptReconciliationFailed extends AttemptEvent {
+  const AttemptReconciliationFailed(this.failure);
+
+  final AppFailure failure;
 }
 
 final class AttemptSubmissionRecorded extends AttemptEvent {
@@ -348,7 +447,8 @@ final class AttemptMachine {
 
     if (state case final AttemptPresenting presenting) {
       if (event case final AttemptOptionSelected selected) {
-        if (!presenting.question.containsOption(selected.optionId)) {
+        if (presenting.question.answerKind != AnswerKind.option ||
+            !presenting.question.containsOption(selected.optionId)) {
           throw IllegalAttemptTransition(state.runtimeType, event.runtimeType);
         }
         return AttemptPresenting(
@@ -359,7 +459,9 @@ final class AttemptMachine {
       }
       if (event case final AttemptSubmitRequested requested) {
         final selected = presenting.selectedOptionId;
-        if (selected == null || requested.submissionId.isEmpty) {
+        if (presenting.question.answerKind != AnswerKind.option ||
+            selected == null ||
+            requested.submissionId.isEmpty) {
           throw IllegalAttemptTransition(state.runtimeType, event.runtimeType);
         }
         return AttemptSubmitting(
@@ -368,41 +470,123 @@ final class AttemptMachine {
           pending: PendingAnswer(
             submissionId: requested.submissionId,
             questionRevisionId: presenting.question.revisionId,
-            selectedOptionId: selected,
+            input: OptionAnswerInput(selected),
           ),
+        );
+      }
+      if (event case final AttemptTypedSubmitRequested requested) {
+        if (presenting.question.answerKind != AnswerKind.typed ||
+            requested.submissionId.isEmpty ||
+            (presenting.resumeSubmissionId != null &&
+                presenting.resumeSubmissionId != requested.submissionId)) {
+          throw IllegalAttemptTransition(state.runtimeType, event.runtimeType);
+        }
+        return AttemptSubmitting(
+          context: presenting.context,
+          questionIndex: presenting.questionIndex,
+          pending: PendingAnswer(
+            submissionId: requested.submissionId,
+            questionRevisionId: presenting.question.revisionId,
+            input: requested.answer,
+          ),
+        );
+      }
+      if (event case final AttemptTypedSubmissionReserved reserved) {
+        if (presenting.question.answerKind != AnswerKind.typed ||
+            presenting.resumeSubmissionId != null ||
+            reserved.submissionId.isEmpty) {
+          throw IllegalAttemptTransition(state.runtimeType, event.runtimeType);
+        }
+        return AttemptPresenting(
+          context: presenting.context,
+          questionIndex: presenting.questionIndex,
+          resumeSubmissionId: reserved.submissionId,
+        );
+      }
+      if (event case final AttemptReconciliationRequested requested) {
+        if (requested.submissionId.isEmpty ||
+            requested.answerKind != presenting.question.answerKind ||
+            requested.pending != null) {
+          throw IllegalAttemptTransition(state.runtimeType, event.runtimeType);
+        }
+        return AttemptReconciling(
+          context: presenting.context,
+          questionIndex: presenting.questionIndex,
+          submissionId: requested.submissionId,
+          answerKind: requested.answerKind,
+          originalFailure: requested.originalFailure,
         );
       }
     }
 
     if (state case final AttemptSubmitting submitting) {
       if (event case final AttemptSubmissionRecorded recorded) {
-        final feedback = recorded.feedback;
-        if (feedback.submissionId != submitting.pending.submissionId ||
-            !submitting.question.containsOption(feedback.correctOptionId)) {
-          return AttemptFatal(
-            testId: state.testId,
-            context: submitting.context,
-            failure: const ProtocolFailure(
-              'Answer response does not match submission',
-            ),
-          );
-        }
-        if (feedback.attemptStatus == ServerAttemptStatus.interruptedEnergy) {
-          return AttemptInterrupted(
-            testId: state.testId,
-            context: submitting.context,
-            energy: feedback.energy,
-          );
-        }
-        return AttemptFeedback(
+        return _feedbackState(
           context: submitting.context,
           questionIndex: submitting.questionIndex,
-          selectedOptionId: submitting.pending.selectedOptionId,
-          feedback: feedback,
+          submissionId: submitting.pending.submissionId,
+          answerKind: submitting.pending.kind,
+          selectedOptionId: switch (submitting.pending.input) {
+            final OptionAnswerInput option => option.selectedOptionId,
+            TypedAnswerInput() => null,
+          },
+          feedback: recorded.feedback,
         );
       }
       if (event case final AttemptSubmissionFailed failed) {
         return _fromSubmissionFailure(submitting, failed.failure);
+      }
+      if (event case final AttemptReconciliationRequested requested) {
+        if (requested.submissionId != submitting.pending.submissionId ||
+            requested.answerKind != submitting.pending.kind ||
+            !identical(requested.pending, submitting.pending)) {
+          throw IllegalAttemptTransition(state.runtimeType, event.runtimeType);
+        }
+        return AttemptReconciling(
+          context: submitting.context,
+          questionIndex: submitting.questionIndex,
+          submissionId: requested.submissionId,
+          answerKind: requested.answerKind,
+          pending: requested.pending,
+          originalFailure: requested.originalFailure,
+        );
+      }
+    }
+
+    if (state case final AttemptReconciling reconciling) {
+      if (event case final AttemptReconciliationRecorded recorded) {
+        final selectedOptionId = switch (reconciling.pending?.input) {
+          final OptionAnswerInput option => option.selectedOptionId,
+          _ => null,
+        };
+        return _feedbackState(
+          context: reconciling.context,
+          questionIndex: reconciling.questionIndex,
+          submissionId: reconciling.submissionId,
+          answerKind: reconciling.answerKind,
+          selectedOptionId: selectedOptionId,
+          feedback: recorded.feedback,
+        );
+      }
+      if (event is AttemptReconciliationMissing) {
+        if (reconciling.answerKind == AnswerKind.typed &&
+            reconciling.pending == null) {
+          return AttemptPresenting(
+            context: reconciling.context,
+            questionIndex: reconciling.questionIndex,
+            resumeSubmissionId: reconciling.submissionId,
+          );
+        }
+        return AttemptFatal(
+          testId: reconciling.testId,
+          context: reconciling.context,
+          failure:
+              reconciling.originalFailure ??
+              const ProtocolFailure('Recorded answer was not found'),
+        );
+      }
+      if (event case final AttemptReconciliationFailed failed) {
+        return _fromReconciliationFailure(reconciling, failed.failure);
       }
     }
 
@@ -475,6 +659,15 @@ final class AttemptMachine {
           questionIndex: submission.questionIndex,
           pending: submission.pending,
         ),
+        final ReconciliationRecoveryContext reconciliation =>
+          AttemptReconciling(
+            context: reconciliation.context,
+            questionIndex: reconciliation.questionIndex,
+            submissionId: reconciliation.submissionId,
+            answerKind: reconciliation.answerKind,
+            pending: reconciliation.pending,
+            originalFailure: reconciliation.originalFailure,
+          ),
         final FinishRecoveryContext finish => AttemptFinishing(
           context: finish.context,
           finishCommandId: finish.finishCommandId,
@@ -483,6 +676,54 @@ final class AttemptMachine {
     }
 
     throw IllegalAttemptTransition(state.runtimeType, event.runtimeType);
+  }
+
+  static AttemptState _feedbackState({
+    required ActiveAttempt context,
+    required int questionIndex,
+    required String submissionId,
+    required AnswerKind answerKind,
+    required String? selectedOptionId,
+    required AnswerFeedback feedback,
+  }) {
+    final question = context.session.questions[questionIndex];
+    final responseMatches = switch (answerKind) {
+      AnswerKind.option =>
+        selectedOptionId != null &&
+            feedback.correctOptionId != null &&
+            feedback.correctAnswerText == null &&
+            question.containsOption(selectedOptionId) &&
+            question.containsOption(feedback.correctOptionId!),
+      AnswerKind.typed =>
+        selectedOptionId == null &&
+            feedback.correctOptionId == null &&
+            feedback.correctAnswerText != null,
+    };
+    if (feedback.submissionId != submissionId ||
+        question.answerKind != answerKind ||
+        !responseMatches) {
+      return AttemptFatal(
+        testId: context.session.testId,
+        context: context,
+        failure: const ProtocolFailure(
+          'Answer response does not match submission',
+        ),
+      );
+    }
+    if (feedback.attemptStatus == ServerAttemptStatus.interruptedEnergy) {
+      return AttemptInterrupted(
+        testId: context.session.testId,
+        context: context,
+        energy: feedback.energy,
+      );
+    }
+    return AttemptFeedback(
+      context: context,
+      questionIndex: questionIndex,
+      answerKind: answerKind,
+      selectedOptionId: selectedOptionId,
+      feedback: feedback,
+    );
   }
 
   static AttemptState _fromStartFailure(
@@ -511,6 +752,14 @@ final class AttemptMachine {
     AttemptSubmitting state,
     AppFailure failure,
   ) {
+    if (failure is ValidationFailure &&
+        state.pending.kind == AnswerKind.typed) {
+      return AttemptPresenting(
+        context: state.context,
+        questionIndex: state.questionIndex,
+        resumeSubmissionId: state.pending.submissionId,
+      );
+    }
     if (failure is ContentChangedFailure) {
       return AttemptContentChanged(
         testId: state.testId,
@@ -531,6 +780,44 @@ final class AttemptMachine {
           context: state.context,
           questionIndex: state.questionIndex,
           pending: state.pending,
+        ),
+        failure: failure,
+      );
+    }
+    return AttemptFatal(
+      testId: state.testId,
+      context: state.context,
+      failure: failure,
+    );
+  }
+
+  static AttemptState _fromReconciliationFailure(
+    AttemptReconciling state,
+    AppFailure failure,
+  ) {
+    if (failure is ContentChangedFailure) {
+      return AttemptContentChanged(
+        testId: state.testId,
+        context: state.context,
+        failure: failure,
+      );
+    }
+    if (failure is EnergyDepletedFailure) {
+      return AttemptInterrupted(
+        testId: state.testId,
+        context: state.context,
+        failure: failure,
+      );
+    }
+    if (failure.isRetryable) {
+      return AttemptRecovery(
+        recovery: ReconciliationRecoveryContext(
+          context: state.context,
+          questionIndex: state.questionIndex,
+          submissionId: state.submissionId,
+          answerKind: state.answerKind,
+          pending: state.pending,
+          originalFailure: state.originalFailure,
         ),
         failure: failure,
       );

@@ -541,6 +541,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'blank'**
   String get accessibilityBlank;
+
+  /// No description provided for @typedAnswerLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Your answer'**
+  String get typedAnswerLabel;
+
+  /// No description provided for @typedAnswerReentry.
+  ///
+  /// In en, this message translates to:
+  /// **'The previous answer was not stored on this device. Enter it again to continue the same submission.'**
+  String get typedAnswerReentry;
+
+  /// No description provided for @correctAnswerLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Correct answer'**
+  String get correctAnswerLabel;
 }
 
 class _AppLocalizationsDelegate

@@ -1,0 +1,70 @@
+{{#models}}
+{{#model}}
+import 'package:test/test.dart';
+import 'package:{{pubName}}/{{pubName}}.dart';
+
+// tests for {{{classname}}}
+void main() {
+  {{^isEnum}}
+  {{! Due to required vars without default value we can not create a full instance here }}
+{{#includeLibraryTemplate}}test_instance{{/includeLibraryTemplate}}
+  {{/isEnum}}
+
+  group({{{classname}}}, () {
+    {{#vars}}
+    {{#description}}
+    // {{{.}}}
+    {{/description}}
+    // {{{dataType}}} {{{name}}}{{#defaultValue}} (default value: {{{.}}}){{/defaultValue}}
+    test('to test the property `{{{name}}}`', () async {
+      // TODO
+    });
+
+    {{/vars}}
+    {{#vendorExtensions.x-kelimio-redaction-test-submit-answer-request}}
+    test('redacts sensitive values from toString', () {
+      const sensitiveAnswer = 'private-typed-answer';
+      final request = SubmitAnswerRequest(
+        submissionId: '00000000-0000-4000-8000-000000000001',
+        questionRevisionId: '00000000-0000-4000-8000-000000000002',
+        typedAnswer: sensitiveAnswer,
+      );
+
+      expect(request.toString(), contains('[REDACTED]'));
+      expect(request.toString(), isNot(contains(sensitiveAnswer)));
+      expect(request.toJson()['typedAnswer'], sensitiveAnswer);
+    });
+    {{/vendorExtensions.x-kelimio-redaction-test-submit-answer-request}}
+    {{#vendorExtensions.x-kelimio-redaction-test-answer-recorded-response}}
+    test('redacts answer-key values from toString', () {
+      const optionAnswerKey = '00000000-0000-4000-8000-000000000099';
+      const typedAnswerKey = 'private-authored-answer-key';
+      final response = AnswerRecordedResponse(
+        submissionId: '00000000-0000-4000-8000-000000000001',
+        correct: true,
+        correctOptionId: optionAnswerKey,
+        correctAnswerText: typedAnswerKey,
+        activeScoreDelta: 60,
+        lifetimeScoreDelta: 60,
+        activeQuestionScore: 60,
+        lifetimeScore: 60,
+        energy: EnergyResponse(
+          balance: 5,
+          maximum: EnergyResponseMaximumEnum.number5,
+          unlimited: false,
+          asOf: DateTime.utc(2026, 8, 2),
+        ),
+        attemptState: AttemptState.IN_PROGRESS,
+      );
+
+      expect(response.toString(), contains('[REDACTED]'));
+      expect(response.toString(), isNot(contains(optionAnswerKey)));
+      expect(response.toString(), isNot(contains(typedAnswerKey)));
+      expect(response.toJson()['correctOptionId'], optionAnswerKey);
+      expect(response.toJson()['correctAnswerText'], typedAnswerKey);
+    });
+    {{/vendorExtensions.x-kelimio-redaction-test-answer-recorded-response}}
+  });
+}
+{{/model}}
+{{/models}}

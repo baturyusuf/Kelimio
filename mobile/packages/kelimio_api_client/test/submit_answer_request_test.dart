@@ -21,5 +21,23 @@ void main() {
     test('to test the property `selectedOptionId`', () async {
       // TODO
     });
+
+    // String typedAnswer
+    test('to test the property `typedAnswer`', () async {
+      // TODO
+    });
+
+    test('redacts sensitive values from toString', () {
+      const sensitiveAnswer = 'private-typed-answer';
+      final request = SubmitAnswerRequest(
+        submissionId: '00000000-0000-4000-8000-000000000001',
+        questionRevisionId: '00000000-0000-4000-8000-000000000002',
+        typedAnswer: sensitiveAnswer,
+      );
+
+      expect(request.toString(), contains('[REDACTED]'));
+      expect(request.toString(), isNot(contains(sensitiveAnswer)));
+      expect(request.toJson()['typedAnswer'], sensitiveAnswer);
+    });
   });
 }

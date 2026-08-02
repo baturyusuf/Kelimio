@@ -23,6 +23,12 @@ void main() {
     expect(failure, isA<ForbiddenFailure>());
     expect((failure as ForbiddenFailure).detail, contains('enrollment'));
   });
+
+  test('maps oversized HTTP 413 answer payloads to validation', () {
+    final failure = mapper.map(_responseError(413));
+
+    expect(failure, isA<ValidationFailure>());
+  });
 }
 
 DioException _responseError(int status, {Object? data}) {

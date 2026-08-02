@@ -130,7 +130,7 @@ final class GeneratedLearningRepository implements LearningRepository {
   Future<AnswerFeedback> submitAnswer({
     required String attemptId,
     required String questionRevisionId,
-    required String selectedOptionId,
+    required AnswerInput answer,
     required String submissionId,
   }) => _guard(() async {
     final response = await _api.submitAnswer(
@@ -139,16 +139,51 @@ final class GeneratedLearningRepository implements LearningRepository {
       submitAnswerRequest: api.SubmitAnswerRequest(
         submissionId: submissionId,
         questionRevisionId: questionRevisionId,
-        selectedOptionId: selectedOptionId,
+        selectedOptionId: switch (answer) {
+          final OptionAnswerInput option => option.selectedOptionId,
+          TypedAnswerInput() => null,
+        },
+        typedAnswer: switch (answer) {
+          OptionAnswerInput() => null,
+          final TypedAnswerInput typed => typed.rawValueForSubmission,
+        },
       ),
       extra: {RequestMetadata.idempotencyKey: submissionId},
     );
+    _discardRequestBody(response.requestOptions);
     final data = response.data;
     if (data == null) {
       throw const ProtocolFailure('Answer response body was empty');
     }
     return mapAnswerFeedback(data);
-  });
+  }, redactRequestBodyOnError: true);
+
+  @override
+  Future<AnswerFeedback?> getRecordedAnswer({
+    required String attemptId,
+    required String submissionId,
+  }) async {
+    try {
+      final response = await _api.getRecordedAnswer(
+        attemptId: attemptId,
+        submissionId: submissionId,
+      );
+      final data = response.data;
+      if (data == null) {
+        throw const ProtocolFailure('Recorded-answer response body was empty');
+      }
+      return mapAnswerFeedback(data);
+    } on DioException catch (error) {
+      if (error.response?.statusCode == 404) {
+        return null;
+      }
+      throw _failures.map(error);
+    } on AppFailure {
+      rethrow;
+    } on Object catch (error) {
+      throw UnknownFailure(cause: error);
+    }
+  }
 
   @override
   Future<AttemptResult> finishAttempt({
@@ -167,17 +202,69 @@ final class GeneratedLearningRepository implements LearningRepository {
     return mapAttemptResult(data);
   });
 
-  Future<T> _guard<T>(Future<T> Function() request) async {
+  Future<T> _guard<T>(
+    Future<T> Function() request, {
+    bool redactRequestBodyOnError = false,
+  }) async {
     try {
       return await request();
     } on DioException catch (error) {
-      throw _failures.map(error);
+      var mappedError = error;
+      if (redactRequestBodyOnError) {
+        _discardRequestBody(error.requestOptions);
+        final responseOptions = error.response?.requestOptions;
+        if (responseOptions != null &&
+            !identical(responseOptions, error.requestOptions)) {
+          _discardRequestBody(responseOptions);
+        }
+        mappedError = _redactedAnswerFailure(error);
+      }
+      throw _failures.map(mappedError);
     } on AppFailure {
       rethrow;
     } on Object catch (error) {
       throw UnknownFailure(cause: error);
     }
   }
+
+  void _discardRequestBody(RequestOptions options) {
+    options.data = null;
+  }
+
+  DioException _redactedAnswerFailure(DioException error) {
+    final response = error.response;
+    final rawCode = response?.data is Map<Object?, Object?>
+        ? (response!.data as Map<Object?, Object?>)['code']
+        : null;
+    final normalizedCode = rawCode is String ? rawCode.toUpperCase() : null;
+    final safeCode = _answerFailureCodes.contains(normalizedCode)
+        ? normalizedCode
+        : null;
+    final safeResponse = response == null
+        ? null
+        : Response<Object?>(
+            requestOptions: error.requestOptions,
+            data: safeCode == null ? null : <String, Object?>{'code': safeCode},
+            headers: response.headers,
+            statusCode: response.statusCode,
+            isRedirect: response.isRedirect,
+            redirects: response.redirects,
+          );
+    return DioException(
+      requestOptions: error.requestOptions,
+      response: safeResponse,
+      type: error.type,
+      message: 'Answer submission failed',
+    );
+  }
+
+  static const _answerFailureCodes = {
+    'CONTENT_CHANGED',
+    'TEST_CONTENT_CHANGED',
+    'QUESTION_REVISION_MISMATCH',
+    'ENERGY_DEPLETED',
+    'INSUFFICIENT_ENERGY',
+  };
 }
 
 final class GeneratedDevelopmentRepository implements DevelopmentRepository {

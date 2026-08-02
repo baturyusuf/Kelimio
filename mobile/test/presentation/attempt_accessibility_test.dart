@@ -142,6 +142,144 @@ void main() {
       expect(tester.getSize(optionFinder).height, greaterThanOrEqualTo(48));
     }
   });
+
+  testWidgets('typed cloze uses a private accessible IME-done field', (
+    tester,
+  ) async {
+    String? submitted;
+    await _pumpTypedQuestion(
+      tester,
+      onTypedSubmitted: (value) => submitted = value,
+    );
+
+    final fieldFinder = find.byKey(const Key('attempt-typed-answer'));
+    final field = tester.widget<TextField>(fieldFinder);
+    expect(field.decoration?.labelText, isNotEmpty);
+    expect(find.bySemanticsLabel(RegExp('Your answer')), findsOneWidget);
+    expect(field.autocorrect, isFalse);
+    expect(field.enableSuggestions, isFalse);
+    expect(field.enableIMEPersonalizedLearning, isFalse);
+    expect(field.textInputAction, TextInputAction.done);
+    expect(field.maxLines, 2);
+    expect(field.maxLength, TypedAnswerInput.maxLength);
+    expect(
+      tester
+          .widget<FilledButton>(find.byKey(const Key('attempt-primary-button')))
+          .onPressed,
+      isNull,
+    );
+
+    await tester.enterText(fieldFinder, 'private typed answer');
+    await tester.pump();
+    expect(
+      tester
+          .widget<FilledButton>(find.byKey(const Key('attempt-primary-button')))
+          .onPressed,
+      isNotNull,
+    );
+
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pump();
+
+    expect(submitted, 'private typed answer');
+    expect(tester.widget<TextField>(fieldFinder).controller?.text, isEmpty);
+  });
+
+  testWidgets('typed input direction follows its first strong character', (
+    tester,
+  ) async {
+    await _pumpTypedQuestion(tester, onTypedSubmitted: (_) {});
+    final fieldFinder = find.byKey(const Key('attempt-typed-answer'));
+
+    await tester.enterText(fieldFinder, '\u0645\u0631\u062d\u0628\u0627');
+    await tester.pump();
+
+    expect(
+      tester.widget<TextField>(fieldFinder).textDirection,
+      TextDirection.rtl,
+    );
+  });
+
+  testWidgets('typed submit limit counts astral Unicode code points', (
+    tester,
+  ) async {
+    await _pumpTypedQuestion(tester, onTypedSubmitted: (_) {});
+    final fieldFinder = find.byKey(const Key('attempt-typed-answer'));
+    final exactlyAtLimit = List.filled(
+      TypedAnswerInput.maxLength,
+      _astralCharacter,
+    ).join();
+
+    await tester.enterText(fieldFinder, exactlyAtLimit);
+    await tester.pump();
+    expect(
+      tester
+          .widget<FilledButton>(find.byKey(const Key('attempt-primary-button')))
+          .onPressed,
+      isNotNull,
+    );
+
+    tester.widget<TextField>(fieldFinder).controller!.text =
+        '$exactlyAtLimit$_astralCharacter';
+    await tester.pump();
+    expect(
+      tester
+          .widget<FilledButton>(find.byKey(const Key('attempt-primary-button')))
+          .onPressed,
+      isNull,
+    );
+  });
+
+  testWidgets('typed feedback shows only the authoritative server answer', (
+    tester,
+  ) async {
+    const privateRaw = 'never render this raw value';
+    await _pumpTypedQuestion(
+      tester,
+      feedback: fixtureTypedFeedback(correct: false),
+      locked: true,
+    );
+
+    expect(find.byKey(const Key('attempt-typed-answer')), findsNothing);
+    expect(find.text(privateRaw), findsNothing);
+    expect(
+      find.byKey(const Key('attempt-correct-answer-text')),
+      findsOneWidget,
+    );
+    expect(find.text('Incorrect'), findsOneWidget);
+  });
+
+  testWidgets('typed process-recovery state requests blank re-entry', (
+    tester,
+  ) async {
+    await _pumpTypedQuestion(
+      tester,
+      onTypedSubmitted: (_) {},
+      needsReentry: true,
+    );
+
+    final field = tester.widget<TextField>(
+      find.byKey(const Key('attempt-typed-answer')),
+    );
+    expect(field.controller?.text, isEmpty);
+    expect(field.decoration?.helperText, isNotEmpty);
+  });
+
+  testWidgets('typed cloze has no overflow at 2x text scale', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(280, 520));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await _pumpTypedQuestion(
+      tester,
+      onTypedSubmitted: (_) {},
+      textScaler: const TextScaler.linear(2),
+    );
+    await tester.drag(find.byType(ListView), const Offset(0, -320));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.byKey(const Key('attempt-typed-answer')), findsOneWidget);
+  });
 }
 
 Future<void> _pumpQuestion(
@@ -174,3 +312,43 @@ Future<void> _pumpQuestion(
   );
   await tester.pumpAndSettle();
 }
+
+Future<void> _pumpTypedQuestion(
+  WidgetTester tester, {
+  ValueChanged<String>? onTypedSubmitted,
+  AnswerFeedback? feedback,
+  bool locked = false,
+  bool needsReentry = false,
+  TextScaler textScaler = TextScaler.noScaling,
+}) async {
+  await tester.pumpWidget(
+    MaterialApp(
+      locale: const Locale('en'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      builder: (context, child) => MediaQuery(
+        data: MediaQuery.of(context).copyWith(textScaler: textScaler),
+        child: child!,
+      ),
+      home: Scaffold(
+        body: AttemptQuestionView(
+          question: fixtureTypedClozeQuestion(
+            prompt: 'They --- every morning before work.',
+          ),
+          questionIndex: 0,
+          questionCount: 1,
+          selectedOptionId: null,
+          locked: locked,
+          feedback: feedback,
+          onOptionSelected: null,
+          onTypedSubmitted: onTypedSubmitted,
+          typedAnswerNeedsReentry: needsReentry,
+          onPrimary: feedback == null ? null : () {},
+        ),
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
+}
+
+const _astralCharacter = '\u{1F642}';

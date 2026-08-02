@@ -73,6 +73,7 @@ Class | Method | HTTP request | Description
 [*EnrollmentApi*](doc/EnrollmentApi.md) | [**enrollInCourse**](doc/EnrollmentApi.md#enrollincourse) | **POST** /v1/courses/{courseId}/enrollments | Enroll the authenticated user in a free public course
 [*LearningApi*](doc/LearningApi.md) | [**finishAttempt**](doc/LearningApi.md#finishattempt) | **POST** /v1/attempts/{attemptId}/finish | Finish an attempt after all planned questions are answered
 [*LearningApi*](doc/LearningApi.md) | [**getCourseProgress**](doc/LearningApi.md#getcourseprogress) | **GET** /v1/courses/{courseId}/progress | Return the authenticated learner&#39;s rebuildable course progress projection
+[*LearningApi*](doc/LearningApi.md) | [**getRecordedAnswer**](doc/LearningApi.md#getrecordedanswer) | **GET** /v1/attempts/{attemptId}/answers/{submissionId} | Reconcile one previously committed answer owned by the current user
 [*LearningApi*](doc/LearningApi.md) | [**startAttempt**](doc/LearningApi.md#startattempt) | **POST** /v1/tests/{testId}/attempts | Start an online attempt for the current test revision
 [*LearningApi*](doc/LearningApi.md) | [**submitAnswer**](doc/LearningApi.md#submitanswer) | **POST** /v1/attempts/{attemptId}/answers | Record and evaluate one online answer exactly once
 [*ProfileApi*](doc/ProfileApi.md) | [**completeProfileSetup**](doc/ProfileApi.md#completeprofilesetup) | **POST** /v1/me/profile-setup | Complete the authenticated user&#39;s first-login profile setup

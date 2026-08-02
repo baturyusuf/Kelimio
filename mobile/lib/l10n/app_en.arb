@@ -72,5 +72,8 @@
   "accessibilitySelectedAnswer": "Selected answer",
   "accessibilityCorrectAnswer": "Correct answer",
   "accessibilityIncorrectAnswer": "Incorrect answer",
-  "accessibilityBlank": "blank"
+  "accessibilityBlank": "blank",
+  "typedAnswerLabel": "Your answer",
+  "typedAnswerReentry": "The previous answer was not stored on this device. Enter it again to continue the same submission.",
+  "correctAnswerLabel": "Correct answer"
 }

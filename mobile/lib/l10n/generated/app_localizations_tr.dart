@@ -258,4 +258,14 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get accessibilityBlank => 'boşluk';
+
+  @override
+  String get typedAnswerLabel => 'Cevabın';
+
+  @override
+  String get typedAnswerReentry =>
+      'Önceki cevap cihazda saklanmadı. Aynı gönderimi sürdürmek için cevabı yeniden yaz.';
+
+  @override
+  String get correctAnswerLabel => 'Doğru cevap';
 }

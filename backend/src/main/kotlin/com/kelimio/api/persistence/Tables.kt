@@ -111,6 +111,13 @@ object QuestionRevisions {
     val TYPE = field(name("question_revision", "question_type"), String::class.java)
     val PROMPT = field(name("question_revision", "prompt"), String::class.java)
     val CORRECT_ANSWER = field(name("question_revision", "correct_answer"), String::class.java)
+    val ALTERNATIVE_CORRECT_ANSWER =
+        field(name("question_revision", "alternative_correct_answer"), String::class.java)
+    val ANSWER_MATCH_POLICY = field(name("question_revision", "answer_match_policy"), String::class.java)
+    val ANSWER_MATCH_LANGUAGE = field(name("question_revision", "answer_match_language"), String::class.java)
+    val CORRECT_ANSWER_MATCH_KEY = field(name("question_revision", "correct_answer_match_key"), String::class.java)
+    val ALTERNATIVE_ANSWER_MATCH_KEY =
+        field(name("question_revision", "alternative_answer_match_key"), String::class.java)
     val STATUS = field(name("question_revision", "status"), String::class.java)
 }
 
@@ -166,6 +173,10 @@ object AnswerSubmissions {
     val USER_ID = field(name("answer_submission", "user_id"), UUID::class.java)
     val QUESTION_REVISION_ID = field(name("answer_submission", "question_revision_id"), UUID::class.java)
     val SELECTED_OPTION_ID = field(name("answer_submission", "selected_option_id"), UUID::class.java)
+    val ANSWER_KIND = field(name("answer_submission", "answer_kind"), String::class.java)
+    val TYPED_ANSWER_SALT = field(name("answer_submission", "typed_answer_salt"), ByteArray::class.java)
+    val TYPED_ANSWER_DIGEST = field(name("answer_submission", "typed_answer_digest"), ByteArray::class.java)
+    val TYPED_MATCH_ORDINAL = field(name("answer_submission", "typed_match_ordinal"), Short::class.java)
     val IS_CORRECT = field(name("answer_submission", "is_correct"), Boolean::class.java)
     val ACTIVE_DELTA = field(name("answer_submission", "active_score_delta"), Short::class.java)
     val LIFETIME_DELTA = field(name("answer_submission", "lifetime_score_delta"), Short::class.java)

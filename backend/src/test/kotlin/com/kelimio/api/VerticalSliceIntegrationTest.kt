@@ -1,7 +1,9 @@
 package com.kelimio.api
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.kelimio.api.language.TypedAnswerPolicy
 import com.kelimio.api.progress.LearningProgressProjectionWorker
+import com.kelimio.api.web.AnswerSubmissionBodyLimitFilter
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -313,7 +315,7 @@ class VerticalSliceIntegrationTest {
                 status { isOk() }
                 jsonPath("$.name") { value("Örnek Türkçe Kelime Kursu") }
                 jsonPath("$.supportLanguages[0]") { value("en") }
-                jsonPath("$.tests[0].questionCount") { value(6) }
+                jsonPath("$.tests[0].questionCount") { value(7) }
             }
 
         assertThat(
@@ -336,7 +338,36 @@ class VerticalSliceIntegrationTest {
                 String::class.java,
                 courseId,
             ),
-        ).isEqualTo("kurs-excel-plani-v3-type-a-b-en-v2")
+        ).isEqualTo("kurs-excel-plani-v3-type-a-b-c-en-v3")
+        val typedQuestion = jdbcTemplate.queryForMap(
+            """
+            select prompt, correct_answer, alternative_correct_answer,
+                   answer_match_policy, answer_match_language,
+                   correct_answer_match_key, alternative_answer_match_key
+              from question_revision
+             where course_id = ? and question_type = 'C'
+            """.trimIndent(),
+            courseId,
+        )
+        assertThat(typedQuestion["prompt"]).isEqualTo("Sabah kahvaltıda çay ---.")
+        assertThat(typedQuestion["correct_answer"]).isEqualTo("içerim")
+        assertThat(typedQuestion["alternative_correct_answer"]).isEqualTo("içiyorum")
+        assertThat(typedQuestion["answer_match_policy"]).isEqualTo(TypedAnswerPolicy.VERSION)
+        assertThat(typedQuestion["answer_match_language"]).isEqualTo("tr")
+        assertThat(typedQuestion["correct_answer_match_key"]).isEqualTo("içerim")
+        assertThat(typedQuestion["alternative_answer_match_key"]).isEqualTo("içiyorum")
+        assertThat(
+            jdbcTemplate.queryForObject(
+                """
+                select count(*)
+                  from question_revision_option qro
+                  join question_revision qr on qr.id = qro.question_revision_id
+                 where qr.course_id = ? and qr.question_type = 'C'
+                """.trimIndent(),
+                Int::class.java,
+                courseId,
+            ),
+        ).isZero()
 
         assertThat(count("course_origin", "course_id", courseId)).isEqualTo(1)
         assertThat(
@@ -426,6 +457,16 @@ class VerticalSliceIntegrationTest {
             status { isOk() }
             jsonPath("$.activeScoreDelta") { value(60) }
             jsonPath("$.lifetimeScore") { value(60) }
+        }
+
+        mockMvc.get("/v1/attempts/$attemptId/answers/$submissionId") {
+            with(learnerJwt)
+        }.andExpect {
+            status { isOk() }
+            header { string("Cache-Control", "no-store") }
+            jsonPath("$.correct") { value(true) }
+            jsonPath("$.correctOptionId") { value(fixture.correctOptionId.toString()) }
+            jsonPath("$.correctAnswerText") { doesNotExist() }
         }
 
         mockMvc.post("/v1/attempts/$attemptId/finish") {
@@ -580,13 +621,300 @@ class VerticalSliceIntegrationTest {
         ).isEqualTo(1)
     }
 
+    @Test
+    fun `typed cloze remains answer key free and reconciles private server authoritative evidence`() {
+        val fixture = createCourseFixture(
+            questionType = "C",
+            prompt = "Sabah kahvaltıda çay ---. ",
+            correctAnswer = "içerim",
+            alternativeCorrectAnswer = "içiyorum",
+        )
+        val learnerJwt = jwt().jwt {
+            it.subject("typed-cloze-learner-${fixture.courseId}")
+                .claim("email", "typed-cloze-learner@integration.invalid")
+                .claim("preferred_username", "typed-cloze-learner")
+                .audience(listOf("kelimio-mobile"))
+        }
+        mockMvc.get("/v1/me") { with(learnerJwt) }
+            .andExpect { status { isOk() } }
+        completeProfileSetup(learnerJwt, displayName = "Typed Cloze Learner")
+        mockMvc.post("/v1/courses/${fixture.courseId}/enrollments") {
+            with(learnerJwt)
+            header("Idempotency-Key", UUID.randomUUID().toString())
+            contentType = MediaType.APPLICATION_JSON
+            content = """{"supportLanguage":"en"}"""
+        }.andExpect { status { isCreated() } }
+
+        val startBody = mockMvc.post("/v1/tests/${fixture.testId}/attempts") {
+            with(learnerJwt)
+            header("Idempotency-Key", UUID.randomUUID().toString())
+        }.andExpect {
+            status { isCreated() }
+            jsonPath("$.questions[0].type") { value("TYPED_CLOZE") }
+            jsonPath("$.questions[0].prompt") { value("Sabah kahvaltıda çay ---. ") }
+            jsonPath("$.questions[0].options.length()") { value(0) }
+            jsonPath("$.questions[0].correctOptionId") { doesNotExist() }
+            jsonPath("$.questions[0].correctAnswer") { doesNotExist() }
+            jsonPath("$.questions[0].correctAnswerText") { doesNotExist() }
+            jsonPath("$.questions[0].answerMatchPolicy") { doesNotExist() }
+            jsonPath("$.questions[0].answerMatchLanguage") { doesNotExist() }
+        }.andReturn().response.contentAsString
+        val attemptId = UUID.fromString(objectMapper.readTree(startBody)["id"].asText())
+
+        val oversizedSubmissionId = UUID.randomUUID()
+        val oversizedRequestId = UUID.randomUUID()
+        val oversizedSensitivePrefix = "private-oversized-${UUID.randomUUID()}"
+        val oversizedBody = objectMapper.writeValueAsString(
+            mapOf(
+                "submissionId" to oversizedSubmissionId,
+                "questionRevisionId" to fixture.questionRevisionId,
+                "typedAnswer" to oversizedSensitivePrefix +
+                    "x".repeat(AnswerSubmissionBodyLimitFilter.MAX_BODY_BYTES),
+            ),
+        )
+        val oversizedResponse = mockMvc.post("/v1/attempts/$attemptId/answers") {
+            with(learnerJwt)
+            header("X-Request-Id", oversizedRequestId.toString())
+            header("Idempotency-Key", oversizedSubmissionId.toString())
+            contentType = MediaType.APPLICATION_JSON
+            content = oversizedBody
+        }.andExpect {
+            status { isPayloadTooLarge() }
+            header { string("Cache-Control", "no-store") }
+            header { string("X-Request-Id", oversizedRequestId.toString()) }
+            jsonPath("$.type") { value("https://api.kelimio.invalid/problems/payload-too-large") }
+            jsonPath("$.detail") { value("The request body is too large.") }
+            jsonPath("$.requestId") { value(oversizedRequestId.toString()) }
+        }.andReturn().response.contentAsString
+        assertThat(oversizedResponse).doesNotContain(oversizedSensitivePrefix)
+        assertThat(count("answer_submission", "submission_id", oversizedSubmissionId)).isZero()
+        assertThat(
+            jdbcTemplate.queryForObject(
+                "select count(*) from command_idempotency where idempotency_key = ?",
+                Int::class.java,
+                oversizedSubmissionId,
+            ),
+        ).isZero()
+
+        val matrixSubmissionId = UUID.randomUUID()
+        val matrixRequestId = UUID.randomUUID()
+        val matrixSensitivePrefix = "private-matrix-${UUID.randomUUID()}"
+        val matrixBody = objectMapper.writeValueAsString(
+            mapOf(
+                "submissionId" to matrixSubmissionId,
+                "questionRevisionId" to fixture.questionRevisionId,
+                "typedAnswer" to matrixSensitivePrefix +
+                    "x".repeat(AnswerSubmissionBodyLimitFilter.MAX_BODY_BYTES),
+            ),
+        )
+        val matrixResponse = mockMvc.post(
+            "/v1/attempts;scope=local/$attemptId;probe=one/answers;probe=two",
+        ) {
+            with(learnerJwt)
+            header("X-Request-Id", matrixRequestId.toString())
+            header("Idempotency-Key", matrixSubmissionId.toString())
+            contentType = MediaType.APPLICATION_JSON
+            content = matrixBody
+        }.andExpect {
+            status { isPayloadTooLarge() }
+            header { string("Cache-Control", "no-store") }
+            header { string("X-Request-Id", matrixRequestId.toString()) }
+            jsonPath("$.type") { value("https://api.kelimio.invalid/problems/payload-too-large") }
+            jsonPath("$.detail") { value("The request body is too large.") }
+            jsonPath("$.requestId") { value(matrixRequestId.toString()) }
+        }.andReturn().response.contentAsString
+        assertThat(matrixResponse).doesNotContain(matrixSensitivePrefix)
+        assertThat(count("answer_submission", "submission_id", matrixSubmissionId)).isZero()
+        assertThat(
+            jdbcTemplate.queryForObject(
+                "select count(*) from command_idempotency where idempotency_key = ?",
+                Int::class.java,
+                matrixSubmissionId,
+            ),
+        ).isZero()
+
+        val rejectedSubmissionId = UUID.randomUUID()
+        mockMvc.post("/v1/attempts/$attemptId/answers") {
+            with(learnerJwt)
+            header("Idempotency-Key", rejectedSubmissionId.toString())
+            contentType = MediaType.APPLICATION_JSON
+            content =
+                """
+                {
+                  "submissionId":"$rejectedSubmissionId",
+                  "questionRevisionId":"${fixture.questionRevisionId}",
+                  "selectedOptionId":"${fixture.correctOptionId}",
+                  "typedAnswer":"içerim"
+                }
+                """.trimIndent()
+        }.andExpect { status { isBadRequest() } }
+        assertThat(count("answer_submission", "submission_id", rejectedSubmissionId)).isZero()
+
+        mockMvc.post("/v1/attempts/$attemptId/answers") {
+            with(learnerJwt)
+            header("Idempotency-Key", rejectedSubmissionId.toString())
+            contentType = MediaType.APPLICATION_JSON
+            content =
+                """
+                {
+                  "submissionId":"$rejectedSubmissionId",
+                  "questionRevisionId":"${fixture.questionRevisionId}",
+                  "selectedOptionId":"${fixture.correctOptionId}"
+                }
+                """.trimIndent()
+        }.andExpect { status { isUnprocessableEntity() } }
+        assertThat(count("answer_submission", "submission_id", rejectedSubmissionId)).isZero()
+
+        val sensitiveInvalidAnswer = "private-${UUID.randomUUID()}\u202E"
+        val invalidBody = mockMvc.post("/v1/attempts/$attemptId/answers") {
+            with(learnerJwt)
+            header("Idempotency-Key", rejectedSubmissionId.toString())
+            contentType = MediaType.APPLICATION_JSON
+            content =
+                objectMapper.writeValueAsString(
+                    mapOf(
+                        "submissionId" to rejectedSubmissionId,
+                        "questionRevisionId" to fixture.questionRevisionId,
+                        "typedAnswer" to sensitiveInvalidAnswer,
+                    ),
+                )
+        }.andExpect {
+            status { isUnprocessableEntity() }
+            jsonPath("$.detail") { value("The typed answer is invalid.") }
+        }.andReturn().response.contentAsString
+        assertThat(invalidBody).doesNotContain(sensitiveInvalidAnswer)
+        assertThat(count("answer_submission", "submission_id", rejectedSubmissionId)).isZero()
+
+        val submissionId = UUID.randomUUID()
+        val sensitiveRawAnswer = "  İÇİYORUM\u00A0 "
+        val answerJson = objectMapper.writeValueAsString(
+            mapOf(
+                "submissionId" to submissionId,
+                "questionRevisionId" to fixture.questionRevisionId,
+                "typedAnswer" to sensitiveRawAnswer,
+            ),
+        )
+        repeat(2) {
+            mockMvc.post("/v1/attempts/$attemptId/answers") {
+                with(learnerJwt)
+                header("Idempotency-Key", submissionId.toString())
+                contentType = MediaType.APPLICATION_JSON
+                content = answerJson
+            }.andExpect {
+                status { isOk() }
+                header { string("Cache-Control", "no-store") }
+                jsonPath("$.correct") { value(true) }
+                jsonPath("$.correctOptionId") { doesNotExist() }
+                jsonPath("$.correctAnswerText") { value("içerim") }
+                jsonPath("$.activeScoreDelta") { value(60) }
+                jsonPath("$.lifetimeScoreDelta") { value(60) }
+                jsonPath("$.energy.balance") { value(5) }
+            }
+        }
+
+        val differentAnswerBody = objectMapper.writeValueAsString(
+            mapOf(
+                "submissionId" to submissionId,
+                "questionRevisionId" to fixture.questionRevisionId,
+                "typedAnswer" to "başka",
+            ),
+        )
+        mockMvc.post("/v1/attempts/$attemptId/answers") {
+            with(learnerJwt)
+            header("Idempotency-Key", submissionId.toString())
+            contentType = MediaType.APPLICATION_JSON
+            content = differentAnswerBody
+        }.andExpect { status { isConflict() } }
+
+        mockMvc.get("/v1/attempts/$attemptId/answers/$submissionId") {
+            with(learnerJwt)
+        }.andExpect {
+            status { isOk() }
+            header { string("Cache-Control", "no-store") }
+            jsonPath("$.submissionId") { value(submissionId.toString()) }
+            jsonPath("$.correct") { value(true) }
+            jsonPath("$.correctOptionId") { doesNotExist() }
+            jsonPath("$.correctAnswerText") { value("içerim") }
+        }
+
+        val otherJwt = jwt().jwt {
+            it.subject("typed-cloze-other-${fixture.courseId}")
+                .claim("email", "typed-cloze-other@integration.invalid")
+                .audience(listOf("kelimio-mobile"))
+        }
+        mockMvc.get("/v1/me") { with(otherJwt) }.andExpect { status { isOk() } }
+        completeProfileSetup(otherJwt, displayName = "Other Learner")
+        mockMvc.get("/v1/attempts/$attemptId/answers/$submissionId") {
+            with(otherJwt)
+        }.andExpect { status { isNotFound() } }
+        mockMvc.get("/v1/attempts/$attemptId/answers/${UUID.randomUUID()}") {
+            with(learnerJwt)
+        }.andExpect { status { isNotFound() } }
+
+        val evidence = jdbcTemplate.queryForMap(
+            """
+            select answer_kind, selected_option_id, typed_answer_salt,
+                   typed_answer_digest, typed_match_ordinal
+              from answer_submission
+             where submission_id = ?
+            """.trimIndent(),
+            submissionId,
+        )
+        assertThat(evidence["answer_kind"]).isEqualTo("TYPED_TEXT")
+        assertThat(evidence["selected_option_id"]).isNull()
+        assertThat(evidence["typed_answer_salt"] as ByteArray).hasSize(16)
+        assertThat(evidence["typed_answer_digest"] as ByteArray).hasSize(32)
+        assertThat((evidence["typed_match_ordinal"] as Number).toInt()).isEqualTo(2)
+        assertThat(count("answer_submission", "submission_id", submissionId)).isEqualTo(1)
+        assertThat(count("score_event", "submission_id", submissionId)).isEqualTo(1)
+        assertThat(
+            jdbcTemplate.queryForObject(
+                "select count(*) from energy_event where submission_id = ?",
+                Int::class.java,
+                submissionId,
+            ),
+        ).isZero()
+
+        val storedEventText = jdbcTemplate.queryForObject(
+            """
+            select coalesce(string_agg(payload::text, ' '), '')
+              from (
+                    select payload from attempt_event where submission_id = ?
+                    union all
+                    select payload from outbox_event where aggregate_id = ?
+              ) private_payloads
+            """.trimIndent(),
+            String::class.java,
+            submissionId,
+            attemptId,
+        )!!
+        assertThat(storedEventText)
+            .doesNotContain(sensitiveRawAnswer)
+            .doesNotContain("içiyorum")
+            .doesNotContain("içerim")
+        assertThat(
+            jdbcTemplate.queryForObject(
+                """
+                select count(*)
+                  from command_idempotency
+                 where operation = 'learning.submit-answer'
+                   and resource_id = ?
+                   and request_fingerprint ~ '^[0-9a-f]{64}$'
+                """.trimIndent(),
+                Int::class.java,
+                submissionId,
+            ),
+        ).isEqualTo(1)
+    }
+
     private fun createCourseFixture(
         questionType: String = "A",
         prompt: String = "Pencere",
         correctAnswer: String = "Window",
         wrongAnswers: List<String> = listOf("Door", "Table", "Chair"),
+        alternativeCorrectAnswer: String? = null,
     ): Fixture {
-        require(wrongAnswers.size == 3)
+        require(questionType == "C" || wrongAnswers.size == 3)
         val fixture = Fixture(
             courseId = UUID.randomUUID(),
             testId = UUID.randomUUID(),
@@ -649,22 +977,49 @@ class VerticalSliceIntegrationTest {
                 fixture.courseId,
                 now,
             )
+            val answerPolicy = questionType.takeIf { it == "C" }?.let { TypedAnswerPolicy.VERSION }
+            val answerLanguage = questionType.takeIf { it == "C" }?.let { "tr" }
+            val primaryMatchKey = answerLanguage?.let {
+                TypedAnswerPolicy.canonicalize(correctAnswer, it, checkNotNull(answerPolicy))
+            }
+            val alternativeMatchKey = answerLanguage?.let { language ->
+                alternativeCorrectAnswer?.let {
+                    TypedAnswerPolicy.canonicalize(it, language, checkNotNull(answerPolicy))
+                }
+            }
             jdbcTemplate.update(
-                "insert into question_revision(id, question_id, course_id, revision_number, question_type, prompt, correct_answer, status, created_at) values (?, ?, ?, 1, ?, ?, ?, 'DRAFT', ?)",
+                """
+                insert into question_revision(
+                    id, question_id, course_id, revision_number, question_type,
+                    prompt, correct_answer, alternative_correct_answer,
+                    answer_match_policy, answer_match_language,
+                    correct_answer_match_key, alternative_answer_match_key,
+                    status, created_at
+                ) values (?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, 'DRAFT', ?)
+                """.trimIndent(),
                 fixture.questionRevisionId,
                 questionId,
                 fixture.courseId,
                 questionType,
                 prompt,
                 correctAnswer,
+                alternativeCorrectAnswer,
+                answerPolicy,
+                answerLanguage,
+                primaryMatchKey,
+                alternativeMatchKey,
                 now,
             )
-            val options = listOf(
-                fixture.correctOptionId to correctAnswer,
-                fixture.wrongOptionId to wrongAnswers[0],
-                UUID.randomUUID() to wrongAnswers[1],
-                UUID.randomUUID() to wrongAnswers[2],
-            )
+            val options = if (questionType == "C") {
+                emptyList()
+            } else {
+                listOf(
+                    fixture.correctOptionId to correctAnswer,
+                    fixture.wrongOptionId to wrongAnswers[0],
+                    UUID.randomUUID() to wrongAnswers[1],
+                    UUID.randomUUID() to wrongAnswers[2],
+                )
+            }
             options.forEachIndexed { index, (id, text) ->
                 jdbcTemplate.update(
                     "insert into question_revision_option(id, question_revision_id, option_text, is_correct, position) values (?, ?, ?, ?, ?)",

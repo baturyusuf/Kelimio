@@ -56,6 +56,7 @@ final class AttemptController extends Notifier<AttemptState> {
     final current = state;
     if (_operationActive ||
         current is! AttemptPresenting ||
+        current.question.answerKind != AnswerKind.option ||
         current.selectedOptionId == null) {
       return;
     }
@@ -63,6 +64,43 @@ final class AttemptController extends Notifier<AttemptState> {
     state = AttemptMachine.reduce(
       current,
       AttemptSubmitRequested(submissionId),
+    );
+    _operationActive = true;
+    try {
+      await _persistCurrent();
+      await _submitCurrent();
+    } on Object catch (error) {
+      final submitting = state;
+      if (submitting is AttemptSubmitting) {
+        state = AttemptMachine.reduce(
+          submitting,
+          AttemptSubmissionFailed(_failure(error)),
+        );
+      }
+    } finally {
+      _operationActive = false;
+    }
+  }
+
+  Future<void> submitTyped(String rawAnswer) async {
+    final current = state;
+    if (_operationActive ||
+        current is! AttemptPresenting ||
+        current.question.answerKind != AnswerKind.typed) {
+      return;
+    }
+    final TypedAnswerInput answer;
+    try {
+      answer = TypedAnswerInput(rawAnswer);
+    } on ArgumentError {
+      return;
+    }
+    final submissionId =
+        current.resumeSubmissionId ??
+        ref.read(identifierFactoryProvider).create();
+    state = AttemptMachine.reduce(
+      current,
+      AttemptTypedSubmitRequested(submissionId, answer),
     );
     _operationActive = true;
     try {
@@ -130,6 +168,8 @@ final class AttemptController extends Notifier<AttemptState> {
           );
         case AttemptSubmitting():
           await _submitCurrent();
+        case AttemptReconciling():
+          await _reconcileCurrent();
         case AttemptFinishing():
           await _finishCurrent();
         default:
@@ -145,6 +185,10 @@ final class AttemptController extends Notifier<AttemptState> {
         AttemptSubmitting() => AttemptMachine.reduce(
           currentState,
           AttemptSubmissionFailed(_failure(error)),
+        ),
+        AttemptReconciling() => AttemptMachine.reduce(
+          currentState,
+          AttemptReconciliationFailed(_failure(error)),
         ),
         AttemptFinishing() => AttemptMachine.reduce(
           currentState,
@@ -167,6 +211,7 @@ final class AttemptController extends Notifier<AttemptState> {
     return state is AttemptLoading ||
         state is AttemptPresenting ||
         state is AttemptSubmitting ||
+        state is AttemptReconciling ||
         state is AttemptFeedback ||
         state is AttemptFinishing ||
         state is AttemptRecovery;
@@ -210,21 +255,73 @@ final class AttemptController extends Notifier<AttemptState> {
         await _finishCurrent();
         return;
       }
-      if (snapshot?.selectedOptionId != null && state is AttemptPresenting) {
-        state = AttemptMachine.reduce(
-          state,
-          AttemptOptionSelected(snapshot!.selectedOptionId!),
-        );
-      }
-      if (snapshot?.phase == RecoveryPhase.submitting &&
-          snapshot?.submissionId != null &&
-          state is AttemptPresenting) {
-        state = AttemptMachine.reduce(
-          state,
-          AttemptSubmitRequested(snapshot!.submissionId!),
-        );
-        await _submitCurrent();
-        return;
+      if (snapshot != null && state is AttemptPresenting) {
+        final presenting = state as AttemptPresenting;
+        final questionKind = presenting.question.answerKind;
+        final recoveredKind = snapshot.answerKind;
+        if ((recoveredKind != null && recoveredKind != questionKind) ||
+            (questionKind == AnswerKind.typed &&
+                snapshot.selectedOptionId != null)) {
+          await _invalidateRecoveredAttempt(
+            presenting,
+            'Recovered answer kind does not match the question',
+          );
+          return;
+        }
+
+        if (questionKind == AnswerKind.option) {
+          if (snapshot.selectedOptionId != null) {
+            state = AttemptMachine.reduce(
+              presenting,
+              AttemptOptionSelected(snapshot.selectedOptionId!),
+            );
+          }
+          if (snapshot.phase == RecoveryPhase.submitting) {
+            if (snapshot.submissionId == null ||
+                snapshot.selectedOptionId == null ||
+                state is! AttemptPresenting) {
+              await _invalidateRecoveredAttempt(
+                presenting,
+                'Recovered option submission is incomplete',
+              );
+              return;
+            }
+            state = AttemptMachine.reduce(
+              state,
+              AttemptSubmitRequested(snapshot.submissionId!),
+            );
+            await _submitCurrent();
+            return;
+          }
+        } else {
+          if (snapshot.phase == RecoveryPhase.submitting ||
+              snapshot.phase == RecoveryPhase.feedback) {
+            final submissionId = snapshot.submissionId;
+            if (submissionId == null) {
+              await _invalidateRecoveredAttempt(
+                presenting,
+                'Recovered typed submission has no identifier',
+              );
+              return;
+            }
+            state = AttemptMachine.reduce(
+              presenting,
+              AttemptReconciliationRequested(
+                submissionId: submissionId,
+                answerKind: AnswerKind.typed,
+              ),
+            );
+            await _reconcileCurrent();
+            return;
+          }
+          if (snapshot.phase == RecoveryPhase.presenting &&
+              snapshot.submissionId != null) {
+            state = AttemptMachine.reduce(
+              presenting,
+              AttemptTypedSubmissionReserved(snapshot.submissionId!),
+            );
+          }
+        }
       }
       await _persistCurrent();
     } on Object catch (error) {
@@ -251,22 +348,81 @@ final class AttemptController extends Notifier<AttemptState> {
           .submitAnswer(
             attemptId: submitting.context.session.id,
             questionRevisionId: submitting.pending.questionRevisionId,
-            selectedOptionId: submitting.pending.selectedOptionId,
+            answer: submitting.pending.input,
             submissionId: submitting.pending.submissionId,
           );
       state = AttemptMachine.reduce(
         submitting,
         AttemptSubmissionRecorded(feedback),
       );
+      if (state is AttemptFeedback) {
+        await _persistCurrent();
+      }
       ref.invalidate(energyControllerProvider);
       ref.invalidate(courseProgressProvider);
       if (state is AttemptInterrupted || state is AttemptFatal) {
         await _clearRecovery();
       }
+    } on ConflictFailure catch (failure) {
+      state = AttemptMachine.reduce(
+        submitting,
+        AttemptReconciliationRequested(
+          submissionId: submitting.pending.submissionId,
+          answerKind: submitting.pending.kind,
+          pending: submitting.pending,
+          originalFailure: failure,
+        ),
+      );
+      await _persistCurrent();
+      await _reconcileCurrent();
     } on Object catch (error) {
       state = AttemptMachine.reduce(
         submitting,
         AttemptSubmissionFailed(_failure(error)),
+      );
+      if (state is AttemptPresenting) {
+        await _persistCurrent();
+      }
+      if (state is AttemptContentChanged ||
+          state is AttemptInterrupted ||
+          state is AttemptFatal) {
+        await _clearRecovery();
+      }
+    }
+  }
+
+  Future<void> _reconcileCurrent() async {
+    final reconciling = state;
+    if (reconciling is! AttemptReconciling) {
+      throw StateError('No recorded-answer reconciliation is pending');
+    }
+    try {
+      final feedback = await ref
+          .read(learningRepositoryProvider)
+          .getRecordedAnswer(
+            attemptId: reconciling.context.session.id,
+            submissionId: reconciling.submissionId,
+          );
+      state = AttemptMachine.reduce(
+        reconciling,
+        feedback == null
+            ? const AttemptReconciliationMissing()
+            : AttemptReconciliationRecorded(feedback),
+      );
+      if (state is AttemptFeedback || state is AttemptPresenting) {
+        await _persistCurrent();
+      }
+      if (feedback != null) {
+        ref.invalidate(energyControllerProvider);
+        ref.invalidate(courseProgressProvider);
+      }
+      if (state is AttemptInterrupted || state is AttemptFatal) {
+        await _clearRecovery();
+      }
+    } on Object catch (error) {
+      state = AttemptMachine.reduce(
+        reconciling,
+        AttemptReconciliationFailed(_failure(error)),
       );
       if (state is AttemptContentChanged ||
           state is AttemptInterrupted ||
@@ -274,6 +430,18 @@ final class AttemptController extends Notifier<AttemptState> {
         await _clearRecovery();
       }
     }
+  }
+
+  Future<void> _invalidateRecoveredAttempt(
+    AttemptPresenting presenting,
+    String message,
+  ) async {
+    state = AttemptFatal(
+      testId: presenting.testId,
+      context: presenting.context,
+      failure: ProtocolFailure(message),
+    );
+    await _clearRecovery();
   }
 
   Future<void> _finishCurrent() async {
@@ -334,7 +502,9 @@ final class AttemptController extends Notifier<AttemptState> {
         phase: RecoveryPhase.presenting,
         attemptId: presenting.context.session.id,
         questionIndex: presenting.questionIndex,
+        answerKind: presenting.question.answerKind,
         selectedOptionId: presenting.selectedOptionId,
+        submissionId: presenting.resumeSubmissionId,
         updatedAt: now,
       ),
       final AttemptSubmitting submitting => AttemptRecoverySnapshot(
@@ -343,16 +513,37 @@ final class AttemptController extends Notifier<AttemptState> {
         phase: RecoveryPhase.submitting,
         attemptId: submitting.context.session.id,
         questionIndex: submitting.questionIndex,
-        selectedOptionId: submitting.pending.selectedOptionId,
+        answerKind: submitting.pending.kind,
+        selectedOptionId: switch (submitting.pending.input) {
+          final OptionAnswerInput option => option.selectedOptionId,
+          TypedAnswerInput() => null,
+        },
         submissionId: submitting.pending.submissionId,
+        updatedAt: now,
+      ),
+      final AttemptReconciling reconciling => AttemptRecoverySnapshot(
+        testId: reconciling.testId,
+        startCommandId: reconciling.context.startCommandId,
+        phase: RecoveryPhase.submitting,
+        attemptId: reconciling.context.session.id,
+        questionIndex: reconciling.questionIndex,
+        answerKind: reconciling.answerKind,
+        selectedOptionId: switch (reconciling.pending?.input) {
+          final OptionAnswerInput option => option.selectedOptionId,
+          _ => null,
+        },
+        submissionId: reconciling.submissionId,
         updatedAt: now,
       ),
       final AttemptFeedback feedback => AttemptRecoverySnapshot(
         testId: feedback.testId,
         startCommandId: feedback.context.startCommandId,
-        phase: RecoveryPhase.submitting,
+        phase: feedback.answerKind == AnswerKind.typed
+            ? RecoveryPhase.feedback
+            : RecoveryPhase.submitting,
         attemptId: feedback.context.session.id,
         questionIndex: feedback.questionIndex,
+        answerKind: feedback.answerKind,
         selectedOptionId: feedback.selectedOptionId,
         submissionId: feedback.feedback.submissionId,
         updatedAt: now,
@@ -388,10 +579,29 @@ final class AttemptController extends Notifier<AttemptState> {
       phase: RecoveryPhase.submitting,
       attemptId: submission.context.session.id,
       questionIndex: submission.questionIndex,
-      selectedOptionId: submission.pending.selectedOptionId,
+      answerKind: submission.pending.kind,
+      selectedOptionId: switch (submission.pending.input) {
+        final OptionAnswerInput option => option.selectedOptionId,
+        TypedAnswerInput() => null,
+      },
       submissionId: submission.pending.submissionId,
       updatedAt: now,
     ),
+    final ReconciliationRecoveryContext reconciliation =>
+      AttemptRecoverySnapshot(
+        testId: reconciliation.testId,
+        startCommandId: reconciliation.context.startCommandId,
+        phase: RecoveryPhase.submitting,
+        attemptId: reconciliation.context.session.id,
+        questionIndex: reconciliation.questionIndex,
+        answerKind: reconciliation.answerKind,
+        selectedOptionId: switch (reconciliation.pending?.input) {
+          final OptionAnswerInput option => option.selectedOptionId,
+          _ => null,
+        },
+        submissionId: reconciliation.submissionId,
+        updatedAt: now,
+      ),
     final FinishRecoveryContext finish => AttemptRecoverySnapshot(
       testId: finish.testId,
       startCommandId: finish.context.startCommandId,

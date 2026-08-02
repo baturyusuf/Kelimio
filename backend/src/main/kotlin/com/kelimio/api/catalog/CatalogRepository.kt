@@ -295,6 +295,12 @@ class CatalogRepository(
             QuestionRevisions.ID,
             QuestionRevisions.TYPE,
             QuestionRevisions.PROMPT,
+            QuestionRevisions.CORRECT_ANSWER,
+            QuestionRevisions.ALTERNATIVE_CORRECT_ANSWER,
+            QuestionRevisions.ANSWER_MATCH_POLICY,
+            QuestionRevisions.ANSWER_MATCH_LANGUAGE,
+            QuestionRevisions.CORRECT_ANSWER_MATCH_KEY,
+            QuestionRevisions.ALTERNATIVE_ANSWER_MATCH_KEY,
             TestRevisionQuestions.POSITION,
         ).from(TestRevisionQuestions.TABLE)
             .join(QuestionRevisions.TABLE)
@@ -304,12 +310,25 @@ class CatalogRepository(
             .and(QuestionRevisions.STATUS.eq("ACTIVE"))
             .orderBy(TestRevisionQuestions.POSITION.asc())
             .fetch {
+                val type = LearningQuestionType.fromStorageCode(it.get(QuestionRevisions.TYPE)!!)
                 AttemptQuestionSource(
                     questionId = it.get(QuestionRevisions.QUESTION_ID)!!,
                     questionRevisionId = it.get(QuestionRevisions.ID)!!,
-                    type = LearningQuestionType.fromStorageCode(it.get(QuestionRevisions.TYPE)!!),
+                    type = type,
                     prompt = it.get(QuestionRevisions.PROMPT)!!,
                     options = findQuestionOptions(it.get(QuestionRevisions.ID)!!),
+                    typedAnswer = if (type == LearningQuestionType.TYPED_CLOZE) {
+                        TypedAnswerSource(
+                            primaryAnswerText = it.get(QuestionRevisions.CORRECT_ANSWER)!!,
+                            alternativeAnswerText = it.get(QuestionRevisions.ALTERNATIVE_CORRECT_ANSWER),
+                            policyVersion = it.get(QuestionRevisions.ANSWER_MATCH_POLICY)!!,
+                            languageTag = it.get(QuestionRevisions.ANSWER_MATCH_LANGUAGE)!!,
+                            primaryMatchKey = it.get(QuestionRevisions.CORRECT_ANSWER_MATCH_KEY)!!,
+                            alternativeMatchKey = it.get(QuestionRevisions.ALTERNATIVE_ANSWER_MATCH_KEY),
+                        )
+                    } else {
+                        null
+                    },
                     position = it.get(TestRevisionQuestions.POSITION)!!,
                 )
             }

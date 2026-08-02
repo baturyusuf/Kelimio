@@ -72,5 +72,8 @@
   "accessibilitySelectedAnswer": "Seçili cevap",
   "accessibilityCorrectAnswer": "Doğru cevap",
   "accessibilityIncorrectAnswer": "Yanlış cevap",
-  "accessibilityBlank": "boşluk"
+  "accessibilityBlank": "boşluk",
+  "typedAnswerLabel": "Cevabın",
+  "typedAnswerReentry": "Önceki cevap cihazda saklanmadı. Aynı gönderimi sürdürmek için cevabı yeniden yaz.",
+  "correctAnswerLabel": "Doğru cevap"
 }

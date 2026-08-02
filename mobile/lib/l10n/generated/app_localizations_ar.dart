@@ -255,4 +255,14 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get accessibilityBlank => 'فراغ';
+
+  @override
+  String get typedAnswerLabel => 'إجابتك';
+
+  @override
+  String get typedAnswerReentry =>
+      'لم تُحفظ الإجابة السابقة على هذا الجهاز. أدخلها مجددًا لمتابعة الإرسال نفسه.';
+
+  @override
+  String get correctAnswerLabel => 'الإجابة الصحيحة';
 }

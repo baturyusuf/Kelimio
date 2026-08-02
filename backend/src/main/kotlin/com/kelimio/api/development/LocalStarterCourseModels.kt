@@ -14,15 +14,16 @@ internal data class StarterQuestion(
     val prompt: String,
     val correctAnswer: String,
     val options: List<String>,
+    val alternativeCorrectAnswer: String? = null,
 )
 
 internal object LocalStarterCourseDefinition {
     const val ORIGIN_TYPE = "LOCAL_STARTER"
-    const val ORIGIN_KEY = "kurs-excel-plani-v3-type-a-b-en-v2"
+    const val ORIGIN_KEY = "kurs-excel-plani-v3-type-a-b-c-en-v3"
     const val SOURCE_WORKBOOK_SHA256 = "9fb87f680505e949304257e43e09ab0ce7f71324b4a06bcfae919260ab9f889e"
     const val COURSE_NAME = "Örnek Türkçe Kelime Kursu"
     const val COURSE_DESCRIPTION =
-        "Yerel geliştirme için kaynak çalışma kitabındaki Type-A ve Type-B satırlarından oluşturulan başlangıç kursu."
+        "Yerel geliştirme için kaynak çalışma kitabındaki Type-A, Type-B ve Type-C satırlarından oluşturulan başlangıç kursu."
     const val TEST_TITLE = "Giriş Seviyesi · Başlangıç Kelimeleri"
 
     private val words = listOf(
@@ -48,5 +49,12 @@ internal object LocalStarterCourseDefinition {
                 prompt = "Ben her sabah çay ---.",
                 correctAnswer = "içerim",
                 options = listOf("içerim", "yerim", "koşarım", "yazarım"),
+            ) +
+            StarterQuestion(
+                type = LearningQuestionType.TYPED_CLOZE,
+                prompt = "Sabah kahvaltıda çay ---.",
+                correctAnswer = "içerim",
+                alternativeCorrectAnswer = "içiyorum",
+                options = emptyList(),
             )
 }

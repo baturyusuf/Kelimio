@@ -6,7 +6,19 @@ drift check in CI.
 
 The first contract intentionally covers the production vertical slice only. It
 contains no answer keys in attempt payloads and no client-supplied user, score,
-energy, or entitlement claims.
+energy, or entitlement claims. Type A and Type B carry four options; Type C
+(`TYPED_CLOZE`) carries none and requires exactly one literal `---` in its
+prompt. Answer submission accepts exactly one of an option ID or typed text.
+Only transaction-specific post-commit feedback contains the corresponding
+correct option ID or primary correct-answer text, never both.
+
+The answer body has an explicit 8192-byte transport limit and documents generic
+no-store `413` behavior. The ownership-scoped recorded-answer response supports
+lost-response reconciliation. Raw/canonical learner text is absent from attempt,
+reconciliation, analytics, and recovery contracts. Authored answer keys are
+absent before submission and from analytics/recovery data; only the
+transaction-specific post-commit response or reconciliation result may contain
+the submitted question's narrowly scoped feedback described above.
 
 Generate clients with the pinned OpenAPI Generator container:
 

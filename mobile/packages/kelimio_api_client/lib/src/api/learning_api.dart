@@ -190,6 +190,97 @@ class LearningApi {
     );
   }
 
+  /// Reconcile one previously committed answer owned by the current user
+  /// Returns the immutable committed result only when both the attempt and submission belong to the authenticated user. Missing or non-owned records are indistinguishable and return not found.
+  ///
+  /// Parameters:
+  /// * [attemptId]
+  /// * [submissionId]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [AnswerRecordedResponse] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<AnswerRecordedResponse>> getRecordedAnswer({
+    required String attemptId,
+    required String submissionId,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/v1/attempts/{attemptId}/answers/{submissionId}'
+        .replaceAll(
+          '{'
+          r'attemptId'
+          '}',
+          attemptId.toString(),
+        )
+        .replaceAll(
+          '{'
+          r'submissionId'
+          '}',
+          submissionId.toString(),
+        );
+    final _options = Options(
+      method: r'GET',
+      headers: <String, dynamic>{...?headers},
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearerAuth'},
+        ],
+        ...?extra,
+      },
+      validateStatus: validateStatus,
+    );
+
+    final _response = await _dio.request<Object>(
+      _path,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    AnswerRecordedResponse? _responseData;
+
+    try {
+      final rawData = _response.data;
+      _responseData = rawData == null
+          ? null
+          : deserialize<AnswerRecordedResponse, AnswerRecordedResponse>(
+              rawData,
+              'AnswerRecordedResponse',
+              growable: true,
+            );
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<AnswerRecordedResponse>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
   /// Start an online attempt for the current test revision
   ///
   ///
@@ -278,7 +369,7 @@ class LearningApi {
   }
 
   /// Record and evaluate one online answer exactly once
-  /// Reusing submissionId returns the previously committed response and never creates a second attempt fact, score event, energy event, or outbox event.
+  /// Reusing submissionId returns the previously committed response and never creates a second attempt fact, score event, energy event, or outbox event. The complete request body is limited to 8192 bytes and is rejected before JSON allocation or transactional command handling when that limit is exceeded.
   ///
   /// Parameters:
   /// * [attemptId]
@@ -296,7 +387,7 @@ class LearningApi {
   Future<Response<AnswerRecordedResponse>> submitAnswer({
     required String attemptId,
     required String idempotencyKey,
-    required SubmitAnswerRequest submitAnswerRequest,
+    SubmitAnswerRequest? submitAnswerRequest,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,

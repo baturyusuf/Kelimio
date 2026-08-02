@@ -29,7 +29,7 @@ import {
 } from './AttemptState';
 
 /**
- *
+ * Post-commit feedback for exactly one submitted question. Multiple-choice responses contain correctOptionId; typed-cloze responses contain only the primary authored correctAnswerText. Neither appears before commit.
  * @export
  * @interface AnswerRecordedResponse
  */
@@ -51,7 +51,13 @@ export interface AnswerRecordedResponse {
      * @type {string}
      * @memberof AnswerRecordedResponse
      */
-    correctOptionId: string;
+    correctOptionId?: string;
+    /**
+     *
+     * @type {string}
+     * @memberof AnswerRecordedResponse
+     */
+    correctAnswerText?: string;
     /**
      *
      * @type {number}
@@ -90,15 +96,12 @@ export interface AnswerRecordedResponse {
     attemptState: AttemptState;
 }
 
-
-
 /**
  * Check if a given object implements the AnswerRecordedResponse interface.
  */
 export function instanceOfAnswerRecordedResponse(value: object): value is AnswerRecordedResponse {
     if (!('submissionId' in value) || value['submissionId'] === undefined) return false;
     if (!('correct' in value) || value['correct'] === undefined) return false;
-    if (!('correctOptionId' in value) || value['correctOptionId'] === undefined) return false;
     if (!('activeScoreDelta' in value) || value['activeScoreDelta'] === undefined) return false;
     if (!('lifetimeScoreDelta' in value) || value['lifetimeScoreDelta'] === undefined) return false;
     if (!('activeQuestionScore' in value) || value['activeQuestionScore'] === undefined) return false;
@@ -120,7 +123,8 @@ export function AnswerRecordedResponseFromJSONTyped(json: any, ignoreDiscriminat
 
         'submissionId': json['submissionId'],
         'correct': json['correct'],
-        'correctOptionId': json['correctOptionId'],
+        'correctOptionId': json['correctOptionId'] == null ? undefined : json['correctOptionId'],
+        'correctAnswerText': json['correctAnswerText'] == null ? undefined : json['correctAnswerText'],
         'activeScoreDelta': json['activeScoreDelta'],
         'lifetimeScoreDelta': json['lifetimeScoreDelta'],
         'activeQuestionScore': json['activeQuestionScore'],
@@ -144,6 +148,7 @@ export function AnswerRecordedResponseToJSONTyped(value?: AnswerRecordedResponse
         'submissionId': value['submissionId'],
         'correct': value['correct'],
         'correctOptionId': value['correctOptionId'],
+        'correctAnswerText': value['correctAnswerText'],
         'activeScoreDelta': value['activeScoreDelta'],
         'lifetimeScoreDelta': value['lifetimeScoreDelta'],
         'activeQuestionScore': value['activeQuestionScore'],

@@ -1,13 +1,21 @@
 package com.kelimio.api.learningsession
 
-import com.kelimio.api.identityprofile.CurrentUserService
+import com.fasterxml.jackson.annotation.JsonIgnore
 import com.kelimio.api.energy.EnergySnapshot
+import com.kelimio.api.identityprofile.CurrentUserService
+import com.kelimio.api.language.InvalidTypedAnswerException
+import com.kelimio.api.language.TypedAnswerPolicy
+import com.kelimio.api.web.UnprocessableProblem
 import jakarta.validation.Valid
+import jakarta.validation.constraints.AssertTrue
 import jakarta.validation.constraints.NotNull
+import org.springframework.http.CacheControl
 import org.springframework.http.HttpStatus
+import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.security.oauth2.jwt.Jwt
 import org.springframework.web.bind.annotation.PathVariable
+import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestHeader
@@ -39,15 +47,33 @@ class LearningSessionController(
         @PathVariable attemptId: UUID,
         @RequestHeader("Idempotency-Key") idempotencyKey: UUID,
         @Valid @RequestBody request: SubmitAnswerRequest,
-    ): SubmitAnswerResponse =
-        learningSessionService.submitAnswer(
-            user = currentUserService.requireCompleted(jwt),
-            attemptId = attemptId,
-            submissionId = request.submissionId,
-            questionRevisionId = request.questionRevisionId,
-            selectedOptionId = request.selectedOptionId,
-            idempotencyKey = idempotencyKey,
-        ).toResponse()
+    ): ResponseEntity<SubmitAnswerResponse> {
+        val answer = request.toSubmittedAnswer()
+        return noStore(
+            learningSessionService.submitAnswer(
+                user = currentUserService.requireCompleted(jwt),
+                attemptId = attemptId,
+                submissionId = request.submissionId,
+                questionRevisionId = request.questionRevisionId,
+                answer = answer,
+                idempotencyKey = idempotencyKey,
+            ).toResponse(),
+        )
+    }
+
+    @GetMapping("/attempts/{attemptId}/answers/{submissionId}")
+    fun getRecordedAnswer(
+        @AuthenticationPrincipal jwt: Jwt,
+        @PathVariable attemptId: UUID,
+        @PathVariable submissionId: UUID,
+    ): ResponseEntity<SubmitAnswerResponse> =
+        noStore(
+            learningSessionService.getRecordedAnswer(
+                currentUserService.requireCompleted(jwt),
+                attemptId,
+                submissionId,
+            ).toResponse(),
+        )
 
     @PostMapping("/attempts/{attemptId}/finish")
     fun finishAttempt(
@@ -58,11 +84,32 @@ class LearningSessionController(
         learningSessionService.finishAttempt(currentUserService.requireCompleted(jwt), attemptId, idempotencyKey).toResponse()
 }
 
-data class SubmitAnswerRequest(
+class SubmitAnswerRequest(
     @field:NotNull val submissionId: UUID,
     @field:NotNull val questionRevisionId: UUID,
-    @field:NotNull val selectedOptionId: UUID,
-)
+    val selectedOptionId: UUID? = null,
+    val typedAnswer: String? = null,
+) {
+    @get:JsonIgnore
+    @get:AssertTrue(message = "Exactly one answer form is required")
+    val hasExactlyOneAnswer: Boolean
+        get() = (selectedOptionId == null) != (typedAnswer == null)
+
+    fun toSubmittedAnswer(): SubmittedAnswer {
+        selectedOptionId?.let { return SubmittedAnswer.Option(it) }
+        val value = checkNotNull(typedAnswer)
+        try {
+            TypedAnswerPolicy.validateRawEnvelope(value)
+        } catch (_: InvalidTypedAnswerException) {
+            throw UnprocessableProblem("The typed answer is invalid.")
+        }
+        return SubmittedAnswer.TypedText(value)
+    }
+
+    override fun toString(): String =
+        "SubmitAnswerRequest(submissionId=$submissionId, questionRevisionId=$questionRevisionId, " +
+            "selectedOptionId=$selectedOptionId, typedAnswer=[REDACTED])"
+}
 
 data class StartAttemptResponse(
     val id: UUID,
@@ -90,14 +137,22 @@ data class AttemptOptionResponse(
 data class SubmitAnswerResponse(
     val submissionId: UUID,
     val correct: Boolean,
-    val correctOptionId: UUID,
+    val correctOptionId: UUID?,
+    val correctAnswerText: String?,
     val activeScoreDelta: Int,
     val lifetimeScoreDelta: Int,
     val activeQuestionScore: Int,
     val lifetimeScore: Long,
     val energy: EnergySnapshot,
     val attemptState: String,
-)
+) {
+    override fun toString(): String =
+        "SubmitAnswerResponse(submissionId=$submissionId, correct=$correct, " +
+            "correctOptionId=[REDACTED], correctAnswerText=[REDACTED], " +
+            "activeScoreDelta=$activeScoreDelta, lifetimeScoreDelta=$lifetimeScoreDelta, " +
+            "activeQuestionScore=$activeQuestionScore, lifetimeScore=$lifetimeScore, " +
+            "energy=$energy, attemptState=$attemptState)"
+}
 
 data class FinishAttemptResponse(
     val attemptId: UUID,
@@ -127,15 +182,16 @@ private fun StartAttemptResult.toResponse() = StartAttemptResponse(
 )
 
 private fun SubmitAnswerResult.toResponse() = SubmitAnswerResponse(
-    submissionId,
-    correct,
-    correctOptionId,
-    activeScoreDelta,
-    lifetimeScoreDelta,
-    activeQuestionScore,
-    lifetimeScore,
-    energy,
-    attemptStatus,
+    submissionId = submissionId,
+    correct = correct,
+    correctOptionId = correctOptionId,
+    correctAnswerText = correctAnswerText,
+    activeScoreDelta = activeScoreDelta,
+    lifetimeScoreDelta = lifetimeScoreDelta,
+    activeQuestionScore = activeQuestionScore,
+    lifetimeScore = lifetimeScore,
+    energy = energy,
+    attemptState = attemptStatus,
 )
 
 private fun FinishAttemptResult.toResponse() = FinishAttemptResponse(
@@ -146,3 +202,8 @@ private fun FinishAttemptResult.toResponse() = FinishAttemptResponse(
     correctRatio,
     finishedAt,
 )
+
+private fun <T> noStore(body: T): ResponseEntity<T> =
+    ResponseEntity.ok()
+        .cacheControl(CacheControl.noStore())
+        .body(body)

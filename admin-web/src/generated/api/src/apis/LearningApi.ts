@@ -46,6 +46,11 @@ export interface GetCourseProgressRequest {
     courseId: string;
 }
 
+export interface GetRecordedAnswerRequest {
+    attemptId: string;
+    submissionId: string;
+}
+
 export interface StartAttemptRequest {
     testId: string;
     idempotencyKey: string;
@@ -54,7 +59,7 @@ export interface StartAttemptRequest {
 export interface SubmitAnswerOperationRequest {
     attemptId: string;
     idempotencyKey: string;
-    submitAnswerRequest: SubmitAnswerRequest;
+    submitAnswerRequest: SubmitAnswerRequest | null;
 }
 
 /**
@@ -97,6 +102,23 @@ export interface LearningApiInterface {
     getCourseProgress(requestParameters: GetCourseProgressRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<CourseProgressResponse>;
 
     /**
+     * Returns the immutable committed result only when both the attempt and submission belong to the authenticated user. Missing or non-owned records are indistinguishable and return not found.
+     * @summary Reconcile one previously committed answer owned by the current user
+     * @param {string} attemptId
+     * @param {string} submissionId
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof LearningApiInterface
+     */
+    getRecordedAnswerRaw(requestParameters: GetRecordedAnswerRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<AnswerRecordedResponse>>;
+
+    /**
+     * Returns the immutable committed result only when both the attempt and submission belong to the authenticated user. Missing or non-owned records are indistinguishable and return not found.
+     * Reconcile one previously committed answer owned by the current user
+     */
+    getRecordedAnswer(requestParameters: GetRecordedAnswerRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<AnswerRecordedResponse>;
+
+    /**
      *
      * @summary Start an online attempt for the current test revision
      * @param {string} testId
@@ -113,7 +135,7 @@ export interface LearningApiInterface {
     startAttempt(requestParameters: StartAttemptRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<AttemptResponse>;
 
     /**
-     * Reusing submissionId returns the previously committed response and never creates a second attempt fact, score event, energy event, or outbox event.
+     * Reusing submissionId returns the previously committed response and never creates a second attempt fact, score event, energy event, or outbox event. The complete request body is limited to 8192 bytes and is rejected before JSON allocation or transactional command handling when that limit is exceeded.
      * @summary Record and evaluate one online answer exactly once
      * @param {string} attemptId
      * @param {string} idempotencyKey Stable UUID generated once for the logical command.
@@ -125,7 +147,7 @@ export interface LearningApiInterface {
     submitAnswerRaw(requestParameters: SubmitAnswerOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<AnswerRecordedResponse>>;
 
     /**
-     * Reusing submissionId returns the previously committed response and never creates a second attempt fact, score event, energy event, or outbox event.
+     * Reusing submissionId returns the previously committed response and never creates a second attempt fact, score event, energy event, or outbox event. The complete request body is limited to 8192 bytes and is rejected before JSON allocation or transactional command handling when that limit is exceeded.
      * Record and evaluate one online answer exactly once
      */
     submitAnswer(requestParameters: SubmitAnswerOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<AnswerRecordedResponse>;
@@ -241,6 +263,61 @@ export class LearningApi extends runtime.BaseAPI implements LearningApiInterface
     }
 
     /**
+     * Returns the immutable committed result only when both the attempt and submission belong to the authenticated user. Missing or non-owned records are indistinguishable and return not found.
+     * Reconcile one previously committed answer owned by the current user
+     */
+    async getRecordedAnswerRaw(requestParameters: GetRecordedAnswerRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<AnswerRecordedResponse>> {
+        if (requestParameters['attemptId'] == null) {
+            throw new runtime.RequiredError(
+                'attemptId',
+                'Required parameter "attemptId" was null or undefined when calling getRecordedAnswer().'
+            );
+        }
+
+        if (requestParameters['submissionId'] == null) {
+            throw new runtime.RequiredError(
+                'submissionId',
+                'Required parameter "submissionId" was null or undefined when calling getRecordedAnswer().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("bearerAuth", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/v1/attempts/{attemptId}/answers/{submissionId}`;
+        urlPath = urlPath.replace(`{${"attemptId"}}`, encodeURIComponent(String(requestParameters['attemptId'])));
+        urlPath = urlPath.replace(`{${"submissionId"}}`, encodeURIComponent(String(requestParameters['submissionId'])));
+
+        const response = await this.request({
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => AnswerRecordedResponseFromJSON(jsonValue));
+    }
+
+    /**
+     * Returns the immutable committed result only when both the attempt and submission belong to the authenticated user. Missing or non-owned records are indistinguishable and return not found.
+     * Reconcile one previously committed answer owned by the current user
+     */
+    async getRecordedAnswer(requestParameters: GetRecordedAnswerRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<AnswerRecordedResponse> {
+        const response = await this.getRecordedAnswerRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
      * Start an online attempt for the current test revision
      */
     async startAttemptRaw(requestParameters: StartAttemptRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<AttemptResponse>> {
@@ -297,7 +374,7 @@ export class LearningApi extends runtime.BaseAPI implements LearningApiInterface
     }
 
     /**
-     * Reusing submissionId returns the previously committed response and never creates a second attempt fact, score event, energy event, or outbox event.
+     * Reusing submissionId returns the previously committed response and never creates a second attempt fact, score event, energy event, or outbox event. The complete request body is limited to 8192 bytes and is rejected before JSON allocation or transactional command handling when that limit is exceeded.
      * Record and evaluate one online answer exactly once
      */
     async submitAnswerRaw(requestParameters: SubmitAnswerOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<AnswerRecordedResponse>> {
@@ -356,7 +433,7 @@ export class LearningApi extends runtime.BaseAPI implements LearningApiInterface
     }
 
     /**
-     * Reusing submissionId returns the previously committed response and never creates a second attempt fact, score event, energy event, or outbox event.
+     * Reusing submissionId returns the previously committed response and never creates a second attempt fact, score event, energy event, or outbox event. The complete request body is limited to 8192 bytes and is rejected before JSON allocation or transactional command handling when that limit is exceeded.
      * Record and evaluate one online answer exactly once
      */
     async submitAnswer(requestParameters: SubmitAnswerOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<AnswerRecordedResponse> {

@@ -21,8 +21,9 @@ Optional configuration:
 
 `KELIMIO_LOCAL_DEVELOPMENT_TOOLS` is accepted only by non-production builds.
 It reveals an explicit local-only action that installs the reviewed mixed
-Type-A/Type-B starter course through the local backend; it never creates users or learning
-results, and the backend rejects the command outside its enabled local mode.
+Type-A/Type-B/Type-C starter course through the local backend; it never creates
+users or learning results, and the backend rejects the command outside its
+enabled local mode.
 
 After a valid OIDC session, the app loads `/v1/me`. Provisional users must
 complete the one-time app-language, target-language, support-language, and time-
@@ -75,10 +76,21 @@ From the repository root, `scripts\local-android-e2e.cmd` runs the isolated
 real-registration acceptance flow. It uses separate Compose volumes and ports,
 public Keycloak registration, Mailpit verification, a genuine S256 PKCE token,
 the generated API repositories, real Drift storage, and the production Flutter
-UI. It verifies profile gating, starter-course installation, enrollment, all six
-server-scored answers, idempotent answer replay, the final 6/6 and 360/360
-projection, sign-out, and private-cache removal. It is skipped by ordinary
+UI. It verifies profile gating, starter-course installation, enrollment, all
+seven server-scored answers, Type-B replay plus Type-C replay/reconciliation,
+the final 7/7 and 420/420 projection at version 8, sign-out, and private-cache
+removal. It is skipped by ordinary
 integration-test invocations unless the guarded runner enables it.
+
+Type-C entry sends the word or phrase only as learner-answer content, alongside
+the required submission/question identifiers, and never grades it locally. Raw
+or canonical typed text is not written to Drift recovery,
+logs, analytics, or diagnostic string output. If the backend rejects a Type-C
+body with `413` or `422`, the app returns to a blank input using the same reserved
+submission ID; this permits safe correction without retaining the rejected text
+or weakening idempotency. After an ambiguous network failure or restart, the app
+uses the ownership-scoped recorded-answer endpoint to reconcile a committed
+result before allowing a new submission.
 
 Android has explicit `production`, `smoke`, and `e2e` flavors. Normal Android
 run/build commands select `production`; ordinary device tests select `smoke`,

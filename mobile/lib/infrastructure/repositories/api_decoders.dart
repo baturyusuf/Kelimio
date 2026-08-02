@@ -101,6 +101,8 @@ AttemptSession mapAttempt(api.AttemptResponse value) {
                 QuestionType.wordMultipleChoice,
               api.QuestionPayloadTypeEnum.MULTIPLE_CHOICE_CLOZE =>
                 QuestionType.multipleChoiceCloze,
+              api.QuestionPayloadTypeEnum.TYPED_CLOZE =>
+                QuestionType.typedCloze,
             };
             try {
               return Question(
@@ -133,17 +135,22 @@ AttemptSession mapAttempt(api.AttemptResponse value) {
 }
 
 AnswerFeedback mapAnswerFeedback(api.AnswerRecordedResponse value) {
-  return AnswerFeedback(
-    submissionId: value.submissionId,
-    correct: value.correct,
-    correctOptionId: value.correctOptionId,
-    activeScoreDelta: value.activeScoreDelta,
-    lifetimeScoreDelta: value.lifetimeScoreDelta,
-    activeQuestionScore: value.activeQuestionScore,
-    lifetimeScore: value.lifetimeScore,
-    energy: mapEnergy(value.energy),
-    attemptStatus: mapAttemptStatus(value.attemptState),
-  );
+  try {
+    return AnswerFeedback(
+      submissionId: value.submissionId,
+      correct: value.correct,
+      correctOptionId: value.correctOptionId,
+      correctAnswerText: value.correctAnswerText,
+      activeScoreDelta: value.activeScoreDelta,
+      lifetimeScoreDelta: value.lifetimeScoreDelta,
+      activeQuestionScore: value.activeQuestionScore,
+      lifetimeScore: value.lifetimeScore,
+      energy: mapEnergy(value.energy),
+      attemptStatus: mapAttemptStatus(value.attemptState),
+    );
+  } on ArgumentError {
+    throw const ProtocolFailure('Invalid answer feedback payload');
+  }
 }
 
 AttemptResult mapAttemptResult(api.FinishAttemptResponse value) {

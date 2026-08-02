@@ -68,7 +68,7 @@ final class DioFailureMapper {
         cause: error,
       );
     }
-    if (status == 400 || status == 422) {
+    if (status == 400 || status == 413 || status == 422) {
       return ValidationFailure(
         code: problem.code,
         detail: problem.detail,

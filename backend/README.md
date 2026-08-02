@@ -35,10 +35,31 @@ Flyway applies the schema on startup. Readiness is exposed at
 No course or user is seeded on startup. When Compose explicitly enables
 `KELIMIO_LOCAL_STARTER_COURSE_ENABLED`, an authenticated local user can invoke
 `POST /v1/development/starter-course` to install one idempotent immutable mixed
-Type-A/Type-B course derived from the reviewed workbook subset using English as
-its support language. The route
-returns not found outside enabled local mode and is separate from the import
-core described below.
+Type-A/Type-B/Type-C course derived from the reviewed workbook subset using
+English as its support language. Immutable starter release v3 contains five
+Type-A questions, one Type-B question, and the exact reviewed Type-C row. The
+route returns not found outside enabled local mode and is separate from the
+import core described below.
+
+## Typed-cloze boundary
+
+Type-C correctness is derived inside the authoritative answer transaction from
+the attempt's pinned immutable revision and `typed-answer-v1` target-language
+policy. The answer endpoint enforces an 8192-byte body limit before Jackson,
+authentication, or transactional/idempotency work. Its pre-Jackson matcher uses
+Spring MVC path-pattern semantics, so matrix parameters and percent-encoded path
+literals cannot bypass the cap; declared and chunked oversize bodies receive a
+generic no-store `413` response. Locale-independent raw-envelope validation also
+runs before the transaction, while locale-pinned normalization and grading stay
+inside it.
+
+Typed answer facts retain only salted replay evidence and a match ordinal. Raw
+or canonical learner text is never persisted, logged, emitted to analytics or
+the outbox, or returned through recovery. An ownership-scoped no-store recorded-
+answer lookup supports lost-response reconciliation without exposing whether
+another user owns a submission. Primary correct-answer text is returned only in
+transaction-specific post-commit feedback; diagnostic string representations
+redact it.
 
 ## Secure Excel preview core
 

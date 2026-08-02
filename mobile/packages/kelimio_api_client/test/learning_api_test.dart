@@ -22,6 +22,15 @@ void main() {
       // TODO
     });
 
+    // Reconcile one previously committed answer owned by the current user
+    //
+    // Returns the immutable committed result only when both the attempt and submission belong to the authenticated user. Missing or non-owned records are indistinguishable and return not found.
+    //
+    //Future<AnswerRecordedResponse> getRecordedAnswer(String attemptId, String submissionId) async
+    test('test getRecordedAnswer', () async {
+      // TODO
+    });
+
     // Start an online attempt for the current test revision
     //
     //Future<AttemptResponse> startAttempt(String testId, String idempotencyKey) async
@@ -31,7 +40,7 @@ void main() {
 
     // Record and evaluate one online answer exactly once
     //
-    // Reusing submissionId returns the previously committed response and never creates a second attempt fact, score event, energy event, or outbox event.
+    // Reusing submissionId returns the previously committed response and never creates a second attempt fact, score event, energy event, or outbox event. The complete request body is limited to 8192 bytes and is rejected before JSON allocation or transactional command handling when that limit is exceeded.
     //
     //Future<AnswerRecordedResponse> submitAnswer(String attemptId, String idempotencyKey, SubmitAnswerRequest submitAnswerRequest) async
     test('test submitAnswer', () async {

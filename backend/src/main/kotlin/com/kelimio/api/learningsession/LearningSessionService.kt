@@ -3,10 +3,14 @@ package com.kelimio.api.learningsession
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.kelimio.api.catalog.LearningContentQuery
 import com.kelimio.api.catalog.LearningQuestionType
+import com.kelimio.api.catalog.QuestionOptionSource
+import com.kelimio.api.catalog.TypedAnswerSource
 import com.kelimio.api.energy.EnergyService
 import com.kelimio.api.energy.EnergySnapshot
 import com.kelimio.api.idempotency.IdempotencyService
 import com.kelimio.api.identityprofile.AppUser
+import com.kelimio.api.language.InvalidTypedAnswerException
+import com.kelimio.api.language.TypedAnswerPolicy
 import com.kelimio.api.outbox.OutboxRepository
 import com.kelimio.api.scoring.ScoringService
 import com.kelimio.api.web.ConflictProblem
@@ -67,12 +71,22 @@ class LearningSessionService(
             throw ConflictProblem("The active test revision contains no questions.")
         }
         sourceQuestions.forEach { source ->
-            val promptIsValid = when (source.type) {
-                LearningQuestionType.WORD_MULTIPLE_CHOICE -> true
-                LearningQuestionType.MULTIPLE_CHOICE_CLOZE -> source.prompt.hasExactlyOneClozeMarker()
+            val valid = when (source.type) {
+                LearningQuestionType.WORD_MULTIPLE_CHOICE ->
+                    source.typedAnswer == null && source.options.isValidMultipleChoiceOptions()
+
+                LearningQuestionType.MULTIPLE_CHOICE_CLOZE ->
+                    source.typedAnswer == null &&
+                        source.prompt.hasExactlyOneClozeMarker() &&
+                        source.options.isValidMultipleChoiceOptions()
+
+                LearningQuestionType.TYPED_CLOZE ->
+                    source.prompt.hasExactlyOneClozeMarker() &&
+                        source.options.isEmpty() &&
+                        source.typedAnswer?.isValidTypedAnswerMaterial() == true
             }
-            if (!promptIsValid || source.options.size != 4 || source.options.count { it.correct } != 1) {
-                throw ConflictProblem("The active test revision contains an invalid multiple-choice question.")
+            if (!valid) {
+                throw ConflictProblem("The active test revision contains an invalid question.")
             }
         }
 
@@ -90,6 +104,7 @@ class LearningSessionService(
                 type = source.type,
                 prompt = source.prompt,
                 options = options,
+                typedAnswer = source.typedAnswer,
                 position = index + 1,
             )
         }
@@ -158,22 +173,22 @@ class LearningSessionService(
         attemptId: UUID,
         submissionId: UUID,
         questionRevisionId: UUID,
-        selectedOptionId: UUID,
+        answer: SubmittedAnswer,
         idempotencyKey: UUID,
     ): SubmitAnswerResult {
         val lookup = idempotencyService.lockAndFind(
             user.id,
             "learning.submit-answer",
             idempotencyKey,
-            "$attemptId|$submissionId|$questionRevisionId|$selectedOptionId",
+            structuralAnswerFingerprint(attemptId, submissionId, questionRevisionId, answer),
         )
         lookup.resourceId?.let { resourceId ->
             val stored = repository.findAnswerBySubmissionId(resourceId)
                 ?: throw ConflictProblem("The idempotent answer fact no longer exists.")
-            return replay(stored, user, attemptId, questionRevisionId, selectedOptionId)
+            return replay(stored, user, attemptId, questionRevisionId, answer)
         }
         repository.findAnswerBySubmissionId(submissionId)?.let {
-            val response = replay(it, user, attemptId, questionRevisionId, selectedOptionId)
+            val response = replay(it, user, attemptId, questionRevisionId, answer)
             idempotencyService.record(
                 user.id,
                 "learning.submit-answer",
@@ -187,7 +202,7 @@ class LearningSessionService(
         val attempt = repository.lockAttempt(attemptId, user.id)
             ?: throw NotFoundProblem("Attempt was not found.")
         repository.findAnswerBySubmissionId(submissionId)?.let {
-            val response = replay(it, user, attemptId, questionRevisionId, selectedOptionId)
+            val response = replay(it, user, attemptId, questionRevisionId, answer)
             idempotencyService.record(
                 user.id,
                 "learning.submit-answer",
@@ -206,13 +221,12 @@ class LearningSessionService(
         if (manifestQuestion.position != attempt.answeredCount + 1) {
             throw ConflictProblem("Answers must follow the server-issued attempt order.")
         }
-        val selectedOption = repository.findOption(questionRevisionId, selectedOptionId)
-            ?: throw UnprocessableProblem("The selected option does not belong to the question.")
         repository.findAnswerForQuestion(attemptId, questionRevisionId)?.let {
             throw ConflictProblem("The question was already answered with another submissionId.")
         }
 
-        val correct = selectedOption.correct
+        val evaluation = evaluateAnswer(attemptId, submissionId, manifestQuestion, answer)
+        val correct = evaluation.correct
         val energyDecision = energyService.applyForAnswer(
             userId = user.id,
             wrongAnswer = !correct,
@@ -226,7 +240,11 @@ class LearningSessionService(
             attemptId = attemptId,
             userId = user.id,
             questionRevisionId = questionRevisionId,
-            selectedOptionId = selectedOptionId,
+            answerKind = evaluation.answerKind,
+            selectedOptionId = evaluation.selectedOptionId,
+            typedAnswerSalt = evaluation.typedAnswerSalt,
+            typedAnswerDigest = evaluation.typedAnswerDigest,
+            typedMatchOrdinal = evaluation.typedMatchOrdinal,
             correct = correct,
             activeScoreDelta = appliedScore.change.activeDelta,
             lifetimeScoreDelta = appliedScore.change.lifetimeDelta,
@@ -283,7 +301,18 @@ class LearningSessionService(
             lookup.fingerprint,
             submissionId,
         )
-        return result(stored, repository.findCorrectOptionId(questionRevisionId))
+        return result(stored)
+    }
+
+    @Transactional(readOnly = true)
+    fun getRecordedAnswer(
+        user: AppUser,
+        attemptId: UUID,
+        submissionId: UUID,
+    ): SubmitAnswerResult {
+        val stored = repository.findAnswerForOwner(attemptId, submissionId, user.id)
+            ?: throw NotFoundProblem("Recorded answer was not found.")
+        return result(stored)
     }
 
     @Transactional
@@ -365,26 +394,32 @@ class LearningSessionService(
         user: AppUser,
         attemptId: UUID,
         questionRevisionId: UUID,
-        selectedOptionId: UUID,
+        answer: SubmittedAnswer,
     ): SubmitAnswerResult {
         if (
             stored.userId != user.id ||
             stored.attemptId != attemptId ||
             stored.questionRevisionId != questionRevisionId ||
-            stored.selectedOptionId != selectedOptionId
+            !answerMatchesStored(stored, answer)
         ) {
             throw ConflictProblem("submissionId was already used for a different command.")
         }
-        return result(stored, repository.findCorrectOptionId(questionRevisionId))
+        return result(stored)
     }
 
-    private fun result(
-        stored: StoredAnswer,
-        correctOptionId: UUID,
-    ) = SubmitAnswerResult(
+    private fun result(stored: StoredAnswer) = SubmitAnswerResult(
         submissionId = stored.submissionId,
         correct = stored.correct,
-        correctOptionId = correctOptionId,
+        correctOptionId = if (stored.answerKind == ANSWER_KIND_OPTION) {
+            repository.findCorrectOptionId(stored.questionRevisionId)
+        } else {
+            null
+        },
+        correctAnswerText = if (stored.answerKind == ANSWER_KIND_TYPED_TEXT) {
+            repository.findPrimaryCorrectAnswer(stored.questionRevisionId)
+        } else {
+            null
+        },
         activeScoreDelta = stored.activeScoreDelta,
         lifetimeScoreDelta = stored.lifetimeScoreDelta,
         activeQuestionScore = stored.activeQuestionScore,
@@ -398,6 +433,118 @@ class LearningSessionService(
         ),
         attemptStatus = stored.attemptStatusAfter,
     )
+
+    private fun answerMatchesStored(
+        stored: StoredAnswer,
+        answer: SubmittedAnswer,
+    ): Boolean =
+        when (answer) {
+            is SubmittedAnswer.Option ->
+                stored.answerKind == ANSWER_KIND_OPTION &&
+                    stored.selectedOptionId == answer.selectedOptionId
+
+            is SubmittedAnswer.TypedText -> {
+                if (stored.answerKind != ANSWER_KIND_TYPED_TEXT) return false
+                val salt = stored.typedAnswerSalt ?: return false
+                val expectedDigest = stored.typedAnswerDigest ?: return false
+                val material = repository.findManifestQuestion(stored.attemptId, stored.questionRevisionId)
+                    ?.typedAnswer ?: return false
+                val canonical = try {
+                    TypedAnswerPolicy.canonicalize(
+                        answer.value,
+                        material.languageTag,
+                        material.policyVersion,
+                    )
+                } catch (_: InvalidTypedAnswerException) {
+                    return false
+                }
+                val actualDigest = TypedAnswerReplayDigest.compute(
+                    salt,
+                    stored.attemptId,
+                    stored.submissionId,
+                    stored.questionRevisionId,
+                    material.policyVersion,
+                    canonical,
+                )
+                TypedAnswerReplayDigest.matches(expectedDigest, actualDigest)
+            }
+        }
+
+    private fun evaluateAnswer(
+        attemptId: UUID,
+        submissionId: UUID,
+        question: ManifestQuestion,
+        answer: SubmittedAnswer,
+    ): AnswerEvaluation =
+        when (answer) {
+            is SubmittedAnswer.Option -> {
+                if (question.type == LearningQuestionType.TYPED_CLOZE) {
+                    throw UnprocessableProblem("The submitted answer form does not match the question.")
+                }
+                val selectedOption = repository.findOption(question.questionRevisionId, answer.selectedOptionId)
+                    ?: throw UnprocessableProblem("The selected option does not belong to the question.")
+                AnswerEvaluation(
+                    answerKind = ANSWER_KIND_OPTION,
+                    selectedOptionId = answer.selectedOptionId,
+                    typedAnswerSalt = null,
+                    typedAnswerDigest = null,
+                    typedMatchOrdinal = null,
+                    correct = selectedOption.correct,
+                )
+            }
+
+            is SubmittedAnswer.TypedText -> {
+                if (question.type != LearningQuestionType.TYPED_CLOZE) {
+                    throw UnprocessableProblem("The submitted answer form does not match the question.")
+                }
+                val material = question.typedAnswer
+                    ?: throw ConflictProblem("The active question revision is invalid.")
+                val canonical = try {
+                    TypedAnswerPolicy.canonicalize(
+                        answer.value,
+                        material.languageTag,
+                        material.policyVersion,
+                    )
+                } catch (_: InvalidTypedAnswerException) {
+                    throw UnprocessableProblem("The typed answer is invalid.")
+                }
+                val matchOrdinal = when (canonical) {
+                    material.primaryMatchKey -> TYPED_MATCH_PRIMARY
+                    material.alternativeMatchKey -> TYPED_MATCH_ALTERNATIVE
+                    else -> TYPED_MATCH_NONE
+                }
+                val salt = ByteArray(TypedAnswerReplayDigest.SALT_BYTES).also(secureRandom::nextBytes)
+                AnswerEvaluation(
+                    answerKind = ANSWER_KIND_TYPED_TEXT,
+                    selectedOptionId = null,
+                    typedAnswerSalt = salt,
+                    typedAnswerDigest = TypedAnswerReplayDigest.compute(
+                        salt,
+                        attemptId,
+                        submissionId,
+                        question.questionRevisionId,
+                        material.policyVersion,
+                        canonical,
+                    ),
+                    typedMatchOrdinal = matchOrdinal,
+                    correct = matchOrdinal != TYPED_MATCH_NONE,
+                )
+            }
+        }
+
+    private fun structuralAnswerFingerprint(
+        attemptId: UUID,
+        submissionId: UUID,
+        questionRevisionId: UUID,
+        answer: SubmittedAnswer,
+    ): String =
+        when (answer) {
+            is SubmittedAnswer.Option ->
+                "$attemptId|$submissionId|$questionRevisionId|$ANSWER_KIND_OPTION|${answer.selectedOptionId}"
+
+            is SubmittedAnswer.TypedText ->
+                "$attemptId|$submissionId|$questionRevisionId|$ANSWER_KIND_TYPED_TEXT"
+        }
 
     private fun replayStart(
         user: AppUser,
@@ -445,7 +592,37 @@ class LearningSessionService(
     private fun String.hasExactlyOneClozeMarker(): Boolean =
         windowed(CLOZE_MARKER.length).count { it == CLOZE_MARKER } == 1
 
+    private fun List<QuestionOptionSource>.isValidMultipleChoiceOptions(): Boolean =
+        size == 4 && count { it.correct } == 1
+
+    private fun TypedAnswerSource.isValidTypedAnswerMaterial(): Boolean =
+        try {
+            val primaryKey = TypedAnswerPolicy.canonicalize(primaryAnswerText, languageTag, policyVersion)
+            val alternativeKey = alternativeAnswerText?.let { answer ->
+                TypedAnswerPolicy.canonicalize(answer, languageTag, policyVersion)
+            }
+            primaryKey == primaryMatchKey &&
+                alternativeKey == alternativeMatchKey &&
+                (alternativeKey == null || alternativeKey != primaryKey)
+        } catch (_: InvalidTypedAnswerException) {
+            false
+        }
+
+    private data class AnswerEvaluation(
+        val answerKind: String,
+        val selectedOptionId: UUID?,
+        val typedAnswerSalt: ByteArray?,
+        val typedAnswerDigest: ByteArray?,
+        val typedMatchOrdinal: Int?,
+        val correct: Boolean,
+    )
+
     private companion object {
         const val CLOZE_MARKER = "---"
+        const val ANSWER_KIND_OPTION = "OPTION"
+        const val ANSWER_KIND_TYPED_TEXT = "TYPED_TEXT"
+        const val TYPED_MATCH_NONE = 0
+        const val TYPED_MATCH_PRIMARY = 1
+        const val TYPED_MATCH_ALTERNATIVE = 2
     }
 }

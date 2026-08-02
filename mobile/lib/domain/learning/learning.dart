@@ -1,6 +1,8 @@
 import '../energy/energy.dart';
 
-enum QuestionType { wordMultipleChoice, multipleChoiceCloze }
+enum QuestionType { wordMultipleChoice, multipleChoiceCloze, typedCloze }
+
+enum AnswerKind { option, typed }
 
 enum ServerAttemptStatus {
   inProgress,
@@ -25,19 +27,23 @@ final class Question {
     required this.prompt,
     required List<AnswerOption> options,
   }) : options = List.unmodifiable(options) {
-    if (options.length != 4) {
+    if (type != QuestionType.typedCloze && options.length != 4) {
       throw ArgumentError.value(
         options.length,
         'options',
         'Multiple-choice questions require four options',
       );
     }
-    if (type == QuestionType.multipleChoiceCloze &&
-        !_hasExactlyOneClozeMarker(prompt)) {
+    if (type == QuestionType.typedCloze && options.isNotEmpty) {
       throw ArgumentError.value(
-        prompt,
-        'prompt',
-        'Multiple-choice cloze requires exactly one marker',
+        options.length,
+        'options',
+        'Typed cloze questions cannot contain options',
+      );
+    }
+    if (isCloze && !_hasExactlyOneClozeMarker(prompt)) {
+      throw ArgumentError(
+        'Cloze questions require exactly one marker in the prompt',
       );
     }
   }
@@ -49,9 +55,16 @@ final class Question {
   final String prompt;
   final List<AnswerOption> options;
 
+  bool get isCloze =>
+      type == QuestionType.multipleChoiceCloze ||
+      type == QuestionType.typedCloze;
+
+  AnswerKind get answerKind =>
+      type == QuestionType.typedCloze ? AnswerKind.typed : AnswerKind.option;
+
   ClozePromptSegments get clozePromptSegments {
-    if (type != QuestionType.multipleChoiceCloze) {
-      throw StateError('Only a multiple-choice cloze question has segments');
+    if (!isCloze) {
+      throw StateError('Only a cloze question has prompt segments');
     }
     final markerIndex = prompt.indexOf(_clozeMarker);
     return ClozePromptSegments(
@@ -81,6 +94,56 @@ bool _hasExactlyOneClozeMarker(String prompt) {
   return prompt.indexOf(_clozeMarker, first + 1) == -1;
 }
 
+sealed class AnswerInput {
+  const AnswerInput();
+
+  AnswerKind get kind;
+}
+
+final class OptionAnswerInput extends AnswerInput {
+  OptionAnswerInput(this.selectedOptionId) {
+    if (selectedOptionId.isEmpty) {
+      throw ArgumentError('An option answer requires an option identifier');
+    }
+  }
+
+  final String selectedOptionId;
+
+  @override
+  AnswerKind get kind => AnswerKind.option;
+
+  @override
+  String toString() => 'OptionAnswerInput(<redacted-id>)';
+}
+
+final class TypedAnswerInput extends AnswerInput {
+  TypedAnswerInput(String value) : _value = value {
+    if (!isValid(value)) {
+      throw ArgumentError('A typed answer must contain 1 to 500 characters');
+    }
+  }
+
+  static const int maxLength = 500;
+
+  static int codePointLength(String value) => value.runes.length;
+
+  static bool isValid(String value) {
+    final length = codePointLength(value);
+    return length >= 1 && length <= maxLength && value.trim().isNotEmpty;
+  }
+
+  final String _value;
+
+  /// Exposed only so the repository can serialize the transient submission.
+  String get rawValueForSubmission => _value;
+
+  @override
+  AnswerKind get kind => AnswerKind.typed;
+
+  @override
+  String toString() => 'TypedAnswerInput(<redacted>)';
+}
+
 final class AttemptSession {
   AttemptSession({
     required this.id,
@@ -108,27 +171,44 @@ final class AttemptSession {
 }
 
 final class AnswerFeedback {
-  const AnswerFeedback({
+  AnswerFeedback({
     required this.submissionId,
     required this.correct,
-    required this.correctOptionId,
+    this.correctOptionId,
+    this.correctAnswerText,
     required this.activeScoreDelta,
     required this.lifetimeScoreDelta,
     required this.activeQuestionScore,
     required this.lifetimeScore,
     required this.energy,
     required this.attemptStatus,
-  });
+  }) {
+    final hasOption = correctOptionId != null;
+    final hasText = correctAnswerText != null;
+    if (hasOption == hasText) {
+      throw ArgumentError(
+        'Answer feedback requires exactly one authoritative answer value',
+      );
+    }
+    final text = correctAnswerText;
+    if (text != null && !TypedAnswerInput.isValid(text)) {
+      throw ArgumentError('Invalid authoritative typed-answer feedback');
+    }
+  }
 
   final String submissionId;
   final bool correct;
-  final String correctOptionId;
+  final String? correctOptionId;
+  final String? correctAnswerText;
   final int activeScoreDelta;
   final int lifetimeScoreDelta;
   final int activeQuestionScore;
   final int lifetimeScore;
   final Energy energy;
   final ServerAttemptStatus attemptStatus;
+
+  @override
+  String toString() => 'AnswerFeedback(<redacted-authoritative-answer>)';
 }
 
 final class AttemptResult {
@@ -158,7 +238,12 @@ abstract interface class LearningRepository {
   Future<AnswerFeedback> submitAnswer({
     required String attemptId,
     required String questionRevisionId,
-    required String selectedOptionId,
+    required AnswerInput answer,
+    required String submissionId,
+  });
+
+  Future<AnswerFeedback?> getRecordedAnswer({
+    required String attemptId,
     required String submissionId,
   });
 
@@ -168,7 +253,7 @@ abstract interface class LearningRepository {
   });
 }
 
-enum RecoveryPhase { starting, presenting, submitting, finishing }
+enum RecoveryPhase { starting, presenting, submitting, feedback, finishing }
 
 final class AttemptRecoverySnapshot {
   const AttemptRecoverySnapshot({
@@ -178,6 +263,7 @@ final class AttemptRecoverySnapshot {
     required this.questionIndex,
     required this.updatedAt,
     this.attemptId,
+    this.answerKind,
     this.selectedOptionId,
     this.submissionId,
     this.finishCommandId,
@@ -188,6 +274,7 @@ final class AttemptRecoverySnapshot {
   final RecoveryPhase phase;
   final String? attemptId;
   final int questionIndex;
+  final AnswerKind? answerKind;
   final String? selectedOptionId;
   final String? submissionId;
   final String? finishCommandId;

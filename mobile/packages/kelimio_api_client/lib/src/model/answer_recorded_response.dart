@@ -22,7 +22,9 @@ class AnswerRecordedResponse {
 
     required this.correct,
 
-    required this.correctOptionId,
+    this.correctOptionId,
+
+    this.correctAnswerText,
 
     required this.activeScoreDelta,
 
@@ -43,8 +45,11 @@ class AnswerRecordedResponse {
   @JsonKey(name: r'correct', required: true, includeIfNull: false)
   final bool correct;
 
-  @JsonKey(name: r'correctOptionId', required: true, includeIfNull: false)
-  final String correctOptionId;
+  @JsonKey(name: r'correctOptionId', required: false, includeIfNull: false)
+  final String? correctOptionId;
+
+  @JsonKey(name: r'correctAnswerText', required: false, includeIfNull: false)
+  final String? correctAnswerText;
 
   // minimum: 0
   // maximum: 60
@@ -78,6 +83,7 @@ class AnswerRecordedResponse {
           other.submissionId == submissionId &&
           other.correct == correct &&
           other.correctOptionId == correctOptionId &&
+          other.correctAnswerText == correctAnswerText &&
           other.activeScoreDelta == activeScoreDelta &&
           other.lifetimeScoreDelta == lifetimeScoreDelta &&
           other.activeQuestionScore == activeQuestionScore &&
@@ -90,6 +96,7 @@ class AnswerRecordedResponse {
       submissionId.hashCode +
       correct.hashCode +
       correctOptionId.hashCode +
+      correctAnswerText.hashCode +
       activeScoreDelta.hashCode +
       lifetimeScoreDelta.hashCode +
       activeQuestionScore.hashCode +
@@ -104,6 +111,13 @@ class AnswerRecordedResponse {
 
   @override
   String toString() {
-    return toJson().toString();
+    final json = toJson();
+    if (json.containsKey(r'correctOptionId')) {
+      json[r'correctOptionId'] = '[REDACTED]';
+    }
+    if (json.containsKey(r'correctAnswerText')) {
+      json[r'correctAnswerText'] = '[REDACTED]';
+    }
+    return json.toString();
   }
 }

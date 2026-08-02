@@ -42,14 +42,14 @@ Exit gate:
 
 Status: in progress; the local code path exists, but the staging exit gate is not met.
 
-Implemented so far: JWT/OIDC resource-server validation, mobile Authorization Code + PKCE adapter, a server-enforced provisional-user gate and explicit one-time profile/language/time-zone setup, catalog/detail/enrollment, Type-A word and Type-B multiple-choice-cloze attempts, persistent idempotency, authoritative scoring/energy/outbox transaction, generated-client mobile repositories, Drift recovery state, result display, an idempotent rebuildable learner-course progress projection, and real-PostgreSQL local transaction evidence. A fail-closed local-development command can create one immutable provenance-recorded mixed Type-A/Type-B starter release without seeding users or learning results. An isolated Android acceptance runner proves public Keycloak registration, Mailpit verification before code issuance, S256 PKCE, profile gating, enrollment, six authoritative mixed questions, idempotent replay, the 6/6 and 360/360 projection, and private-state purge against fresh real services. General profile editing and legal-consent facts, Type C/D, the remaining projections, production telemetry, production-supported course creation/import, native Custom Tab/deep-link acceptance, and staging proof remain open.
+Implemented so far: JWT/OIDC resource-server validation, mobile Authorization Code + PKCE adapter, a server-enforced provisional-user gate and explicit one-time profile/language/time-zone setup, catalog/detail/enrollment, Type-A word, Type-B multiple-choice-cloze, and privacy-safe Type-C typed-cloze attempts, persistent idempotency, authoritative scoring/energy/outbox transaction, generated-client mobile repositories, raw-free Drift recovery state, owner-scoped lost-response reconciliation, result display, an idempotent rebuildable learner-course progress projection, and real-PostgreSQL local transaction evidence. A fail-closed local-development command creates immutable provenance-recorded starter release v3 with five Type-A, one Type-B, and the exact reviewed-workbook Type-C row without seeding users or learning results. An isolated Android acceptance runner proves public Keycloak registration, Mailpit verification before code issuance, S256 PKCE, profile gating, enrollment, seven authoritative mixed questions, Type-B replay plus Type-C replay/reconciliation, the 7/7 and 420/420 projection at version 8, and private-state purge against fresh real services. General profile editing and legal-consent facts, Type D, the remaining projections, production telemetry, production-supported course creation/import, native Custom Tab/deep-link acceptance, and staging proof remain open.
 
 Deliverables:
 
 - OIDC Authorization Code + PKCE sign-in and secure refresh handling;
 - profile/language preferences with app, target, and support language separation;
 - real course catalog/detail and public/private enrollment;
-- Type-A word and Type-B multiple-choice-cloze online questions with an explicit attempt state machine;
+- Type-A word, Type-B multiple-choice-cloze, and Type-C typed-cloze online questions with an explicit attempt state machine and raw typed-answer privacy;
 - transactionally authoritative answer handling: revision validation, submission idempotency, server correctness, energy, attempt fact, score event, and outbox;
 - synchronous response plus asynchronous progress/profile/ranking projection;
 - Flutter generated client, repository, Drift cache, typed errors, and result rendering;
@@ -62,7 +62,7 @@ A registered staging user signs in, enrolls, answers a real question against the
 
 ## Phase 2 — Student learning product
 
-Status: in progress; Type A and Type B run locally, while Type C, Type D, and the remaining student product are open.
+Status: in progress; Type A, Type B, and Type C run locally, while Type D and the remaining student product are open.
 
 Deliverables:
 
