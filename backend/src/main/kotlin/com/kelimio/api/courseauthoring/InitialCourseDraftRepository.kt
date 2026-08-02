@@ -311,6 +311,19 @@ internal class InitialCourseDraftRepository(
                         )
                         dsl.execute(
                             """
+                            insert into test_revision_source_change_set(
+                                test_revision_id, test_id, course_id,
+                                content_change_set_id, created_at
+                            ) values (?, ?, ?, ?, cast(? as timestamptz))
+                            """.trimIndent(),
+                            test.revisionId,
+                            test.id,
+                            graph.courseId,
+                            graph.changeSetId,
+                            command.committedAt,
+                        )
+                        dsl.execute(
+                            """
                             insert into course_release_test_revision(
                                 course_release_id, test_revision_id, test_id, course_id, position
                             ) values (?, ?, ?, ?, ?)
@@ -434,6 +447,19 @@ internal class InitialCourseDraftRepository(
                     representative.matchingGroup,
                     representative.hidden,
                     representative.note,
+                    command.committedAt,
+                )
+                dsl.execute(
+                    """
+                    insert into question_revision_source_change_set(
+                        question_revision_id, question_id, course_id,
+                        content_change_set_id, created_at
+                    ) values (?, ?, ?, ?, cast(? as timestamptz))
+                    """.trimIndent(),
+                    question.revisionId,
+                    question.id,
+                    graph.courseId,
+                    graph.changeSetId,
                     command.committedAt,
                 )
                 if (matching) {

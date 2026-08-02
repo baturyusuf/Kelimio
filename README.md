@@ -160,7 +160,7 @@ Type-C replay/reconciliation, Type-D matching replay/reconciliation, projection,
 the native **Teacher** workbook selector, checksum-bound multipart upload,
 malware scan, paged preview, three explicit approval/draft/publication gates,
 initial release activation, catalog return, and sign-out. The guarded run boots
-a fresh Flyway V12 stack with a per-run
+a fresh Flyway V13 stack with a per-run
 random 32-byte matching-replay key, passes 8/8 with 480/480 projected score at
 projection version 9, rejects a changed matching edge without mutation, purges
 private state, and verifies isolated cleanup. Random credentials and the replay

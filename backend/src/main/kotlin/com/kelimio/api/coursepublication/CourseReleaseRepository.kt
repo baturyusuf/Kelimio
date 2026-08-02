@@ -88,12 +88,64 @@ class CourseReleaseRepository(
         courseId,
     )!!.get("count", Long::class.java)!!.toInt()
 
-    fun activateContainedRevisions(releaseId: UUID) {
+    fun prepareReleaseTransition(previousReleaseId: UUID?, targetReleaseId: UUID) {
+        previousReleaseId?.let { previous ->
+            check(
+                dsl.execute(
+                    "update course_release set status = 'RETIRED' where id = ? and status = 'ACTIVE'",
+                    previous,
+                ) == 1,
+            ) { "The previous active release changed during activation" }
+            dsl.execute(
+                """
+                update test_revision previous_revision
+                   set status = 'RETIRED'
+                 where previous_revision.status = 'ACTIVE'
+                   and previous_revision.id in (
+                        select release_test.test_revision_id
+                          from course_release_test_revision release_test
+                         where release_test.course_release_id = ?
+                   )
+                   and not exists (
+                        select 1
+                          from course_release_test_revision target_test
+                         where target_test.course_release_id = ?
+                           and target_test.test_revision_id = previous_revision.id
+                   )
+                """.trimIndent(),
+                previous,
+                targetReleaseId,
+            )
+            dsl.execute(
+                """
+                update question_revision previous_revision
+                   set status = 'RETIRED'
+                 where previous_revision.status = 'ACTIVE'
+                   and previous_revision.id in (
+                        select test_question.question_revision_id
+                          from course_release_test_revision release_test
+                          join test_revision_question test_question
+                            on test_question.test_revision_id = release_test.test_revision_id
+                         where release_test.course_release_id = ?
+                   )
+                   and not exists (
+                        select 1
+                          from course_release_test_revision target_test
+                          join test_revision_question target_question
+                            on target_question.test_revision_id = target_test.test_revision_id
+                         where target_test.course_release_id = ?
+                           and target_question.question_revision_id = previous_revision.id
+                   )
+                """.trimIndent(),
+                previous,
+                targetReleaseId,
+            )
+        }
         dsl.execute(
             """
             update question_revision revision
                set status = 'ACTIVE'
-             where revision.status = 'DRAFT'
+             where revision.status in ('DRAFT', 'RETIRED')
                and revision.id in (
                     select test_question.question_revision_id
                       from course_release_test_revision release_test
@@ -102,20 +154,20 @@ class CourseReleaseRepository(
                      where release_test.course_release_id = ?
                )
             """.trimIndent(),
-            releaseId,
+            targetReleaseId,
         )
         dsl.execute(
             """
             update test_revision revision
                set status = 'ACTIVE'
-             where revision.status = 'DRAFT'
+             where revision.status in ('DRAFT', 'RETIRED')
                and revision.id in (
                     select release_test.test_revision_id
                       from course_release_test_revision release_test
                      where release_test.course_release_id = ?
                )
             """.trimIndent(),
-            releaseId,
+            targetReleaseId,
         )
     }
 
@@ -124,14 +176,6 @@ class CourseReleaseRepository(
         targetReleaseId: UUID,
         now: OffsetDateTime,
     ): String {
-        course.activeReleaseId?.let { previous ->
-            check(
-                dsl.execute(
-                    "update course_release set status = 'RETIRED' where id = ? and status = 'ACTIVE'",
-                    previous,
-                ) == 1,
-            ) { "The previous active release changed during activation" }
-        }
         check(
             dsl.execute(
                 "update course_release set status = 'ACTIVE' where id = ? and status in ('DRAFT', 'RETIRED')",

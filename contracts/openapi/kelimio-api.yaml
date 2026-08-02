@@ -29,7 +29,7 @@ tags:
   - name: Course Release
     description: Owner-scoped impact review, publication, and rollback of immutable course releases.
   - name: Development
-    description: Explicit local-only utilities that are unavailable outside the local environment.
+    description: Explicit local/test utilities that are unavailable outside enabled non-production environments.
 security:
   - bearerAuth: []
 paths:
@@ -781,6 +781,55 @@ paths:
         "401":
           $ref: "#/components/responses/Problem"
         "404":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/development/courses/{courseId}/revisions:
+    post:
+      operationId: createLocalCourseRevision
+      tags: [Development]
+      summary: Create one subsequent immutable course release for local verification
+      description: >-
+        Available only in explicitly enabled local/test environments. The owner
+        creates one real MOBILE_AUTHORING change set from the exact active release,
+        revises one eligible typed-cloze prompt without returning authored text or
+        answer material, and receives an unpublished immutable release. Publication
+        and rollback still require the separate impact-bound release operations.
+      parameters:
+        - $ref: "#/components/parameters/CourseId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateLocalCourseRevisionRequest"
+      responses:
+        "201":
+          description: Subsequent authored release created
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubsequentCourseDraftResult"
+        "200":
+          description: Existing authored release returned for an idempotent retry
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubsequentCourseDraftResult"
+        "400":
+          $ref: "#/components/responses/Problem"
+        "401":
+          $ref: "#/components/responses/Problem"
+        "404":
+          $ref: "#/components/responses/Problem"
+        "409":
           $ref: "#/components/responses/Problem"
         default:
           $ref: "#/components/responses/Problem"
@@ -2494,6 +2543,59 @@ components:
         sourceWorkbookSha256:
           type: string
           pattern: "^[0-9a-f]{64}$"
+    CreateLocalCourseRevisionRequest:
+      type: object
+      additionalProperties: false
+      required: [baseReleaseId]
+      properties:
+        baseReleaseId:
+          $ref: "#/components/schemas/Id"
+    SubsequentCourseDraftResult:
+      type: object
+      additionalProperties: false
+      required:
+        - courseId
+        - baseReleaseId
+        - contentChangeSetId
+        - draftReleaseId
+        - releaseRevision
+        - changedQuestionId
+        - previousQuestionRevisionId
+        - questionRevisionId
+        - changedTestId
+        - previousTestRevisionId
+        - testRevisionId
+        - createdAt
+        - created
+      properties:
+        courseId:
+          $ref: "#/components/schemas/Id"
+        baseReleaseId:
+          $ref: "#/components/schemas/Id"
+        contentChangeSetId:
+          $ref: "#/components/schemas/Id"
+        draftReleaseId:
+          $ref: "#/components/schemas/Id"
+        releaseRevision:
+          type: integer
+          minimum: 2
+        changedQuestionId:
+          $ref: "#/components/schemas/Id"
+        previousQuestionRevisionId:
+          $ref: "#/components/schemas/Id"
+        questionRevisionId:
+          $ref: "#/components/schemas/Id"
+        changedTestId:
+          $ref: "#/components/schemas/Id"
+        previousTestRevisionId:
+          $ref: "#/components/schemas/Id"
+        testRevisionId:
+          $ref: "#/components/schemas/Id"
+        createdAt:
+          type: string
+          format: date-time
+        created:
+          type: boolean
     Problem:
       type: object
       additionalProperties: true

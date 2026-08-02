@@ -15,15 +15,27 @@
 
 import * as runtime from '../runtime';
 import type {
+  CreateLocalCourseRevisionRequest,
   LocalStarterCourseResponse,
   Problem,
+  SubsequentCourseDraftResult,
 } from '../models/index';
 import {
+    CreateLocalCourseRevisionRequestFromJSON,
+    CreateLocalCourseRevisionRequestToJSON,
     LocalStarterCourseResponseFromJSON,
     LocalStarterCourseResponseToJSON,
     ProblemFromJSON,
     ProblemToJSON,
+    SubsequentCourseDraftResultFromJSON,
+    SubsequentCourseDraftResultToJSON,
 } from '../models/index';
+
+export interface CreateLocalCourseRevisionOperationRequest {
+    courseId: string;
+    idempotencyKey: string;
+    createLocalCourseRevisionRequest: CreateLocalCourseRevisionRequest;
+}
 
 export interface InstallLocalStarterCourseRequest {
     idempotencyKey: string;
@@ -36,6 +48,24 @@ export interface InstallLocalStarterCourseRequest {
  * @interface DevelopmentApiInterface
  */
 export interface DevelopmentApiInterface {
+    /**
+     * Available only in explicitly enabled local/test environments. The owner creates one real MOBILE_AUTHORING change set from the exact active release, revises one eligible typed-cloze prompt without returning authored text or answer material, and receives an unpublished immutable release. Publication and rollback still require the separate impact-bound release operations.
+     * @summary Create one subsequent immutable course release for local verification
+     * @param {string} courseId
+     * @param {string} idempotencyKey Stable UUID generated once for the logical command.
+     * @param {CreateLocalCourseRevisionRequest} createLocalCourseRevisionRequest
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof DevelopmentApiInterface
+     */
+    createLocalCourseRevisionRaw(requestParameters: CreateLocalCourseRevisionOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<SubsequentCourseDraftResult>>;
+
+    /**
+     * Available only in explicitly enabled local/test environments. The owner creates one real MOBILE_AUTHORING change set from the exact active release, revises one eligible typed-cloze prompt without returning authored text or answer material, and receives an unpublished immutable release. Publication and rollback still require the separate impact-bound release operations.
+     * Create one subsequent immutable course release for local verification
+     */
+    createLocalCourseRevision(requestParameters: CreateLocalCourseRevisionOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<SubsequentCourseDraftResult>;
+
     /**
      * Available only when the backend is explicitly running in the local environment with starter-course installation enabled. It creates one immutable Type-A/Type-B/Type-C English-support release derived from the reviewed workbook subset and never creates users or learning results.
      * @summary Install the authenticated owner\'s local starter course idempotently
@@ -58,6 +88,74 @@ export interface DevelopmentApiInterface {
  *
  */
 export class DevelopmentApi extends runtime.BaseAPI implements DevelopmentApiInterface {
+
+    /**
+     * Available only in explicitly enabled local/test environments. The owner creates one real MOBILE_AUTHORING change set from the exact active release, revises one eligible typed-cloze prompt without returning authored text or answer material, and receives an unpublished immutable release. Publication and rollback still require the separate impact-bound release operations.
+     * Create one subsequent immutable course release for local verification
+     */
+    async createLocalCourseRevisionRaw(requestParameters: CreateLocalCourseRevisionOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<SubsequentCourseDraftResult>> {
+        if (requestParameters['courseId'] == null) {
+            throw new runtime.RequiredError(
+                'courseId',
+                'Required parameter "courseId" was null or undefined when calling createLocalCourseRevision().'
+            );
+        }
+
+        if (requestParameters['idempotencyKey'] == null) {
+            throw new runtime.RequiredError(
+                'idempotencyKey',
+                'Required parameter "idempotencyKey" was null or undefined when calling createLocalCourseRevision().'
+            );
+        }
+
+        if (requestParameters['createLocalCourseRevisionRequest'] == null) {
+            throw new runtime.RequiredError(
+                'createLocalCourseRevisionRequest',
+                'Required parameter "createLocalCourseRevisionRequest" was null or undefined when calling createLocalCourseRevision().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (requestParameters['idempotencyKey'] != null) {
+            headerParameters['Idempotency-Key'] = String(requestParameters['idempotencyKey']);
+        }
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("bearerAuth", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/v1/development/courses/{courseId}/revisions`;
+        urlPath = urlPath.replace(`{${"courseId"}}`, encodeURIComponent(String(requestParameters['courseId'])));
+
+        const response = await this.request({
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: CreateLocalCourseRevisionRequestToJSON(requestParameters['createLocalCourseRevisionRequest']),
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => SubsequentCourseDraftResultFromJSON(jsonValue));
+    }
+
+    /**
+     * Available only in explicitly enabled local/test environments. The owner creates one real MOBILE_AUTHORING change set from the exact active release, revises one eligible typed-cloze prompt without returning authored text or answer material, and receives an unpublished immutable release. Publication and rollback still require the separate impact-bound release operations.
+     * Create one subsequent immutable course release for local verification
+     */
+    async createLocalCourseRevision(requestParameters: CreateLocalCourseRevisionOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<SubsequentCourseDraftResult> {
+        const response = await this.createLocalCourseRevisionRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
 
     /**
      * Available only when the backend is explicitly running in the local environment with starter-course installation enabled. It creates one immutable Type-A/Type-B/Type-C English-support release derived from the reviewed workbook subset and never creates users or learning results.

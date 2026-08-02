@@ -79,6 +79,7 @@ Class | Method | HTTP request | Description
 [*CourseImportApi*](doc/CourseImportApi.md) | [**listCourseImports**](doc/CourseImportApi.md#listcourseimports) | **GET** /v1/courses/imports | Page through the current user&#39;s import sessions
 [*CourseReleaseApi*](doc/CourseReleaseApi.md) | [**activateCourseRelease**](doc/CourseReleaseApi.md#activatecourserelease) | **POST** /v1/courses/{courseId}/releases/{releaseId}/activate | Publish or roll back to an exact reviewed immutable release
 [*CourseReleaseApi*](doc/CourseReleaseApi.md) | [**getCourseReleaseImpact**](doc/CourseReleaseApi.md#getcoursereleaseimpact) | **GET** /v1/courses/{courseId}/releases/{releaseId}/impact | Review the exact owner-scoped impact of activating an immutable release
+[*DevelopmentApi*](doc/DevelopmentApi.md) | [**createLocalCourseRevision**](doc/DevelopmentApi.md#createlocalcourserevision) | **POST** /v1/development/courses/{courseId}/revisions | Create one subsequent immutable course release for local verification
 [*DevelopmentApi*](doc/DevelopmentApi.md) | [**installLocalStarterCourse**](doc/DevelopmentApi.md#installlocalstartercourse) | **POST** /v1/development/starter-course | Install the authenticated owner&#39;s local starter course idempotently
 [*EnergyApi*](doc/EnergyApi.md) | [**getEnergy**](doc/EnergyApi.md#getenergy) | **GET** /v1/energy | Return the lazily regenerated free-course energy account
 [*EnrollmentApi*](doc/EnrollmentApi.md) | [**enrollInCourse**](doc/EnrollmentApi.md#enrollincourse) | **POST** /v1/courses/{courseId}/enrollments | Enroll the authenticated user in a free public course
@@ -130,6 +131,7 @@ Class | Method | HTTP request | Description
  - [CourseSummary](doc/CourseSummary.md)
  - [CreateCourseImportRequest](doc/CreateCourseImportRequest.md)
  - [CreateEnrollmentRequest](doc/CreateEnrollmentRequest.md)
+ - [CreateLocalCourseRevisionRequest](doc/CreateLocalCourseRevisionRequest.md)
  - [EnergyResponse](doc/EnergyResponse.md)
  - [EnrollmentResponse](doc/EnrollmentResponse.md)
  - [FinishAttemptResponse](doc/FinishAttemptResponse.md)
@@ -141,6 +143,7 @@ Class | Method | HTTP request | Description
  - [ProfileSetupRequest](doc/ProfileSetupRequest.md)
  - [QuestionPayload](doc/QuestionPayload.md)
  - [SubmitAnswerRequest](doc/SubmitAnswerRequest.md)
+ - [SubsequentCourseDraftResult](doc/SubsequentCourseDraftResult.md)
  - [TestSummary](doc/TestSummary.md)
 
 

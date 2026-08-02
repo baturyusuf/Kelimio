@@ -63,7 +63,10 @@ class CourseReleaseService(
             throw ConflictProblem("The release impact changed after review.")
         }
 
-        repository.activateContainedRevisions(releaseId)
+        repository.prepareReleaseTransition(
+            previousReleaseId = lockedState.course.activeReleaseId,
+            targetReleaseId = releaseId,
+        )
         val now = OffsetDateTime.ofInstant(clock.instant(), ZoneOffset.UTC)
         val publicationStatus = repository.switchActiveRelease(
             course = lockedState.course,

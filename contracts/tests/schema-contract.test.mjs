@@ -1312,6 +1312,61 @@ assert.equal(
   `release activation must satisfy its closed schema: ${ajv.errorsText(validateReleaseActivation.errors)}`,
 );
 
+const localRevisionOperation = contract.paths[
+  "/v1/development/courses/{courseId}/revisions"
+].post;
+assert.equal(
+  localRevisionOperation.responses["201"].headers["Cache-Control"].$ref,
+  "#/components/headers/NoStore",
+  "local authoring identifiers must remain non-cacheable",
+);
+assert.ok(
+  localRevisionOperation.parameters.some(
+    (parameter) => parameter.$ref === "#/components/parameters/IdempotencyKey",
+  ),
+  "local authoring must remain an idempotent command",
+);
+const validateLocalRevisionRequest = compileSchema("CreateLocalCourseRevisionRequest");
+assert.equal(
+  validateLocalRevisionRequest({ baseReleaseId: committedImport.draftReleaseId }),
+  true,
+  "local authoring must bind the exact active base release",
+);
+assert.equal(
+  validateLocalRevisionRequest({
+    baseReleaseId: committedImport.draftReleaseId,
+    correctAnswer: "client-asserted-secret",
+  }),
+  false,
+  "the local proof endpoint must reject client-supplied authored answer material",
+);
+const validateSubsequentDraft = compileSchema("SubsequentCourseDraftResult");
+const validSubsequentDraft = {
+  courseId: committedImport.courseId,
+  baseReleaseId: committedImport.draftReleaseId,
+  contentChangeSetId: "00000000-0000-4000-8000-000000000995",
+  draftReleaseId: "00000000-0000-4000-8000-000000000996",
+  releaseRevision: 2,
+  changedQuestionId: "00000000-0000-4000-8000-000000000997",
+  previousQuestionRevisionId: "00000000-0000-4000-8000-000000000998",
+  questionRevisionId: "00000000-0000-4000-8000-000000000999",
+  changedTestId: "00000000-0000-4000-8000-000000000990",
+  previousTestRevisionId: "00000000-0000-4000-8000-000000000991",
+  testRevisionId: "00000000-0000-4000-8000-000000000992",
+  createdAt: "2026-08-02T08:07:00Z",
+  created: true,
+};
+assert.equal(
+  validateSubsequentDraft(validSubsequentDraft),
+  true,
+  `subsequent draft must satisfy its closed schema: ${ajv.errorsText(validateSubsequentDraft.errors)}`,
+);
+assert.equal(
+  validateSubsequentDraft({ ...validSubsequentDraft, prompt: "authored-content" }),
+  false,
+  "subsequent draft responses must not expose authored content",
+);
+
 const validateCourseProgress = compileSchema("CourseProgressResponse");
 const validCourseProgress = {
   courseId: committedImport.courseId,

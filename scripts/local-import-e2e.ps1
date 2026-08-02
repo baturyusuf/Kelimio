@@ -499,7 +499,7 @@ function Invoke-DatabaseScalar {
 function Assert-LocalInfrastructure {
     $flyway = Invoke-DatabaseScalar `
         "select version from flyway_schema_history where success and version is not null order by installed_rank desc limit 1"
-    if ($flyway -ne "12") { throw "The isolated database did not reach Flyway V12." }
+    if ($flyway -ne "13") { throw "The isolated database did not reach Flyway V13." }
     foreach ($bucket in @("kelimio-local-import-quarantine", "kelimio-local-import-archive")) {
         $status = Invoke-DockerCapture (Get-ComposeArguments @(
             "exec", "-T", "localstack", "awslocal", "s3api", "get-bucket-versioning",

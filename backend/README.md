@@ -114,8 +114,9 @@ domain, and persistence diagnostics
 redact mapping evidence and key metadata.
 
 This local runtime does not authorize production workbook matching conversion.
-That path remains fail-closed until group allocation semantics and a stored
-minimum-client/capability gate are implemented and verified.
+Local/test `xlsx-v2` performs deterministic group allocation and stores the exact
+minimum client capability; the same path remains fail-closed for production until
+least-privilege staging and production evidence is approved.
 
 ## Secure Excel intake and unpublished draft commit
 
@@ -134,16 +135,20 @@ content fails closed.
 Status, preview, issue, and approval responses are owner-scoped and `no-store`;
 opaque page cursors are HMAC-bound to the owner, import, immutable preview, and
 scope. Approval appends one exact provenance/digest binding and still has no
-course side effect. Flyway V10 adds a separate idempotent commit that consumes
-only a versioned `import-content-v1` preview and creates exactly one `DRAFT`
+course side effect. Flyway V10 adds a separate idempotent commit, while V11
+requires the versioned `import-content-v2` preview and creates exactly one `DRAFT`
 course, committed initial change set, and immutable `DRAFT` release hierarchy.
 It preserves every row, hierarchy position, translation, authored distractor,
-and matching-group source value, while creating no active release, runtime
-options, enrollment, entitlement, or publication. Staging and production
-imports fail startup until the outstanding author-eligibility, consent,
-separate least-privilege database/runtime identities, retention/Object
-Lock/KMS, Type-D conversion/capability, publication, and operational gates are
-implemented and approved.
+matching composition/source value, exact runtime options, and stored release
+capabilities, while creating no active release, enrollment, entitlement, or
+publication. Flyway V12 adds impact-bound activation/rollback facts and paged
+release-aware reprojection. Flyway V13 adds generic append-only revision-source
+bindings plus an owner-scoped local/test subsequent-draft producer; a real-
+PostgreSQL test publishes and rolls back changed content while preserving
+lifetime score. Staging and production authoring fail startup until the
+outstanding author-eligibility, consent, separate least-privilege
+database/runtime identities, retention/Object Lock/KMS, production editor,
+conflict handling, and operational gates are implemented and approved.
 
 Run the focused evidence with:
 
@@ -160,8 +165,8 @@ acceptance journey with:
 
 It verifies valid approval and idempotent draft commit, clean-invalid
 validation, EICAR rejection, cross-owner denial, queue drain, immutable
-hierarchy/evidence, and zero active/public/enrollment side effects without using
-AWS or Google Play accounts.
+hierarchy/evidence, impact-bound initial activation, and reprojection completion
+without using AWS or Google Play accounts.
 
 ## Verification
 
@@ -169,14 +174,16 @@ AWS or Google Play accounts.
 .\gradlew.bat clean build
 ```
 
-The current backend checks include V7 content/language and V8 matching migration
-evidence; V10 empty-database and retained upgrade rehearsal; import intake,
-approval, idempotent draft commit, lease, retry, transition, ownership,
-artifact, hierarchy, and security invariants;
+The current backend checks include V7 content/language, V8 matching, and V9-V13
+import/commit/composition/release/subsequent-authoring migration evidence; empty-
+database and retained upgrade rehearsal; import intake, approval, idempotent
+draft commit, lease, retry, transition, ownership, artifact, hierarchy, and
+security invariants;
 HMAC key-ring and fail-closed configuration tests; matching privacy/order/replay
 tests; real-PostgreSQL authoritative answer flows; support-language pinning; and
-local starter v4 multi-user installation. The complete unskipped backend run passes
-34 suites and 167/167 tests.
+local starter v4 multi-user installation; and non-empty later-publication and
+rollback reprojection. The complete unskipped backend run passes 38 suites and
+180/180 tests.
 
 The vertical-slice integration test uses Testcontainers and a real PostgreSQL
 image. It is explicitly skipped when Docker is unavailable; a green build with

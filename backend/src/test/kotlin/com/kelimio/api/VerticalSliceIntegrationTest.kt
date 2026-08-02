@@ -8,6 +8,7 @@ import com.kelimio.api.importpipeline.intake.CourseImportWorkerRepository
 import com.kelimio.api.importpipeline.intake.ImportQueueCommand
 import com.kelimio.api.outbox.RecordedOutboxEvent
 import com.kelimio.api.outbox.TransactionalOutbox
+import com.kelimio.api.coursepublication.CourseReleaseReprojectionProcessor
 import com.kelimio.api.progress.LearningProgressProjectionWorker
 import com.kelimio.api.web.AnswerSubmissionBodyLimitFilter
 import org.assertj.core.api.Assertions.assertThat
@@ -57,6 +58,9 @@ class VerticalSliceIntegrationTest {
 
     @Autowired
     private lateinit var projectionWorker: LearningProgressProjectionWorker
+
+    @Autowired
+    private lateinit var releaseReprojectionProcessor: CourseReleaseReprojectionProcessor
 
     @Autowired
     private lateinit var outbox: TransactionalOutbox
@@ -529,6 +533,265 @@ class VerticalSliceIntegrationTest {
                 courseId,
             ),
         ).isEqualTo(1)
+    }
+
+    @Test
+    fun `subsequent authored release publishes and rolls back non-empty mastery without rewriting lifetime score`() {
+        val fixture = createSourcedAuthoringFixture()
+        val ownerJwt = jwt().jwt {
+            it.subject(fixture.ownerSubject)
+                .claim("email", "authoring-owner@integration.invalid")
+                .claim("email_verified", true)
+                .audience(listOf("kelimio-mobile"))
+        }
+        val learnerJwt = jwt().jwt {
+            it.subject("authoring-learner-${fixture.courseId}")
+                .claim("email", "authoring-learner@integration.invalid")
+                .claim("email_verified", true)
+                .audience(listOf("kelimio-mobile"))
+        }
+        mockMvc.get("/v1/me") { with(learnerJwt) }.andExpect { status { isOk() } }
+        completeProfileSetup(learnerJwt, displayName = "Authoring Learner")
+        mockMvc.post("/v1/courses/${fixture.courseId}/enrollments") {
+            with(learnerJwt)
+            header("Idempotency-Key", UUID.randomUUID().toString())
+            contentType = MediaType.APPLICATION_JSON
+            content = """{"supportLanguage":"en"}"""
+        }.andExpect { status { isCreated() } }
+
+        val startBody = mockMvc.post("/v1/tests/${fixture.testId}/attempts") {
+            with(learnerJwt)
+            header("Idempotency-Key", UUID.randomUUID().toString())
+        }.andExpect {
+            status { isCreated() }
+            jsonPath("$.questions[0].type") { value("TYPED_CLOZE") }
+            jsonPath("$.questions[0].questionRevisionId") { value(fixture.questionRevisionId.toString()) }
+        }.andReturn().response.contentAsString
+        val attemptId = UUID.fromString(objectMapper.readTree(startBody)["id"].asText())
+        val submissionId = UUID.randomUUID()
+        mockMvc.post("/v1/attempts/$attemptId/answers") {
+            with(learnerJwt)
+            header("Idempotency-Key", submissionId.toString())
+            contentType = MediaType.APPLICATION_JSON
+            content = objectMapper.writeValueAsString(
+                mapOf(
+                    "submissionId" to submissionId,
+                    "questionRevisionId" to fixture.questionRevisionId,
+                    "typedAnswer" to "yazarim",
+                ),
+            )
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$.correct") { value(true) }
+            jsonPath("$.activeScoreDelta") { value(60) }
+            jsonPath("$.lifetimeScoreDelta") { value(60) }
+        }
+        while (projectionWorker.processAvailable() > 0) {
+            // Drain the append-only answer projection before changing releases.
+        }
+        mockMvc.get("/v1/courses/${fixture.courseId}/progress") { with(learnerJwt) }
+            .andExpect {
+                status { isOk() }
+                jsonPath("$.courseReleaseId") { value(fixture.baseReleaseId.toString()) }
+                jsonPath("$.activeScore") { value(60) }
+                jsonPath("$.lifetimeScore") { value(60) }
+                jsonPath("$.updating") { value(false) }
+            }
+
+        val authoringKey = UUID.randomUUID()
+        val draftBody = mockMvc.post("/v1/development/courses/${fixture.courseId}/revisions") {
+            with(ownerJwt)
+            header("Idempotency-Key", authoringKey.toString())
+            contentType = MediaType.APPLICATION_JSON
+            content = """{"baseReleaseId":"${fixture.baseReleaseId}"}"""
+        }.andExpect {
+            status { isCreated() }
+            header { string("Cache-Control", "no-store") }
+            jsonPath("$.baseReleaseId") { value(fixture.baseReleaseId.toString()) }
+            jsonPath("$.releaseRevision") { value(2) }
+            jsonPath("$.previousQuestionRevisionId") { value(fixture.questionRevisionId.toString()) }
+            jsonPath("$.created") { value(true) }
+            jsonPath("$.prompt") { doesNotExist() }
+        }.andReturn().response.contentAsString
+        val draft = objectMapper.readTree(draftBody)
+        val draftReleaseId = UUID.fromString(draft["draftReleaseId"].asText())
+        val newQuestionRevisionId = UUID.fromString(draft["questionRevisionId"].asText())
+        val contentChangeSetId = UUID.fromString(draft["contentChangeSetId"].asText())
+
+        mockMvc.post("/v1/development/courses/${fixture.courseId}/revisions") {
+            with(ownerJwt)
+            header("Idempotency-Key", authoringKey.toString())
+            contentType = MediaType.APPLICATION_JSON
+            content = """{"baseReleaseId":"${fixture.baseReleaseId}"}"""
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$.draftReleaseId") { value(draftReleaseId.toString()) }
+            jsonPath("$.created") { value(false) }
+        }
+        mockMvc.post("/v1/development/courses/${fixture.courseId}/revisions") {
+            with(ownerJwt)
+            header("Idempotency-Key", UUID.randomUUID().toString())
+            contentType = MediaType.APPLICATION_JSON
+            content = """{"baseReleaseId":"${fixture.baseReleaseId}"}"""
+        }.andExpect { status { isConflict() } }
+
+        val publicationImpactBody = mockMvc.get(
+            "/v1/courses/${fixture.courseId}/releases/$draftReleaseId/impact",
+        ) {
+            with(ownerJwt)
+        }.andExpect {
+            status { isOk() }
+            header { string("Cache-Control", "no-store") }
+            jsonPath("$.operation") { value("PUBLICATION") }
+            jsonPath("$.expectedActiveReleaseId") { value(fixture.baseReleaseId.toString()) }
+            jsonPath("$.sourceChangeSetId") { value(contentChangeSetId.toString()) }
+            jsonPath("$.targetQuestionCount") { value(1) }
+            jsonPath("$.changedQuestionCount") { value(1) }
+            jsonPath("$.unchangedQuestionCount") { value(0) }
+            jsonPath("$.affectedEnrollmentCount") { value(1) }
+        }.andReturn().response.contentAsString
+        val publicationImpact = objectMapper.readTree(publicationImpactBody)
+        val publicationActivationBody = mockMvc.post(
+            "/v1/courses/${fixture.courseId}/releases/$draftReleaseId/activate",
+        ) {
+            with(ownerJwt)
+            header("Idempotency-Key", UUID.randomUUID().toString())
+            contentType = MediaType.APPLICATION_JSON
+            content = objectMapper.writeValueAsString(
+                mapOf(
+                    "expectedActiveReleaseId" to fixture.baseReleaseId,
+                    "impactBindingSha256" to publicationImpact["impactBindingSha256"].asText(),
+                ),
+            )
+        }.andExpect {
+            status { isCreated() }
+            jsonPath("$.operation") { value("PUBLICATION") }
+            jsonPath("$.previousReleaseId") { value(fixture.baseReleaseId.toString()) }
+            jsonPath("$.reprojectionStatus") { value("PENDING") }
+        }.andReturn().response.contentAsString
+        val publicationActivationId = UUID.fromString(
+            objectMapper.readTree(publicationActivationBody)["activationId"].asText(),
+        )
+        releaseReprojectionProcessor.process(publicationActivationId, pageSize = 1)
+        releaseReprojectionProcessor.process(publicationActivationId, pageSize = 1)
+
+        mockMvc.get("/v1/courses/${fixture.courseId}/progress") { with(learnerJwt) }
+            .andExpect {
+                status { isOk() }
+                jsonPath("$.courseReleaseId") { value(draftReleaseId.toString()) }
+                jsonPath("$.activeScore") { value(0) }
+                jsonPath("$.lifetimeScore") { value(60) }
+                jsonPath("$.updating") { value(false) }
+            }
+
+        val rollbackImpactBody = mockMvc.get(
+            "/v1/courses/${fixture.courseId}/releases/${fixture.baseReleaseId}/impact",
+        ) {
+            with(ownerJwt)
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$.operation") { value("ROLLBACK") }
+            jsonPath("$.expectedActiveReleaseId") { value(draftReleaseId.toString()) }
+            jsonPath("$.changedQuestionCount") { value(1) }
+            jsonPath("$.affectedEnrollmentCount") { value(1) }
+        }.andReturn().response.contentAsString
+        val rollbackImpact = objectMapper.readTree(rollbackImpactBody)
+        val rollbackActivationBody = mockMvc.post(
+            "/v1/courses/${fixture.courseId}/releases/${fixture.baseReleaseId}/activate",
+        ) {
+            with(ownerJwt)
+            header("Idempotency-Key", UUID.randomUUID().toString())
+            contentType = MediaType.APPLICATION_JSON
+            content = objectMapper.writeValueAsString(
+                mapOf(
+                    "expectedActiveReleaseId" to draftReleaseId,
+                    "impactBindingSha256" to rollbackImpact["impactBindingSha256"].asText(),
+                ),
+            )
+        }.andExpect {
+            status { isCreated() }
+            jsonPath("$.operation") { value("ROLLBACK") }
+            jsonPath("$.releaseId") { value(fixture.baseReleaseId.toString()) }
+            jsonPath("$.previousReleaseId") { value(draftReleaseId.toString()) }
+        }.andReturn().response.contentAsString
+        val rollbackActivationId = UUID.fromString(
+            objectMapper.readTree(rollbackActivationBody)["activationId"].asText(),
+        )
+        releaseReprojectionProcessor.process(rollbackActivationId, pageSize = 1)
+        releaseReprojectionProcessor.process(rollbackActivationId, pageSize = 1)
+
+        mockMvc.get("/v1/courses/${fixture.courseId}/progress") { with(learnerJwt) }
+            .andExpect {
+                status { isOk() }
+                jsonPath("$.courseReleaseId") { value(fixture.baseReleaseId.toString()) }
+                jsonPath("$.activeScore") { value(60) }
+                jsonPath("$.lifetimeScore") { value(60) }
+                jsonPath("$.updating") { value(false) }
+            }
+
+        assertThat(
+            jdbcTemplate.queryForObject(
+                "select status from question_revision where id = ?",
+                String::class.java,
+                fixture.questionRevisionId,
+            ),
+        ).isEqualTo("ACTIVE")
+        assertThat(
+            jdbcTemplate.queryForObject(
+                "select status from question_revision where id = ?",
+                String::class.java,
+                newQuestionRevisionId,
+            ),
+        ).isEqualTo("RETIRED")
+        assertThat(
+            jdbcTemplate.queryForObject(
+                "select count(*) from course_authoring_commit where draft_release_id = ?",
+                Int::class.java,
+                draftReleaseId,
+            ),
+        ).isEqualTo(1)
+        assertThat(
+            jdbcTemplate.queryForObject(
+                "select source_type from content_change_set where id = ?",
+                String::class.java,
+                contentChangeSetId,
+            ),
+        ).isEqualTo("MOBILE_AUTHORING")
+        val authoringOutbox = jdbcTemplate.queryForObject(
+            "select payload::text from outbox_event where aggregate_id = ? and event_type = 'content.release-draft-created.v1'",
+            String::class.java,
+            fixture.courseId,
+        )!!
+        assertThat(authoringOutbox)
+            .doesNotContain("Ben her gun")
+            .doesNotContain("yazarim")
+            .doesNotContain("I write")
+        assertThat(
+            jdbcTemplate.queryForObject(
+                "select count(*) from course_release_activation where course_id = ? and operation_kind = 'PUBLICATION'",
+                Int::class.java,
+                fixture.courseId,
+            ),
+        ).isEqualTo(1)
+        assertThat(
+            jdbcTemplate.queryForObject(
+                "select count(*) from course_release_activation where course_id = ? and operation_kind = 'ROLLBACK'",
+                Int::class.java,
+                fixture.courseId,
+            ),
+        ).isEqualTo(1)
+
+        mockMvc.post("/v1/development/courses/${fixture.courseId}/revisions") {
+            with(ownerJwt)
+            header("Idempotency-Key", UUID.randomUUID().toString())
+            contentType = MediaType.APPLICATION_JSON
+            content = """{"baseReleaseId":"${fixture.baseReleaseId}"}"""
+        }.andExpect {
+            status { isCreated() }
+            jsonPath("$.baseReleaseId") { value(fixture.baseReleaseId.toString()) }
+            jsonPath("$.releaseRevision") { value(3) }
+            jsonPath("$.previousQuestionRevisionId") { value(fixture.questionRevisionId.toString()) }
+        }
     }
 
     @Test
@@ -1562,6 +1825,344 @@ class VerticalSliceIntegrationTest {
         assertThat(count("answer_submission", "submission_id", missingKeySubmissionId)).isEqualTo(1)
     }
 
+    private fun createSourcedAuthoringFixture(): AuthoringFixture {
+        val fixture = AuthoringFixture(
+            courseId = UUID.randomUUID(),
+            ownerSubject = "authoring-owner-${UUID.randomUUID()}",
+            baseReleaseId = UUID.randomUUID(),
+            testId = UUID.randomUUID(),
+            testRevisionId = UUID.randomUUID(),
+            questionId = UUID.randomUUID(),
+            questionRevisionId = UUID.randomUUID(),
+        )
+        transactionTemplate.executeWithoutResult {
+            val now = OffsetDateTime.now(ZoneOffset.UTC)
+            val ownerId = UUID.randomUUID()
+            val changeSetId = UUID.randomUUID()
+            val levelId = UUID.randomUUID()
+            val levelRevisionId = UUID.randomUUID()
+            val unitId = UUID.randomUUID()
+            val unitRevisionId = UUID.randomUUID()
+            val topicId = UUID.randomUUID()
+            val topicRevisionId = UUID.randomUUID()
+            val correlationId = "authoring-fixture-${UUID.randomUUID()}"
+            jdbcTemplate.update(
+                """
+                insert into app_user(
+                    id, oidc_subject, email, display_name, username, app_locale,
+                    active_target_language, preferred_support_language, time_zone,
+                    profile_setup_completed_at, profile_version, created_at, updated_at
+                ) values (?, ?, 'authoring-owner@integration.invalid', 'Authoring Owner',
+                          null, 'tr', 'tr', 'en', 'UTC', ?, 1, ?, ?)
+                """.trimIndent(),
+                ownerId,
+                fixture.ownerSubject,
+                now,
+                now,
+                now,
+            )
+            jdbcTemplate.update(
+                """
+                insert into course(
+                    id, owner_user_id, name, description, target_language,
+                    default_support_language, visibility, publication_status,
+                    access_type, created_at, updated_at, active_release_id
+                ) values (?, ?, 'Sourced authoring course', 'Immutable revision proof',
+                          'tr', 'en', 'PUBLIC', 'DRAFT', 'FREE', ?, ?, null)
+                """.trimIndent(),
+                fixture.courseId,
+                ownerId,
+                now,
+                now,
+            )
+            jdbcTemplate.update(
+                "insert into course_support_language(course_id, language_code) values (?, 'en')",
+                fixture.courseId,
+            )
+            jdbcTemplate.update(
+                """
+                insert into content_change_set(
+                    id, course_id, owner_user_id, base_release_id, source_type,
+                    source_reference_id, status, created_at, committed_at, correlation_id
+                ) values (?, ?, ?, null, 'EXCEL_IMPORT', ?, 'COMMITTED', ?, ?, ?)
+                """.trimIndent(),
+                changeSetId,
+                fixture.courseId,
+                ownerId,
+                UUID.randomUUID(),
+                now,
+                now,
+                correlationId,
+            )
+            listOf("CREATED", "COMMITTED").forEach { eventType ->
+                jdbcTemplate.update(
+                    """
+                    insert into content_change_set_event(
+                        id, content_change_set_id, event_type, actor_user_id,
+                        occurred_at, correlation_id
+                    ) values (?, ?, ?, ?, ?, ?)
+                    """.trimIndent(),
+                    UUID.randomUUID(),
+                    changeSetId,
+                    eventType,
+                    ownerId,
+                    now,
+                    correlationId,
+                )
+            }
+            jdbcTemplate.update(
+                "insert into course_release(id, course_id, revision_number, status, created_at) values (?, ?, 1, 'DRAFT', ?)",
+                fixture.baseReleaseId,
+                fixture.courseId,
+                now,
+            )
+            jdbcTemplate.update(
+                """
+                insert into course_release_source_change_set(
+                    course_release_id, course_id, content_change_set_id, created_at
+                ) values (?, ?, ?, ?)
+                """.trimIndent(),
+                fixture.baseReleaseId,
+                fixture.courseId,
+                changeSetId,
+                now,
+            )
+
+            jdbcTemplate.update(
+                "insert into content_level(id, course_id, created_at) values (?, ?, ?)",
+                levelId,
+                fixture.courseId,
+                now,
+            )
+            jdbcTemplate.update(
+                """
+                insert into content_level_revision(
+                    id, level_id, course_id, content_change_set_id,
+                    revision_number, title, hidden, created_at
+                ) values (?, ?, ?, ?, 1, 'Level 1', false, ?)
+                """.trimIndent(),
+                levelRevisionId,
+                levelId,
+                fixture.courseId,
+                changeSetId,
+                now,
+            )
+            jdbcTemplate.update(
+                """
+                insert into course_release_level_revision(
+                    course_release_id, level_revision_id, level_id, course_id, position
+                ) values (?, ?, ?, ?, 1)
+                """.trimIndent(),
+                fixture.baseReleaseId,
+                levelRevisionId,
+                levelId,
+                fixture.courseId,
+            )
+            jdbcTemplate.update(
+                "insert into content_unit(id, course_id, created_at) values (?, ?, ?)",
+                unitId,
+                fixture.courseId,
+                now,
+            )
+            jdbcTemplate.update(
+                """
+                insert into content_unit_revision(
+                    id, unit_id, course_id, content_change_set_id,
+                    revision_number, title, hidden, created_at
+                ) values (?, ?, ?, ?, 1, 'Unit 1', false, ?)
+                """.trimIndent(),
+                unitRevisionId,
+                unitId,
+                fixture.courseId,
+                changeSetId,
+                now,
+            )
+            jdbcTemplate.update(
+                """
+                insert into course_release_unit_revision(
+                    course_release_id, parent_level_revision_id, unit_revision_id,
+                    unit_id, course_id, position
+                ) values (?, ?, ?, ?, ?, 1)
+                """.trimIndent(),
+                fixture.baseReleaseId,
+                levelRevisionId,
+                unitRevisionId,
+                unitId,
+                fixture.courseId,
+            )
+            jdbcTemplate.update(
+                "insert into content_topic(id, course_id, created_at) values (?, ?, ?)",
+                topicId,
+                fixture.courseId,
+                now,
+            )
+            jdbcTemplate.update(
+                """
+                insert into content_topic_revision(
+                    id, topic_id, course_id, content_change_set_id,
+                    revision_number, title, hidden, created_at
+                ) values (?, ?, ?, ?, 1, 'Topic 1', false, ?)
+                """.trimIndent(),
+                topicRevisionId,
+                topicId,
+                fixture.courseId,
+                changeSetId,
+                now,
+            )
+            jdbcTemplate.update(
+                """
+                insert into course_release_topic_revision(
+                    course_release_id, parent_unit_revision_id, topic_revision_id,
+                    topic_id, course_id, position
+                ) values (?, ?, ?, ?, ?, 1)
+                """.trimIndent(),
+                fixture.baseReleaseId,
+                unitRevisionId,
+                topicRevisionId,
+                topicId,
+                fixture.courseId,
+            )
+
+            jdbcTemplate.update(
+                "insert into course_test(id, course_id, created_at) values (?, ?, ?)",
+                fixture.testId,
+                fixture.courseId,
+                now,
+            )
+            jdbcTemplate.update(
+                """
+                insert into test_revision(
+                    id, test_id, course_id, revision_number, title,
+                    status, pass_threshold, created_at
+                ) values (?, ?, ?, 1, 'Typed proof', 'DRAFT', 0.5000, ?)
+                """.trimIndent(),
+                fixture.testRevisionId,
+                fixture.testId,
+                fixture.courseId,
+                now,
+            )
+            jdbcTemplate.update(
+                """
+                insert into test_revision_source_change_set(
+                    test_revision_id, test_id, course_id, content_change_set_id, created_at
+                ) values (?, ?, ?, ?, ?)
+                """.trimIndent(),
+                fixture.testRevisionId,
+                fixture.testId,
+                fixture.courseId,
+                changeSetId,
+                now,
+            )
+            jdbcTemplate.update(
+                "insert into question(id, course_id, created_at) values (?, ?, ?)",
+                fixture.questionId,
+                fixture.courseId,
+                now,
+            )
+            jdbcTemplate.update(
+                """
+                insert into question_revision(
+                    id, question_id, course_id, revision_number, question_type,
+                    prompt, correct_answer, alternative_correct_answer,
+                    answer_match_policy, answer_match_language,
+                    correct_answer_match_key, alternative_answer_match_key,
+                    matching_policy, matching_label_policy, matching_order_policy,
+                    matching_target_language, status, created_at
+                ) values (?, ?, ?, 1, 'C', 'Ben her gun ---.', 'yazarim', null,
+                          ?, 'tr', ?, null, null, null, null, null, 'DRAFT', ?)
+                """.trimIndent(),
+                fixture.questionRevisionId,
+                fixture.questionId,
+                fixture.courseId,
+                TypedAnswerPolicy.VERSION,
+                TypedAnswerPolicy.canonicalize("yazarim", "tr"),
+                now,
+            )
+            jdbcTemplate.update(
+                """
+                insert into question_revision_source_change_set(
+                    question_revision_id, question_id, course_id,
+                    content_change_set_id, created_at
+                ) values (?, ?, ?, ?, ?)
+                """.trimIndent(),
+                fixture.questionRevisionId,
+                fixture.questionId,
+                fixture.courseId,
+                changeSetId,
+                now,
+            )
+            jdbcTemplate.update(
+                """
+                insert into question_revision_translation(
+                    question_revision_id, course_id, support_language,
+                    translation_text, created_at
+                ) values (?, ?, 'en', 'I write', ?)
+                """.trimIndent(),
+                fixture.questionRevisionId,
+                fixture.courseId,
+                now,
+            )
+            jdbcTemplate.update(
+                """
+                insert into test_revision_question(
+                    test_revision_id, question_revision_id, question_id, course_id, position
+                ) values (?, ?, ?, ?, 1)
+                """.trimIndent(),
+                fixture.testRevisionId,
+                fixture.questionRevisionId,
+                fixture.questionId,
+                fixture.courseId,
+            )
+            jdbcTemplate.update(
+                """
+                insert into course_release_test_revision(
+                    course_release_id, test_revision_id, test_id, course_id, position
+                ) values (?, ?, ?, ?, 1)
+                """.trimIndent(),
+                fixture.baseReleaseId,
+                fixture.testRevisionId,
+                fixture.testId,
+                fixture.courseId,
+            )
+            jdbcTemplate.update(
+                """
+                insert into course_release_test_hierarchy(
+                    course_release_id, parent_topic_revision_id, test_revision_id,
+                    test_id, course_id, position
+                ) values (?, ?, ?, ?, ?, 1)
+                """.trimIndent(),
+                fixture.baseReleaseId,
+                topicRevisionId,
+                fixture.testRevisionId,
+                fixture.testId,
+                fixture.courseId,
+            )
+            jdbcTemplate.update(
+                "update question_revision set status = 'ACTIVE' where id = ?",
+                fixture.questionRevisionId,
+            )
+            jdbcTemplate.update(
+                "update test_revision set status = 'ACTIVE' where id = ?",
+                fixture.testRevisionId,
+            )
+            jdbcTemplate.update(
+                "update course_release set status = 'ACTIVE' where id = ?",
+                fixture.baseReleaseId,
+            )
+            jdbcTemplate.update(
+                """
+                update course
+                   set active_release_id = ?, publication_status = 'PUBLISHED', updated_at = ?
+                 where id = ?
+                """.trimIndent(),
+                fixture.baseReleaseId,
+                now,
+                fixture.courseId,
+            )
+        }
+        return fixture
+    }
+
     private fun createCourseFixture(
         questionType: String = "A",
         prompt: String? = "Pencere",
@@ -1844,6 +2445,16 @@ class VerticalSliceIntegrationTest {
         val matchingPairs: List<MatchingFixturePair>,
     )
 
+    data class AuthoringFixture(
+        val courseId: UUID,
+        val ownerSubject: String,
+        val baseReleaseId: UUID,
+        val testId: UUID,
+        val testRevisionId: UUID,
+        val questionId: UUID,
+        val questionRevisionId: UUID,
+    )
+
     data class MatchingFixturePair(
         val targetItemId: UUID,
         val targetText: String,
@@ -1872,6 +2483,7 @@ class VerticalSliceIntegrationTest {
             registry.add("KELIMIO_DB_PASSWORD", postgres::getPassword)
             registry.add("KELIMIO_ENVIRONMENT") { "local" }
             registry.add("KELIMIO_LOCAL_STARTER_COURSE_ENABLED") { "true" }
+            registry.add("KELIMIO_LOCAL_COURSE_AUTHORING_ENABLED") { "true" }
             registry.add("KELIMIO_COURSE_RELEASE_ENABLED") { "true" }
             registry.add("KELIMIO_PROJECTION_ENABLED") { "false" }
             registry.add("KELIMIO_OIDC_ISSUER") { "https://issuer.integration.invalid" }

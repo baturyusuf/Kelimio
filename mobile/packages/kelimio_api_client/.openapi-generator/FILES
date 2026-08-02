@@ -43,6 +43,7 @@ doc/CourseReleaseOperation.md
 doc/CourseSummary.md
 doc/CreateCourseImportRequest.md
 doc/CreateEnrollmentRequest.md
+doc/CreateLocalCourseRevisionRequest.md
 doc/DevelopmentApi.md
 doc/EnergyApi.md
 doc/EnergyResponse.md
@@ -59,6 +60,7 @@ doc/ProfileApi.md
 doc/ProfileSetupRequest.md
 doc/QuestionPayload.md
 doc/SubmitAnswerRequest.md
+doc/SubsequentCourseDraftResult.md
 doc/TestSummary.md
 lib/kelimio_api_client.dart
 lib/src/api.dart
@@ -113,6 +115,7 @@ lib/src/model/course_release_operation.dart
 lib/src/model/course_summary.dart
 lib/src/model/create_course_import_request.dart
 lib/src/model/create_enrollment_request.dart
+lib/src/model/create_local_course_revision_request.dart
 lib/src/model/energy_response.dart
 lib/src/model/enrollment_response.dart
 lib/src/model/finish_attempt_response.dart
@@ -124,6 +127,7 @@ lib/src/model/problem.dart
 lib/src/model/profile_setup_request.dart
 lib/src/model/question_payload.dart
 lib/src/model/submit_answer_request.dart
+lib/src/model/subsequent_course_draft_result.dart
 lib/src/model/test_summary.dart
 pubspec.yaml
 test/activate_course_release_request_test.dart
@@ -166,6 +170,7 @@ test/course_release_operation_test.dart
 test/course_summary_test.dart
 test/create_course_import_request_test.dart
 test/create_enrollment_request_test.dart
+test/create_local_course_revision_request_test.dart
 test/development_api_test.dart
 test/energy_api_test.dart
 test/energy_response_test.dart
@@ -182,4 +187,5 @@ test/profile_api_test.dart
 test/profile_setup_request_test.dart
 test/question_payload_test.dart
 test/submit_answer_request_test.dart
+test/subsequent_course_draft_result_test.dart
 test/test_summary_test.dart

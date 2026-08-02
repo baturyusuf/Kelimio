@@ -12,7 +12,7 @@ $composePath = Join-Path $repositoryRoot "compose.yaml"
 $mobilePath = Join-Path $repositoryRoot "mobile"
 $testPath = "integration_test/real_local_auth_to_progress_test.dart"
 $workbookPath = Join-Path $repositoryRoot "backend/src/test/resources/import/valid/kurs_excel_plani_v3_test_numarali.xlsx"
-$expectedFlywayVersion = "12"
+$expectedFlywayVersion = "13"
 $projectPattern = '^kelimio-e2e-[0-9a-f]{12}$'
 $environmentNames = @(
     "KELIMIO_LOCAL_DB_PASSWORD",
@@ -352,7 +352,7 @@ function Assert-FlywayVersion {
         [string] $ExpectedVersion
     )
 
-    if ($ExpectedVersion -ne "12") {
+    if ($ExpectedVersion -ne "13") {
         throw "The isolated Flyway version guard rejected its configured expectation."
     }
     $rows = @(& $Docker compose -f $composePath -p $Project exec -T postgres `
@@ -714,7 +714,7 @@ try {
     if ($apiHealth.status -ne "UP") {
         throw "The isolated API readiness probe failed."
     }
-    $stage = "Flyway V12 schema guard"
+    $stage = "Flyway V13 schema guard"
     Assert-FlywayVersion `
         -Docker $dockerCommand.Source `
         -Project $project `

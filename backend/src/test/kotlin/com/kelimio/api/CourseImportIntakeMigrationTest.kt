@@ -22,7 +22,7 @@ import java.util.concurrent.TimeUnit
 @Testcontainers(disabledWithoutDocker = true)
 class CourseImportIntakeMigrationTest {
     @Test
-    fun `fresh V12 accepts a draft course without an active release and keeps its release draft`() {
+    fun `fresh V13 accepts a draft course without an active release and keeps its release draft`() {
         val schema = newSchema()
         val ownerId = UUID.randomUUID()
         val courseId = UUID.randomUUID()

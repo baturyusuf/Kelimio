@@ -50,6 +50,7 @@ src/models/CourseReleaseOperation.ts
 src/models/CourseSummary.ts
 src/models/CreateCourseImportRequest.ts
 src/models/CreateEnrollmentRequest.ts
+src/models/CreateLocalCourseRevisionRequest.ts
 src/models/EnergyResponse.ts
 src/models/EnrollmentResponse.ts
 src/models/FinishAttemptResponse.ts
@@ -61,6 +62,7 @@ src/models/Problem.ts
 src/models/ProfileSetupRequest.ts
 src/models/QuestionPayload.ts
 src/models/SubmitAnswerRequest.ts
+src/models/SubsequentCourseDraftResult.ts
 src/models/TestSummary.ts
 src/models/index.ts
 src/runtime.ts

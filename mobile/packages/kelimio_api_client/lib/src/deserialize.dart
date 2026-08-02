@@ -32,6 +32,7 @@ import 'package:kelimio_api_client/src/model/course_release_impact_response.dart
 import 'package:kelimio_api_client/src/model/course_summary.dart';
 import 'package:kelimio_api_client/src/model/create_course_import_request.dart';
 import 'package:kelimio_api_client/src/model/create_enrollment_request.dart';
+import 'package:kelimio_api_client/src/model/create_local_course_revision_request.dart';
 import 'package:kelimio_api_client/src/model/energy_response.dart';
 import 'package:kelimio_api_client/src/model/enrollment_response.dart';
 import 'package:kelimio_api_client/src/model/finish_attempt_response.dart';
@@ -43,6 +44,7 @@ import 'package:kelimio_api_client/src/model/problem.dart';
 import 'package:kelimio_api_client/src/model/profile_setup_request.dart';
 import 'package:kelimio_api_client/src/model/question_payload.dart';
 import 'package:kelimio_api_client/src/model/submit_answer_request.dart';
+import 'package:kelimio_api_client/src/model/subsequent_course_draft_result.dart';
 import 'package:kelimio_api_client/src/model/test_summary.dart';
 
 final _regList = RegExp(r'^List<(.*)>$');
@@ -183,6 +185,11 @@ ReturnType deserialize<ReturnType, BaseType>(
     case 'CreateEnrollmentRequest':
       return CreateEnrollmentRequest.fromJson(value as Map<String, dynamic>)
           as ReturnType;
+    case 'CreateLocalCourseRevisionRequest':
+      return CreateLocalCourseRevisionRequest.fromJson(
+            value as Map<String, dynamic>,
+          )
+          as ReturnType;
     case 'EnergyResponse':
       return EnergyResponse.fromJson(value as Map<String, dynamic>)
           as ReturnType;
@@ -212,6 +219,9 @@ ReturnType deserialize<ReturnType, BaseType>(
           as ReturnType;
     case 'SubmitAnswerRequest':
       return SubmitAnswerRequest.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'SubsequentCourseDraftResult':
+      return SubsequentCourseDraftResult.fromJson(value as Map<String, dynamic>)
           as ReturnType;
     case 'TestSummary':
       return TestSummary.fromJson(value as Map<String, dynamic>) as ReturnType;
