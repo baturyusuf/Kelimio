@@ -1096,7 +1096,7 @@ const validImportStatus = {
   originalFileName: "course.xlsx",
   declaredMediaType: validCreateImport.declaredMediaType,
   fileSizeBytes: validCreateImport.fileSizeBytes,
-  rulesVersion: "xlsx-v1",
+  rulesVersion: "xlsx-v2",
   processingAttempts: 0,
   createdAt: "2026-08-02T08:00:00Z",
   updatedAt: "2026-08-02T08:00:00Z",
@@ -1111,6 +1111,16 @@ assert.equal(
   validateCourseImportStatus(validImportStatus),
   true,
   `owner import status must satisfy the closed response schema: ${ajv.errorsText(validateCourseImportStatus.errors)}`,
+);
+assert.equal(
+  validateCourseImportStatus({ ...validImportStatus, rulesVersion: "xlsx-v1" }),
+  true,
+  "legacy xlsx-v1 import status must remain decodable",
+);
+assert.equal(
+  validateCourseImportStatus({ ...validImportStatus, rulesVersion: "xlsx-v3" }),
+  false,
+  "an unknown import rules version must fail closed",
 );
 assert.equal(
   validateCourseImportStatus({ ...validImportStatus, quarantineObjectKey: "secret/key" }),

@@ -11,6 +11,7 @@ $repositoryRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
 $composePath = Join-Path $repositoryRoot "compose.yaml"
 $mobilePath = Join-Path $repositoryRoot "mobile"
 $testPath = "integration_test/real_local_auth_to_progress_test.dart"
+$workbookPath = Join-Path $repositoryRoot "backend/src/test/resources/import/valid/kurs_excel_plani_v3_test_numarali.xlsx"
 $expectedFlywayVersion = "12"
 $projectPattern = '^kelimio-e2e-[0-9a-f]{12}$'
 $environmentNames = @(
@@ -144,6 +145,87 @@ function Remove-E2eAndroidApplication {
     }
 }
 
+function Install-E2eWorkbookFixture {
+    param(
+        [string] $Adb,
+        [string] $Serial,
+        [string] $Flutter,
+        [string] $Workbook
+    )
+
+    $script:fixtureDiagnostic = "source-guard"
+    $resolvedWorkbook = [System.IO.Path]::GetFullPath($Workbook)
+    $expectedWorkbook = [System.IO.Path]::GetFullPath($workbookPath)
+    if ($resolvedWorkbook -ne $expectedWorkbook -or -not (Test-Path -LiteralPath $resolvedWorkbook -PathType Leaf)) {
+        throw "The Android workbook fixture guard rejected its source."
+    }
+
+    Push-Location $mobilePath
+    try {
+        $script:fixtureDiagnostic = "apk-build"
+        & $Flutter build apk --flavor e2e --debug
+        if ($LASTEXITCODE -ne 0) {
+            throw "The isolated Android fixture APK build failed."
+        }
+    } finally {
+        Pop-Location
+    }
+
+    $apk = Join-Path $mobilePath "build/app/outputs/flutter-apk/app-e2e-debug.apk"
+    $script:fixtureDiagnostic = "apk-output"
+    if (-not (Test-Path -LiteralPath $apk -PathType Leaf)) {
+        throw "The isolated Android fixture APK was not produced."
+    }
+    $script:fixtureDiagnostic = "apk-install"
+    $installOutput = @(& $Adb -s $Serial install -r -t $apk 2>$null)
+    $installResult = if ($installOutput.Count -gt 0) {
+        $installOutput[-1].ToString().Trim()
+    } else {
+        ""
+    }
+    if ($LASTEXITCODE -ne 0 -or $installResult -ne "Success") {
+        throw "The isolated Android fixture APK could not be installed."
+    }
+
+    $deviceTemporary = "/data/local/tmp/kelimio-e2e-$(New-RandomHex -ByteCount 6).xlsx"
+    if ($deviceTemporary -notmatch '^/data/local/tmp/kelimio-e2e-[0-9a-f]{12}\.xlsx$') {
+        throw "The Android temporary fixture path guard failed."
+    }
+    try {
+        $script:fixtureDiagnostic = "device-push"
+        $previousPreference = $ErrorActionPreference
+        try {
+            $ErrorActionPreference = "Continue"
+            & $Adb -s $Serial push $resolvedWorkbook $deviceTemporary 2>&1 | Out-Null
+            $pushExitCode = $LASTEXITCODE
+        } finally {
+            $ErrorActionPreference = $previousPreference
+        }
+        if ($pushExitCode -ne 0) {
+            throw "The workbook fixture could not be transferred to Android."
+        }
+        $script:fixtureDiagnostic = "app-directory"
+        & $Adb -s $Serial shell run-as com.kelimio.app.e2e mkdir -p files 2>$null | Out-Null
+        if ($LASTEXITCODE -ne 0) {
+            throw "The isolated Android fixture directory could not be prepared."
+        }
+        $script:fixtureDiagnostic = "app-copy"
+        & $Adb -s $Serial shell run-as com.kelimio.app.e2e cp $deviceTemporary files/kelimio-e2e-workbook.xlsx 2>$null | Out-Null
+        if ($LASTEXITCODE -ne 0) {
+            throw "The workbook fixture could not enter isolated app storage."
+        }
+        $script:fixtureDiagnostic = "length-check"
+        $actualLength = ((& $Adb -s $Serial shell run-as com.kelimio.app.e2e stat -c '%s' files/kelimio-e2e-workbook.xlsx 2>$null) -join "").Trim()
+        $expectedLength = (Get-Item -LiteralPath $resolvedWorkbook).Length.ToString()
+        if ($LASTEXITCODE -ne 0 -or $actualLength -ne $expectedLength) {
+            throw "The isolated Android workbook fixture length did not match."
+        }
+        $script:fixtureDiagnostic = "complete"
+    } finally {
+        & $Adb -s $Serial shell rm -f $deviceTemporary 2>$null | Out-Null
+    }
+}
+
 function Get-ComposeConfiguration {
     param([string] $Docker, [string] $Project)
 
@@ -230,7 +312,7 @@ function Wait-IsolatedStack {
     $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
     do {
         $ready = $true
-        foreach ($service in @("postgres", "redis", "localstack", "keycloak", "api")) {
+        foreach ($service in @("postgres", "redis", "localstack", "keycloak", "api", "clamav")) {
             $state = Get-ComposeServiceState -Docker $Docker -Project $Project -Service $service
             if (-not $state -or $state.Status -ne "running" -or $state.Health -ne "healthy") {
                 $ready = $false
@@ -238,6 +320,10 @@ function Wait-IsolatedStack {
         }
         $mailpit = Get-ComposeServiceState -Docker $Docker -Project $Project -Service "mailpit"
         if (-not $mailpit -or $mailpit.Status -ne "running") {
+            $ready = $false
+        }
+        $worker = Get-ComposeServiceState -Docker $Docker -Project $Project -Service "import-worker"
+        if (-not $worker -or $worker.Status -ne "running") {
             $ready = $false
         }
         $configuration = Get-ComposeServiceState `
@@ -515,6 +601,7 @@ $configurationValidated = $false
 $deviceReady = $false
 $normalAppInstalled = $false
 $normalAppSnapshotTaken = $false
+$fixtureDiagnostic = "not-started"
 $stage = "runner initialization"
 
 foreach ($name in $environmentNames) {
@@ -614,7 +701,7 @@ try {
 
     $stage = "isolated service startup"
     Write-Host "Starting isolated Kelimio services without touching the normal development stack..."
-    & $dockerCommand.Source compose -f $composePath -p $project --profile app up -d --build api
+    & $dockerCommand.Source compose -f $composePath -p $project --profile app up -d --build api import-worker
     if ($LASTEXITCODE -ne 0) {
         throw "Isolated Compose startup failed."
     }
@@ -642,7 +729,7 @@ try {
     [void] (Invoke-RestMethod -Uri "http://localhost:$($ports.MailpitHttp)/api/v1/info" -TimeoutSec 10)
 
     $stage = "Android reverse-port setup"
-    foreach ($port in @($ports.Api, $ports.Keycloak, $ports.MailpitHttp)) {
+    foreach ($port in @($ports.Api, $ports.Keycloak, $ports.MailpitHttp, $ports.LocalStack)) {
         $currentMappings = Get-AdbReverseMappings -Adb $adb -Serial $DeviceId
         if ($currentMappings -match "tcp:$port(?:\s|$)") {
             throw "An isolated Android reverse port was already in use."
@@ -654,8 +741,15 @@ try {
         $addedReversePorts.Add($port)
     }
 
-    $stage = "real Android registration-to-progress test"
-    Write-Host "Running real Keycloak, Mailpit, backend, Drift, and Flutter UI acceptance flow..."
+    $stage = "isolated Android workbook fixture"
+    Install-E2eWorkbookFixture `
+        -Adb $adb `
+        -Serial $DeviceId `
+        -Flutter $flutterCommand.Source `
+        -Workbook $workbookPath
+
+    $stage = "real Android registration-to-progress-and-publication test"
+    Write-Host "Running real Keycloak, Mailpit, backend, import worker, Drift, and Flutter UI acceptance flow..."
     Push-Location $mobilePath
     try {
         & $flutterCommand.Source test $testPath `
@@ -676,7 +770,7 @@ try {
     }
 
 } catch {
-    $failure = [System.Exception]::new("Local Android E2E failed during $stage. Sensitive values were suppressed.")
+    $failure = [System.Exception]::new("Local Android E2E failed during $stage ($fixtureDiagnostic). Sensitive values were suppressed.")
 } finally {
     foreach ($port in $addedReversePorts) {
         try {

@@ -661,6 +661,198 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Your earlier matches are not stored on this device. The complete correct matching from the server is shown below.'**
   String get matchingFeedbackUnavailable;
+
+  /// No description provided for @teacher.
+  ///
+  /// In en, this message translates to:
+  /// **'Teacher'**
+  String get teacher;
+
+  /// No description provided for @teacherImportTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create a course from Excel'**
+  String get teacherImportTitle;
+
+  /// No description provided for @teacherImportBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This local test flow uploads one .xlsx file for malware scanning and review. Approval, draft creation, and publication stay separate.'**
+  String get teacherImportBody;
+
+  /// No description provided for @selectWorkbook.
+  ///
+  /// In en, this message translates to:
+  /// **'Select Excel file'**
+  String get selectWorkbook;
+
+  /// No description provided for @preparingWorkbook.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking the workbook'**
+  String get preparingWorkbook;
+
+  /// No description provided for @uploadingWorkbook.
+  ///
+  /// In en, this message translates to:
+  /// **'Uploading the workbook'**
+  String get uploadingWorkbook;
+
+  /// No description provided for @processingWorkbook.
+  ///
+  /// In en, this message translates to:
+  /// **'Scanning and preparing the preview'**
+  String get processingWorkbook;
+
+  /// No description provided for @previewHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'Review the import'**
+  String get previewHeading;
+
+  /// No description provided for @previewSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'{rows} source rows · {questions} questions · {matching} matching questions'**
+  String previewSummary(Object matching, Object questions, Object rows);
+
+  /// No description provided for @previewRowLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Source row {row}, test {test}, question type {type}'**
+  String previewRowLabel(Object row, Object test, Object type);
+
+  /// No description provided for @loadMore.
+  ///
+  /// In en, this message translates to:
+  /// **'Load more'**
+  String get loadMore;
+
+  /// No description provided for @issuesHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'Warnings and errors'**
+  String get issuesHeading;
+
+  /// No description provided for @previewApprovalConfirmation.
+  ///
+  /// In en, this message translates to:
+  /// **'I reviewed the preview and understand that approval does not publish the course.'**
+  String get previewApprovalConfirmation;
+
+  /// No description provided for @approvePreview.
+  ///
+  /// In en, this message translates to:
+  /// **'Approve this preview'**
+  String get approvePreview;
+
+  /// No description provided for @draftCreationNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'The approved content can now be committed as an unpublished draft. This still does not make it visible to learners.'**
+  String get draftCreationNotice;
+
+  /// No description provided for @draftCreationConfirmation.
+  ///
+  /// In en, this message translates to:
+  /// **'Create exactly one immutable unpublished draft from this approved preview.'**
+  String get draftCreationConfirmation;
+
+  /// No description provided for @createDraft.
+  ///
+  /// In en, this message translates to:
+  /// **'Create course draft'**
+  String get createDraft;
+
+  /// No description provided for @releaseImpactHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'Publication impact'**
+  String get releaseImpactHeading;
+
+  /// No description provided for @releaseImpactSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'{questions} questions · {added} added · {changed} changed · {removed} removed · {learners} affected learners'**
+  String releaseImpactSummary(
+    Object added,
+    Object changed,
+    Object learners,
+    Object questions,
+    Object removed,
+  );
+
+  /// No description provided for @releaseImpactConfirmation.
+  ///
+  /// In en, this message translates to:
+  /// **'I reviewed this exact impact and want to activate the immutable release.'**
+  String get releaseImpactConfirmation;
+
+  /// No description provided for @publishCourse.
+  ///
+  /// In en, this message translates to:
+  /// **'Publish course'**
+  String get publishCourse;
+
+  /// No description provided for @coursePublished.
+  ///
+  /// In en, this message translates to:
+  /// **'The course release is active. Progress reprojection has been scheduled.'**
+  String get coursePublished;
+
+  /// No description provided for @newImport.
+  ///
+  /// In en, this message translates to:
+  /// **'Start another import'**
+  String get newImport;
+
+  /// No description provided for @workbookRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'The workbook was rejected safely. Review the issues below.'**
+  String get workbookRejected;
+
+  /// No description provided for @workbookExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'This upload session expired. Start a new import.'**
+  String get workbookExpired;
+
+  /// No description provided for @fileDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} · {size} bytes'**
+  String fileDetails(Object name, Object size);
+
+  /// No description provided for @questionType.
+  ///
+  /// In en, this message translates to:
+  /// **'Type {type}'**
+  String questionType(Object type);
+
+  /// No description provided for @correctAnswerTeacher.
+  ///
+  /// In en, this message translates to:
+  /// **'Reviewed answer: {answer}'**
+  String correctAnswerTeacher(Object answer);
+
+  /// No description provided for @alternativeCorrectAnswerTeacher.
+  ///
+  /// In en, this message translates to:
+  /// **'Reviewed alternative answer: {answer}'**
+  String alternativeCorrectAnswerTeacher(Object answer);
+
+  /// No description provided for @wrongAnswersTeacher.
+  ///
+  /// In en, this message translates to:
+  /// **'Reviewed distractors: {answers}'**
+  String wrongAnswersTeacher(Object answers);
+
+  /// No description provided for @matchingGroupTeacher.
+  ///
+  /// In en, this message translates to:
+  /// **'Matching group: {group}'**
+  String matchingGroupTeacher(Object group);
 }
 
 class _AppLocalizationsDelegate

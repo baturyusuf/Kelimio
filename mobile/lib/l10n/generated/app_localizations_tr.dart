@@ -331,4 +331,129 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get matchingFeedbackUnavailable =>
       'Önceki eşleştirmelerin bu cihazda saklanmadı. Sunucunun bildirdiği doğru eşleştirmenin tamamı aşağıda gösteriliyor.';
+
+  @override
+  String get teacher => 'Öğretmen';
+
+  @override
+  String get teacherImportTitle => 'Excel’den kurs oluştur';
+
+  @override
+  String get teacherImportBody =>
+      'Bu yerel test akışı bir .xlsx dosyasını zararlı yazılım taraması ve inceleme için yükler. Onay, taslak oluşturma ve yayımlama ayrı adımlardır.';
+
+  @override
+  String get selectWorkbook => 'Excel dosyası seç';
+
+  @override
+  String get preparingWorkbook => 'Çalışma kitabı denetleniyor';
+
+  @override
+  String get uploadingWorkbook => 'Çalışma kitabı yükleniyor';
+
+  @override
+  String get processingWorkbook => 'Dosya taranıyor ve önizleme hazırlanıyor';
+
+  @override
+  String get previewHeading => 'İçe aktarmayı incele';
+
+  @override
+  String previewSummary(Object matching, Object questions, Object rows) {
+    return '$rows kaynak satırı · $questions soru · $matching eşleştirme sorusu';
+  }
+
+  @override
+  String previewRowLabel(Object row, Object test, Object type) {
+    return 'Kaynak satırı $row, test $test, soru tipi $type';
+  }
+
+  @override
+  String get loadMore => 'Daha fazla yükle';
+
+  @override
+  String get issuesHeading => 'Uyarılar ve hatalar';
+
+  @override
+  String get previewApprovalConfirmation =>
+      'Önizlemeyi inceledim ve bu onayın kursu yayımlamadığını biliyorum.';
+
+  @override
+  String get approvePreview => 'Bu önizlemeyi onayla';
+
+  @override
+  String get draftCreationNotice =>
+      'Onaylanan içerik artık yayımlanmamış bir taslak olarak kaydedilebilir. Bu işlem içeriği öğrencilere açmaz.';
+
+  @override
+  String get draftCreationConfirmation =>
+      'Bu onaylı önizlemeden tam olarak bir değişmez, yayımlanmamış taslak oluştur.';
+
+  @override
+  String get createDraft => 'Kurs taslağını oluştur';
+
+  @override
+  String get releaseImpactHeading => 'Yayımlama etkisi';
+
+  @override
+  String releaseImpactSummary(
+    Object added,
+    Object changed,
+    Object learners,
+    Object questions,
+    Object removed,
+  ) {
+    return '$questions soru · $added eklendi · $changed değişti · $removed kaldırıldı · $learners etkilenen öğrenci';
+  }
+
+  @override
+  String get releaseImpactConfirmation =>
+      'Bu kesin etkiyi inceledim ve değişmez yayını etkinleştirmek istiyorum.';
+
+  @override
+  String get publishCourse => 'Kursu yayımla';
+
+  @override
+  String get coursePublished =>
+      'Kurs yayını etkin. İlerleme yeniden hesaplama işi sıraya alındı.';
+
+  @override
+  String get newImport => 'Yeni içe aktarma başlat';
+
+  @override
+  String get workbookRejected =>
+      'Çalışma kitabı güvenli biçimde reddedildi. Aşağıdaki sorunları incele.';
+
+  @override
+  String get workbookExpired =>
+      'Bu yükleme oturumunun süresi doldu. Yeni bir içe aktarma başlat.';
+
+  @override
+  String fileDetails(Object name, Object size) {
+    return '$name · $size bayt';
+  }
+
+  @override
+  String questionType(Object type) {
+    return 'Tip $type';
+  }
+
+  @override
+  String correctAnswerTeacher(Object answer) {
+    return 'İncelenen cevap: $answer';
+  }
+
+  @override
+  String alternativeCorrectAnswerTeacher(Object answer) {
+    return 'İncelenen alternatif cevap: $answer';
+  }
+
+  @override
+  String wrongAnswersTeacher(Object answers) {
+    return 'İncelenen çeldiriciler: $answers';
+  }
+
+  @override
+  String matchingGroupTeacher(Object group) {
+    return 'Eşleştirme grubu: $group';
+  }
 }

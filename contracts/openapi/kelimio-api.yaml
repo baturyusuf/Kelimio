@@ -1709,7 +1709,7 @@ components:
           maximum: 26214400
         rulesVersion:
           type: string
-          const: xlsx-v1
+          enum: [xlsx-v1, xlsx-v2]
         processingAttempts:
           type: integer
           minimum: 0

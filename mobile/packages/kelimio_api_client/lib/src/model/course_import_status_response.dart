@@ -176,7 +176,9 @@ enum CourseImportStatusResponseDeclaredMediaTypeEnum {
 
 enum CourseImportStatusResponseRulesVersionEnum {
   @JsonValue(r'xlsx-v1')
-  xlsxV1(r'xlsx-v1');
+  xlsxV1(r'xlsx-v1'),
+  @JsonValue(r'xlsx-v2')
+  xlsxV2(r'xlsx-v2');
 
   const CourseImportStatusResponseRulesVersionEnum(this.value);
 

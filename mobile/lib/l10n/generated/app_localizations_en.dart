@@ -337,4 +337,129 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get matchingFeedbackUnavailable =>
       'Your earlier matches are not stored on this device. The complete correct matching from the server is shown below.';
+
+  @override
+  String get teacher => 'Teacher';
+
+  @override
+  String get teacherImportTitle => 'Create a course from Excel';
+
+  @override
+  String get teacherImportBody =>
+      'This local test flow uploads one .xlsx file for malware scanning and review. Approval, draft creation, and publication stay separate.';
+
+  @override
+  String get selectWorkbook => 'Select Excel file';
+
+  @override
+  String get preparingWorkbook => 'Checking the workbook';
+
+  @override
+  String get uploadingWorkbook => 'Uploading the workbook';
+
+  @override
+  String get processingWorkbook => 'Scanning and preparing the preview';
+
+  @override
+  String get previewHeading => 'Review the import';
+
+  @override
+  String previewSummary(Object matching, Object questions, Object rows) {
+    return '$rows source rows · $questions questions · $matching matching questions';
+  }
+
+  @override
+  String previewRowLabel(Object row, Object test, Object type) {
+    return 'Source row $row, test $test, question type $type';
+  }
+
+  @override
+  String get loadMore => 'Load more';
+
+  @override
+  String get issuesHeading => 'Warnings and errors';
+
+  @override
+  String get previewApprovalConfirmation =>
+      'I reviewed the preview and understand that approval does not publish the course.';
+
+  @override
+  String get approvePreview => 'Approve this preview';
+
+  @override
+  String get draftCreationNotice =>
+      'The approved content can now be committed as an unpublished draft. This still does not make it visible to learners.';
+
+  @override
+  String get draftCreationConfirmation =>
+      'Create exactly one immutable unpublished draft from this approved preview.';
+
+  @override
+  String get createDraft => 'Create course draft';
+
+  @override
+  String get releaseImpactHeading => 'Publication impact';
+
+  @override
+  String releaseImpactSummary(
+    Object added,
+    Object changed,
+    Object learners,
+    Object questions,
+    Object removed,
+  ) {
+    return '$questions questions · $added added · $changed changed · $removed removed · $learners affected learners';
+  }
+
+  @override
+  String get releaseImpactConfirmation =>
+      'I reviewed this exact impact and want to activate the immutable release.';
+
+  @override
+  String get publishCourse => 'Publish course';
+
+  @override
+  String get coursePublished =>
+      'The course release is active. Progress reprojection has been scheduled.';
+
+  @override
+  String get newImport => 'Start another import';
+
+  @override
+  String get workbookRejected =>
+      'The workbook was rejected safely. Review the issues below.';
+
+  @override
+  String get workbookExpired =>
+      'This upload session expired. Start a new import.';
+
+  @override
+  String fileDetails(Object name, Object size) {
+    return '$name · $size bytes';
+  }
+
+  @override
+  String questionType(Object type) {
+    return 'Type $type';
+  }
+
+  @override
+  String correctAnswerTeacher(Object answer) {
+    return 'Reviewed answer: $answer';
+  }
+
+  @override
+  String alternativeCorrectAnswerTeacher(Object answer) {
+    return 'Reviewed alternative answer: $answer';
+  }
+
+  @override
+  String wrongAnswersTeacher(Object answers) {
+    return 'Reviewed distractors: $answers';
+  }
+
+  @override
+  String matchingGroupTeacher(Object group) {
+    return 'Matching group: $group';
+  }
 }

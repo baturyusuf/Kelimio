@@ -1,5 +1,6 @@
 package com.kelimio.api.coursepublication
 
+import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.JsonProperty
 import jakarta.validation.constraints.Pattern
 import java.time.OffsetDateTime
@@ -21,6 +22,7 @@ data class ActivateCourseReleaseRequest(
 data class CourseReleaseImpactResponse(
     val courseId: UUID,
     val targetReleaseId: UUID,
+    @get:JsonInclude(JsonInclude.Include.ALWAYS)
     val expectedActiveReleaseId: UUID?,
     val sourceChangeSetId: UUID,
     val operation: CourseReleaseOperation,
@@ -39,6 +41,7 @@ data class CourseReleaseActivationResponse(
     val activationId: UUID,
     val courseId: UUID,
     val releaseId: UUID,
+    @get:JsonInclude(JsonInclude.Include.ALWAYS)
     val previousReleaseId: UUID?,
     val sourceChangeSetId: UUID,
     val operation: CourseReleaseOperation,

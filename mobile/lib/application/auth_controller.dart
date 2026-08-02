@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../domain/auth/auth.dart';
 import 'attempt_controller.dart';
 import 'catalog_controller.dart';
+import 'course_authoring_controller.dart';
 import 'energy_controller.dart';
 import 'providers.dart';
 
@@ -57,6 +58,7 @@ final class AuthController extends AsyncNotifier<AuthSession?> {
     } finally {
       ref.invalidate(attemptControllerProvider);
       ref.invalidate(catalogControllerProvider);
+      ref.invalidate(courseAuthoringControllerProvider);
       ref.invalidate(energyControllerProvider);
       ref.invalidate(courseDetailProvider);
       ref.invalidate(courseProgressProvider);

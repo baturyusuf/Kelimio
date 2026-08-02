@@ -146,7 +146,8 @@ export type CourseImportStatusResponseDeclaredMediaTypeEnum = typeof CourseImpor
  * @export
  */
 export const CourseImportStatusResponseRulesVersionEnum = {
-    XlsxV1: 'xlsx-v1'
+    XlsxV1: 'xlsx-v1',
+    XlsxV2: 'xlsx-v2'
 } as const;
 export type CourseImportStatusResponseRulesVersionEnum = typeof CourseImportStatusResponseRulesVersionEnum[keyof typeof CourseImportStatusResponseRulesVersionEnum];
 

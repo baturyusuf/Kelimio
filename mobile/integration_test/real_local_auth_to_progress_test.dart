@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show appFlavor;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,10 +8,12 @@ import 'package:integration_test/integration_test.dart';
 import 'package:kelimio_mobile/app.dart';
 import 'package:kelimio_mobile/application/attempt_controller.dart';
 import 'package:kelimio_mobile/application/catalog_controller.dart';
+import 'package:kelimio_mobile/application/course_authoring_controller.dart';
 import 'package:kelimio_mobile/application/profile_controller.dart';
 import 'package:kelimio_mobile/application/providers.dart';
 import 'package:kelimio_mobile/core/config/app_config.dart';
 import 'package:kelimio_mobile/domain/catalog/catalog.dart';
+import 'package:kelimio_mobile/domain/course_authoring/course_authoring.dart';
 import 'package:kelimio_mobile/domain/failures.dart';
 import 'package:kelimio_mobile/domain/learning/attempt_machine.dart';
 import 'package:kelimio_mobile/domain/learning/learning.dart';
@@ -22,6 +26,7 @@ import 'package:kelimio_mobile/presentation/screens/catalog_screen.dart';
 import 'package:kelimio_mobile/presentation/screens/course_detail_screen.dart';
 import 'package:kelimio_mobile/presentation/screens/profile_setup_screen.dart';
 import 'package:kelimio_mobile/presentation/screens/sign_in_screen.dart';
+import 'package:kelimio_mobile/presentation/screens/teacher_import_screen.dart';
 
 import 'support/local_keycloak_pkce_session.dart';
 
@@ -78,6 +83,9 @@ void main() {
             appConfigProvider.overrideWithValue(guarded.appConfig),
             authRepositoryProvider.overrideWithValue(session),
             accessTokenProviderProvider.overrideWithValue(session),
+            workbookPickerProvider.overrideWithValue(
+              const _ProvisionedWorkbookPicker(),
+            ),
           ],
           child: const KelimioApp(),
         ),
@@ -691,6 +699,136 @@ void main() {
       );
       await _tapVisible(
         tester,
+        find.text(localizations.teacher),
+        label: 'teacher navigation',
+      );
+      await _pumpUntil(
+        tester,
+        () => find.byType(TeacherImportScreen).evaluate().length == 1,
+        label: 'teacher import screen',
+      );
+      await _tapVisible(
+        tester,
+        find.byKey(const Key('teacher-select-workbook')),
+        label: 'provisioned workbook selection',
+      );
+      await _pumpUntil(
+        tester,
+        () {
+          final authoring = container.read(courseAuthoringControllerProvider);
+          return authoring.error != null ||
+              find
+                  .byKey(const Key('teacher-preview-confirmation'))
+                  .evaluate()
+                  .isNotEmpty;
+        },
+        label: 'real workbook preview',
+        timeout: const Duration(minutes: 2),
+      );
+      final authoringFailure = container
+          .read(courseAuthoringControllerProvider)
+          .error;
+      expect(
+        authoringFailure,
+        isNull,
+        reason:
+            'Real workbook upload failed as ${_safeFailureKind(authoringFailure)}',
+      );
+      await _acknowledgeConfirmation(
+        tester,
+        'teacher-preview-confirmation',
+        label: 'preview acknowledgement',
+        readState: () => container.read(courseAuthoringControllerProvider),
+      );
+      await _tapVisible(
+        tester,
+        find.byKey(const Key('teacher-approve-preview')),
+        label: 'digest-bound preview approval',
+      );
+      await _pumpUntil(
+        tester,
+        () {
+          final authoring = container.read(courseAuthoringControllerProvider);
+          return authoring.error != null ||
+              authoring.importSummary?.status == CourseImportStatus.approved;
+        },
+        label: 'approved import draft gate',
+        timeout: const Duration(seconds: 30),
+        diagnostic: () => _describeAuthoringState(
+          container.read(courseAuthoringControllerProvider),
+        ),
+      );
+      await _acknowledgeConfirmation(
+        tester,
+        'teacher-draft-confirmation',
+        label: 'draft acknowledgement',
+        readState: () => container.read(courseAuthoringControllerProvider),
+      );
+      await _tapVisible(
+        tester,
+        find.byKey(const Key('teacher-create-draft')),
+        label: 'exactly-once draft creation',
+      );
+      await _pumpUntil(
+        tester,
+        () {
+          final authoring = container.read(courseAuthoringControllerProvider);
+          return authoring.error != null || authoring.impact != null;
+        },
+        label: 'publication impact gate',
+        timeout: const Duration(seconds: 30),
+        diagnostic: () => _describeAuthoringState(
+          container.read(courseAuthoringControllerProvider),
+        ),
+      );
+      await _acknowledgeConfirmation(
+        tester,
+        'teacher-impact-confirmation',
+        label: 'impact acknowledgement',
+        readState: () => container.read(courseAuthoringControllerProvider),
+      );
+      await _tapVisible(
+        tester,
+        find.byKey(const Key('teacher-publish-course')),
+        label: 'impact-bound publication',
+      );
+      await _pumpUntil(
+        tester,
+        () {
+          final authoring = container.read(courseAuthoringControllerProvider);
+          return authoring.error != null || authoring.activation != null;
+        },
+        label: 'published reviewed workbook',
+        timeout: const Duration(seconds: 30),
+        diagnostic: () => _describeAuthoringState(
+          container.read(courseAuthoringControllerProvider),
+        ),
+      );
+      final publishedState = container.read(courseAuthoringControllerProvider);
+      expect(
+        publishedState.error,
+        isNull,
+        reason:
+            'Reviewed workbook publication failed as '
+            '${_safeFailureKind(publishedState.error)}',
+      );
+      await _bringTeacherControlIntoView(
+        tester,
+        find.byKey(const Key('teacher-publication-success')),
+        label: 'published reviewed workbook confirmation',
+      );
+      await _tapVisible(
+        tester,
+        find.text(localizations.catalog),
+        label: 'catalog after teacher publication',
+      );
+      await _pumpUntil(
+        tester,
+        () => find.byType(CatalogScreen).evaluate().length == 1,
+        label: 'catalog after teacher flow',
+      );
+      await _tapVisible(
+        tester,
         find.byKey(const Key('catalog-sign-out')),
         label: 'catalog sign out',
       );
@@ -724,9 +862,42 @@ void main() {
       );
     },
     skip: !_realStackEnabled,
-    timeout: const Timeout(Duration(minutes: 4)),
+    timeout: const Timeout(Duration(minutes: 8)),
   );
 }
+
+final class _ProvisionedWorkbookPicker implements WorkbookPicker {
+  const _ProvisionedWorkbookPicker();
+
+  static const _fileName = 'kelimio-e2e-workbook.xlsx';
+
+  @override
+  Future<SelectedWorkbook?> pickWorkbook() async {
+    final file = File('${Directory.systemTemp.parent.path}/files/$_fileName');
+    final size = await file.length();
+    if (size < 1) {
+      throw StateError('The provisioned workbook fixture was empty.');
+    }
+    return SelectedWorkbook(
+      displayName: _fileName,
+      sizeBytes: size,
+      readRange: file.openRead,
+    );
+  }
+}
+
+String _safeFailureKind(Object? failure) {
+  final cause = failure is AppFailure ? failure.cause : null;
+  return '${failure.runtimeType}/${cause.runtimeType}';
+}
+
+String _describeAuthoringState(CourseAuthoringState state) =>
+    'activity=${state.activity.name}, '
+    'failure=${_safeFailureKind(state.error)}, '
+    'status=${state.importSummary?.status.name}, '
+    'commit=${state.commit != null}, '
+    'impact=${state.impact != null}, '
+    'activation=${state.activation != null}';
 
 _GuardedRealStackConfiguration _guardedRealStackConfiguration() {
   final api = Uri.tryParse(_apiBaseUrl);
@@ -1077,6 +1248,77 @@ Future<void> _ensureVisible(
   await tester.ensureVisible(finder);
   await tester.pump(const Duration(milliseconds: 100));
   expect(finder.hitTestable(), findsOneWidget, reason: label);
+}
+
+Future<void> _acknowledgeConfirmation(
+  WidgetTester tester,
+  String tileKey, {
+  required String label,
+  required CourseAuthoringState Function() readState,
+}) async {
+  final tile = find.byKey(Key(tileKey));
+  final checkbox = find.descendant(of: tile, matching: find.byType(Checkbox));
+  await _pumpUntil(
+    tester,
+    () => !readState().busy || readState().error != null,
+    label: '$label enabled',
+    timeout: const Duration(seconds: 35),
+    diagnostic: () {
+      final current = readState();
+      return 'activity=${current.activity.name}, '
+          'failure=${_safeFailureKind(current.error)}, '
+          'previewRows=${current.previewRows.length}, '
+          'issues=${current.issues.length}';
+    },
+  );
+  final current = readState();
+  expect(
+    current.error,
+    isNull,
+    reason: '$label failed as ${_safeFailureKind(current.error)}',
+  );
+  await _bringTeacherControlIntoView(tester, tile, label: label);
+  await _pumpUntil(
+    tester,
+    () => tester.widget<Checkbox>(checkbox).onChanged != null,
+    label: '$label visible and enabled',
+    timeout: const Duration(seconds: 5),
+    diagnostic: () =>
+        'activity=${readState().activity.name}, '
+        'failure=${_safeFailureKind(readState().error)}',
+  );
+
+  await tester.tapAt(tester.getCenter(checkbox));
+  await tester.pump();
+  expect(
+    tester.widget<Checkbox>(checkbox).value,
+    isTrue,
+    reason: '$label must change the explicit confirmation state.',
+  );
+}
+
+Future<void> _bringTeacherControlIntoView(
+  WidgetTester tester,
+  Finder finder, {
+  required String label,
+}) async {
+  if (finder.evaluate().isEmpty) {
+    final teacherScrollable = find
+        .descendant(
+          of: find.byType(TeacherImportScreen),
+          matching: find.byType(Scrollable),
+        )
+        .first;
+    await tester.scrollUntilVisible(
+      finder,
+      200,
+      scrollable: teacherScrollable,
+      maxScrolls: 30,
+    );
+  }
+  expect(finder, findsOneWidget, reason: label);
+  await tester.ensureVisible(finder);
+  await tester.pumpAndSettle();
 }
 
 Future<void> _tapVisible(

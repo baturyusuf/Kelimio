@@ -129,4 +129,5 @@ const _$CourseImportStatusResponseDeclaredMediaTypeEnumEnumMap = {
 
 const _$CourseImportStatusResponseRulesVersionEnumEnumMap = {
   CourseImportStatusResponseRulesVersionEnum.xlsxV1: 'xlsx-v1',
+  CourseImportStatusResponseRulesVersionEnum.xlsxV2: 'xlsx-v2',
 };

@@ -125,6 +125,10 @@ gate they must use; it does not activate or publish an imported draft.
 - OpenAPI preview and commit models expose the projected counts/capabilities and
   row composition without exposing matching relationships. Generated clients
   remain the source for transport models.
+- Owner-scoped import status exposes the stored rules version as the closed set
+  `xlsx-v1 | xlsx-v2`. Retained legacy V9 imports must remain decodable, while
+  the current intake emits `xlsx-v2`; unknown future versions fail closed until
+  the contract and clients deliberately add them.
 - Older clients that send no capability header continue to use releases whose
   required set is empty and cannot discover or enter Type-D releases. Current
   clients send `question.matching.v1` on the affected calls.

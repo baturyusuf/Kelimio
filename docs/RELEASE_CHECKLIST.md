@@ -49,9 +49,9 @@ This is an evidence checklist, not a statement of completion. Check an item only
 
 ## Excel import, authoring, and content releases
 
-Local/test upload-through-approval evidence exists under ADR-010. Every item
-below remains unchecked until production-equivalent staging and the
-course-commit/release path pass.
+Local/test upload-through-publication and mobile operator evidence exists under
+ADRs 010 through 014. Every item below remains unchecked until
+production-equivalent staging and the complete authoring/release path pass.
 
 - [ ] Only `.xlsx` is accepted; file type, size, checksum, malware, zip bomb, XML/path, formula, external-link, Unicode, and resource limits are enforced in an isolated worker.
 - [ ] Production import proves checksum-bound multipart upload, exact object-version acceptance and lost-response recovery, queue/DLQ/lease/retry behavior, private malware scanning, immutable quarantine/archive/report provenance, owner-scoped no-store reads, and digest-bound approval.

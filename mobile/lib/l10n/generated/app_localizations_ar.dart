@@ -328,4 +328,128 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get matchingFeedbackUnavailable =>
       'لم تُحفظ مطابقاتك السابقة على هذا الجهاز. تظهر أدناه المطابقة الصحيحة الكاملة التي أرسلها الخادم.';
+
+  @override
+  String get teacher => 'المعلّم';
+
+  @override
+  String get teacherImportTitle => 'إنشاء دورة من Excel';
+
+  @override
+  String get teacherImportBody =>
+      'يرفع مسار الاختبار المحلي هذا ملف ‎.xlsx واحدًا لفحص البرمجيات الضارة ومراجعته. تبقى الموافقة وإنشاء المسودة والنشر خطوات منفصلة.';
+
+  @override
+  String get selectWorkbook => 'اختيار ملف Excel';
+
+  @override
+  String get preparingWorkbook => 'جارٍ فحص المصنف';
+
+  @override
+  String get uploadingWorkbook => 'جارٍ رفع المصنف';
+
+  @override
+  String get processingWorkbook => 'جارٍ الفحص وإعداد المعاينة';
+
+  @override
+  String get previewHeading => 'مراجعة الاستيراد';
+
+  @override
+  String previewSummary(Object matching, Object questions, Object rows) {
+    return '$rows صفوف مصدر · $questions أسئلة · $matching أسئلة مطابقة';
+  }
+
+  @override
+  String previewRowLabel(Object row, Object test, Object type) {
+    return 'صف المصدر $row، الاختبار $test، نوع السؤال $type';
+  }
+
+  @override
+  String get loadMore => 'تحميل المزيد';
+
+  @override
+  String get issuesHeading => 'التحذيرات والأخطاء';
+
+  @override
+  String get previewApprovalConfirmation =>
+      'راجعت المعاينة وأفهم أن الموافقة لا تنشر الدورة.';
+
+  @override
+  String get approvePreview => 'الموافقة على هذه المعاينة';
+
+  @override
+  String get draftCreationNotice =>
+      'يمكن الآن حفظ المحتوى الموافق عليه كمسودة غير منشورة. لن يصبح مرئيًا للمتعلمين.';
+
+  @override
+  String get draftCreationConfirmation =>
+      'إنشاء مسودة واحدة ثابتة وغير منشورة من هذه المعاينة الموافق عليها.';
+
+  @override
+  String get createDraft => 'إنشاء مسودة الدورة';
+
+  @override
+  String get releaseImpactHeading => 'أثر النشر';
+
+  @override
+  String releaseImpactSummary(
+    Object added,
+    Object changed,
+    Object learners,
+    Object questions,
+    Object removed,
+  ) {
+    return '$questions أسئلة · $added مضافة · $changed معدّلة · $removed محذوفة · $learners متعلمين متأثرين';
+  }
+
+  @override
+  String get releaseImpactConfirmation =>
+      'راجعت هذا الأثر الدقيق وأريد تفعيل الإصدار الثابت.';
+
+  @override
+  String get publishCourse => 'نشر الدورة';
+
+  @override
+  String get coursePublished =>
+      'تم تفعيل إصدار الدورة، وجدولت إعادة حساب التقدم.';
+
+  @override
+  String get newImport => 'بدء استيراد جديد';
+
+  @override
+  String get workbookRejected => 'رُفض المصنف بأمان. راجع المشكلات أدناه.';
+
+  @override
+  String get workbookExpired =>
+      'انتهت صلاحية جلسة الرفع. ابدأ استيرادًا جديدًا.';
+
+  @override
+  String fileDetails(Object name, Object size) {
+    return '$name · $size بايت';
+  }
+
+  @override
+  String questionType(Object type) {
+    return 'النوع $type';
+  }
+
+  @override
+  String correctAnswerTeacher(Object answer) {
+    return 'الإجابة المراجعة: $answer';
+  }
+
+  @override
+  String alternativeCorrectAnswerTeacher(Object answer) {
+    return 'الإجابة البديلة المراجعة: $answer';
+  }
+
+  @override
+  String wrongAnswersTeacher(Object answers) {
+    return 'الخيارات المضللة المراجعة: $answers';
+  }
+
+  @override
+  String matchingGroupTeacher(Object group) {
+    return 'مجموعة المطابقة: $group';
+  }
 }

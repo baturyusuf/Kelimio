@@ -24,7 +24,11 @@ It reveals an explicit local-only action that installs the reviewed mixed
 Type-A/Type-B/Type-C/Type-D starter release v4 through the local backend; it
 contains eight questions (five A, one B, one C, and the four-pair `EV` Type-D
 question), never creates users or learning results, and is rejected outside
-enabled local mode.
+enabled local mode. It also adds a **Teacher** tab for native `.xlsx` selection,
+checksum-bound multipart upload, paged preview/issues, digest-bound approval,
+exactly-once draft creation, impact review, and explicit publication. Approval,
+draft creation, and publication are three separately confirmed actions. The
+presigned upload client never receives the API bearer-token interceptor.
 
 After a valid OIDC session, the app loads `/v1/me`. Provisional users must
 complete the one-time app-language, target-language, support-language, and time-
@@ -85,15 +89,17 @@ optional minimum/current endpoint E2E run, and remaining real-device/release
 limitations.
 
 From the repository root, `scripts\local-android-e2e.cmd` runs the isolated
-real-registration acceptance flow. It uses a fresh Flyway V9 database, a
+real-registration acceptance flow. It uses a fresh Flyway V12 database, a
 per-run random 32-byte matching-replay key, separate Compose volumes and ports,
 public Keycloak registration, Mailpit verification, a genuine S256 PKCE token,
 the generated API repositories, real Drift storage, and the production Flutter
 UI. It verifies profile gating, starter-course installation, enrollment, all
 eight server-scored answers, Type-B replay, Type-C replay/reconciliation,
 Type-D matching, reordered same-map replay and owner-scoped reconciliation, the
-final 8/8 and 480/480 projection at version 9, sign-out, and private-cache
-removal. It also proves that changing a submitted matching edge returns `409`
+final 8/8 and 480/480 projection at version 9, a real reviewed-workbook upload,
+private malware scan, preview, three independent confirmation gates, exactly-once
+draft creation, impact-bound initial publication, catalog return, sign-out, and
+private-cache removal. It also proves that changing a submitted matching edge returns `409`
 without mutation, isolated cleanup leaves no project resources or test images,
 and the normal Compose services and ADB mappings remain unchanged. It is skipped by ordinary
 integration-test invocations unless the guarded runner enables it.
@@ -119,10 +125,13 @@ recoverable process restart keeps only the normal submission identity/state;
 the board is rebuilt empty unless reconciliation returns the no-store committed
 correct mapping.
 
-Flutter analysis is clean and the full suite passes 117/117 tests, including
-the focused 18/18 Type-D domain/controller/widget/accessibility coverage. The
-guarded eight-question Android E2E also passes against fresh Flyway V9 services
-with zero isolated resources or images left after cleanup.
+Flutter analysis is clean and the full suite passes 124/124 tests, including
+the focused 18/18 Type-D domain/controller/widget/accessibility coverage and
+the checksum/upload, explicit three-gate, Arabic RTL, and 200% text-scale
+teacher-operator coverage. The guarded Android E2E also passes the combined
+eight-question learning and reviewed-workbook initial-publication journey
+against fresh Flyway V12 services with zero isolated resources or images left
+after cleanup.
 
 Android has explicit `production`, `smoke`, and `e2e` flavors. Normal Android
 run/build commands select `production`; ordinary device tests select `smoke`,

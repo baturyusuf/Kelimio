@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../application/auth_controller.dart';
 import '../../application/profile_controller.dart';
+import '../../application/providers.dart';
 import '../screens/attempt_screen.dart';
 import '../screens/catalog_screen.dart';
 import '../screens/course_detail_screen.dart';
@@ -11,13 +12,18 @@ import '../screens/energy_screen.dart';
 import '../screens/profile_setup_screen.dart';
 import '../screens/sign_in_screen.dart';
 import '../screens/splash_screen.dart';
+import '../screens/teacher_import_screen.dart';
 import '../widgets/localization.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
 final _catalogNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'catalog');
 final _energyNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'energy');
+final _teacherNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'teacher');
 
 final appRouterProvider = Provider<GoRouter>((ref) {
+  final localToolsEnabled = ref
+      .watch(appConfigProvider)
+      .localDevelopmentToolsEnabled;
   final refresh = ValueNotifier<int>(0);
   ref.listen(authControllerProvider, (previous, next) {
     refresh.value += 1;
@@ -107,6 +113,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               ),
             ],
           ),
+          if (localToolsEnabled)
+            StatefulShellBranch(
+              navigatorKey: _teacherNavigatorKey,
+              routes: [
+                GoRoute(
+                  path: '/teacher',
+                  builder: (context, state) => const TeacherImportScreen(),
+                ),
+              ],
+            ),
         ],
       ),
       GoRoute(
@@ -119,13 +135,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
   );
 });
 
-final class AppShell extends StatelessWidget {
+final class AppShell extends ConsumerWidget {
   const AppShell({required this.navigationShell, super.key});
 
   final StatefulNavigationShell navigationShell;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final localToolsEnabled = ref
+        .watch(appConfigProvider)
+        .localDevelopmentToolsEnabled;
     return Scaffold(
       body: navigationShell,
       bottomNavigationBar: NavigationBar(
@@ -147,6 +166,12 @@ final class AppShell extends StatelessWidget {
             selectedIcon: const Icon(Icons.bolt),
             label: context.l10n.energy,
           ),
+          if (localToolsEnabled)
+            NavigationDestination(
+              icon: const Icon(Icons.school_outlined),
+              selectedIcon: const Icon(Icons.school),
+              label: context.l10n.teacher,
+            ),
         ],
       ),
     );

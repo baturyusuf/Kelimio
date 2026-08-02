@@ -8,6 +8,7 @@ import 'package:uuid/uuid.dart';
 import '../core/config/app_config.dart';
 import '../domain/auth/auth.dart';
 import '../domain/catalog/catalog.dart';
+import '../domain/course_authoring/course_authoring.dart';
 import '../domain/development/development.dart';
 import '../domain/energy/energy.dart';
 import '../domain/failures.dart';
@@ -15,8 +16,10 @@ import '../domain/identifiers.dart';
 import '../domain/learning/learning.dart';
 import '../domain/profile/profile.dart';
 import '../infrastructure/auth/app_auth_gateway.dart';
+import '../infrastructure/files/native_workbook_picker.dart';
 import '../infrastructure/network/failure_mapper.dart';
 import '../infrastructure/network/interceptors.dart';
+import '../infrastructure/repositories/course_authoring_repository.dart';
 import '../infrastructure/repositories/dio_repositories.dart';
 import '../infrastructure/storage/drift_attempt_recovery_store.dart';
 
@@ -95,6 +98,28 @@ final developmentRepositoryProvider = Provider<DevelopmentRepository>((ref) {
   return GeneratedDevelopmentRepository(
     ref.watch(apiClientProvider).getDevelopmentApi(),
     const DioFailureMapper(),
+  );
+});
+
+final workbookPickerProvider = Provider<WorkbookPicker>((ref) {
+  return const NativeWorkbookPicker();
+});
+
+final courseAuthoringUploadClientProvider = Provider<Dio>((ref) {
+  final dio = GeneratedCourseAuthoringRepository.createPresignedUploadClient();
+  ref.onDispose(() => dio.close(force: true));
+  return dio;
+});
+
+final courseAuthoringRepositoryProvider = Provider<CourseAuthoringRepository>((
+  ref,
+) {
+  final client = ref.watch(apiClientProvider);
+  return GeneratedCourseAuthoringRepository(
+    client.getCourseImportApi(),
+    client.getCourseReleaseApi(),
+    const DioFailureMapper(),
+    uploadClient: ref.watch(courseAuthoringUploadClientProvider),
   );
 });
 
