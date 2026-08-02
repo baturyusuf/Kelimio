@@ -56,6 +56,20 @@ OIDC provider through `localhost`. Check or stop it with `-Action status` and
 policy and does not change the workstation's persistent security settings.
 Google Play Console access is not required for this emulator.
 
+Run the repository's sequential Android API/device smoke matrix with:
+
+```powershell
+.\scripts\android-device-matrix.cmd -Headless
+```
+
+The guarded runner covers API 24/Nexus 5, API 30/Pixel 3a, and API 36/Pixel 7
+with five isolated storage, recovery, and startup checks per profile. It creates
+only the allowlisted repository AVDs, never deletes or wipes an AVD, and restores
+the originally running Kelimio emulator and its ADB mappings. See
+[`docs/ANDROID_DEVICE_MATRIX.md`](docs/ANDROID_DEVICE_MATRIX.md) for exact scope,
+the optional endpoint E2E command, and the release gates this evidence does not
+close.
+
 Keycloak is available at `http://localhost:8081`, the API at `http://localhost:8080`, Mailpit at `http://localhost:8025`, and LocalStack at `http://localhost:4566`. The realm has no demo user. Register through OIDC, verify the captured message in Mailpit on a fresh realm, and complete the in-app profile setup. When local development tools are enabled, an authenticated and profile-complete user can explicitly install the immutable reviewed mixed Type-A/Type-B/Type-C/Type-D starter course, including when an older local starter is already present. Starter release v4 contains five Type-A questions, one Type-B question, the exact reviewed-workbook Type-C row, and one four-pair Type-D question from the unambiguous `EV` group (`Pencere`/`Window`, `Kapı`/`Door`, `Masa`/`Table`, and `Sandalye`/`Chair`). This is bounded local test content using English as its support language; it is not the production Excel-import workflow, creates no learning results, and does not enable the still-blocked production workbook-to-Type-D conversion. The repository also tests a side-effect-free secure preview of the exact reviewed XLSX; it does not yet expose upload, approval, persistence, or publication.
 
 Run the backend checks:

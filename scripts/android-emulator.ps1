@@ -2,7 +2,8 @@
 param(
     [ValidateSet("setup", "start", "status", "stop")]
     [string] $Action = "start",
-    [string] $AvdName = "kelimio_api36",
+    [ValidateSet("api24-min", "api30-mid", "api36-current")]
+    [string] $Profile = "api36-current",
     [switch] $Headless,
     [ValidateRange(30, 600)]
     [int] $BootTimeoutSeconds = 180
@@ -10,10 +11,33 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-$apiLevel = 36
+$compileApiLevel = 36
 $buildToolsVersion = "36.0.0"
-$systemImage = "system-images;android-36;google_apis;x86_64"
-$deviceProfile = "pixel_7"
+$profiles = @{
+    "api24-min" = @{
+        AvdName = "kelimio_api24_min"
+        ApiLevel = 24
+        SystemImage = "system-images;android-24;google_apis;x86_64"
+        DeviceProfile = "Nexus 5"
+    }
+    "api30-mid" = @{
+        AvdName = "kelimio_api30_mid"
+        ApiLevel = 30
+        SystemImage = "system-images;android-30;google_apis;x86_64"
+        DeviceProfile = "pixel_3a"
+    }
+    "api36-current" = @{
+        AvdName = "kelimio_api36"
+        ApiLevel = 36
+        SystemImage = "system-images;android-36;google_apis;x86_64"
+        DeviceProfile = "pixel_7"
+    }
+}
+$selectedProfile = $profiles[$Profile]
+$avdName = [string] $selectedProfile.AvdName
+$apiLevel = [int] $selectedProfile.ApiLevel
+$systemImage = [string] $selectedProfile.SystemImage
+$deviceProfile = [string] $selectedProfile.DeviceProfile
 $reversePorts = @(8080, 8081)
 
 function Resolve-AndroidSdkRoot {
@@ -94,7 +118,7 @@ function Assert-AndroidPackages {
     $requiredFiles = @(
         $adb,
         $emulator,
-        (Join-Path $sdkRoot "platforms\android-$apiLevel\android.jar"),
+        (Join-Path $sdkRoot "platforms\android-$compileApiLevel\android.jar"),
         (Join-Path $sdkRoot "build-tools\$buildToolsVersion\aapt2.exe"),
         (Join-Path $sdkRoot "system-images\android-$apiLevel\google_apis\x86_64\system.img")
     )
@@ -103,14 +127,25 @@ function Assert-AndroidPackages {
         return
     }
 
-    & $sdkManager --sdk_root="$sdkRoot" `
-        "platform-tools" `
-        "emulator" `
-        "platforms;android-$apiLevel" `
-        "build-tools;$buildToolsVersion" `
-        $systemImage
-    if ($LASTEXITCODE -ne 0) {
-        throw "Android SDK package installation failed with exit code $LASTEXITCODE."
+    # Command-line Tools 22 writes a deprecation notice to stderr even when
+    # sdkmanager succeeds. Windows PowerShell 5.1 promotes that line to an
+    # error record under Stop, so capture the native exit code explicitly.
+    $previousPreference = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = "Continue"
+        $sdkManagerOutput = @(& $sdkManager --sdk_root="$sdkRoot" `
+            "platform-tools" `
+            "emulator" `
+            "platforms;android-$compileApiLevel" `
+            "build-tools;$buildToolsVersion" `
+            $systemImage 2>&1)
+        $sdkManagerExitCode = $LASTEXITCODE
+    } finally {
+        $ErrorActionPreference = $previousPreference
+    }
+    if ($sdkManagerExitCode -ne 0) {
+        $safeTail = @($sdkManagerOutput | Select-Object -Last 20) -join "`n"
+        throw "Android SDK package installation failed with exit code $sdkManagerExitCode.`n$safeTail"
     }
 
     $stillMissing = @($requiredFiles | Where-Object { -not (Test-Path -LiteralPath $_) })
@@ -123,9 +158,9 @@ function Ensure-Avd {
     Assert-AndroidPackages
 
     $avdList = (& $avdManager list avd 2>&1) -join "`n"
-    if ($avdList -notmatch "(?m)^\s*Name:\s+$([Regex]::Escape($AvdName))\s*$") {
+    if ($avdList -notmatch "(?m)^\s*Name:\s+$([Regex]::Escape($avdName))\s*$") {
         "no" | & $avdManager create avd `
-            --name $AvdName `
+            --name $avdName `
             --package $systemImage `
             --device $deviceProfile
         if ($LASTEXITCODE -ne 0) {
@@ -133,9 +168,22 @@ function Ensure-Avd {
         }
     }
 
-    $configPath = Join-Path $env:USERPROFILE ".android\avd\$AvdName.avd\config.ini"
+    $configPath = Join-Path $env:USERPROFILE ".android\avd\$avdName.avd\config.ini"
     if (-not (Test-Path -LiteralPath $configPath)) {
         throw "AVD configuration was not created at $configPath."
+    }
+
+    $configuration = @{}
+    foreach ($line in Get-Content -LiteralPath $configPath) {
+        $separator = $line.IndexOf('=')
+        if ($separator -gt 0) {
+            $configuration[$line.Substring(0, $separator)] = $line.Substring($separator + 1)
+        }
+    }
+    $expectedImageDirectory = "system-images\android-$apiLevel\google_apis\x86_64\"
+    if ($configuration["image.sysdir.1"] -ne $expectedImageDirectory -or
+        $configuration["hw.device.name"] -ne $deviceProfile) {
+        throw "The repository-owned AVD '$avdName' does not match profile '$Profile'; refusing to modify it."
     }
 
     Set-IniValue -Path $configPath -Key "PlayStore.enabled" -Value "no"
@@ -147,7 +195,7 @@ function Ensure-Avd {
     Set-IniValue -Path $configPath -Key "hw.gpu.enabled" -Value "yes"
     Set-IniValue -Path $configPath -Key "hw.gpu.mode" -Value "software"
 
-    Write-Host "Android AVD is ready: $AvdName (API $apiLevel, Google APIs, no Play Store)"
+    Write-Host "Android AVD is ready: $avdName (API $apiLevel, $deviceProfile, Google APIs, no Play Store)"
 }
 
 function Get-KelimioEmulatorSerial {
@@ -162,7 +210,7 @@ function Get-KelimioEmulatorSerial {
     })
     foreach ($serial in $serials) {
         $reportedName = @(& $adb -s $serial emu avd name 2>$null) | Select-Object -First 1
-        if ($reportedName -eq $AvdName) {
+        if ($reportedName -eq $avdName) {
             return $serial
         }
     }
@@ -172,13 +220,17 @@ function Get-KelimioEmulatorSerial {
 function Write-EmulatorStatus {
     $serial = Get-KelimioEmulatorSerial
     if (-not $serial) {
-        Write-Host "$AvdName is stopped."
+        Write-Host "$avdName is stopped."
         return
     }
 
     $bootCompleted = ((& $adb -s $serial shell getprop sys.boot_completed 2>$null) | Out-String).Trim()
     $androidVersion = ((& $adb -s $serial shell getprop ro.build.version.release 2>$null) | Out-String).Trim()
-    Write-Host "$AvdName is running as $serial; Android $androidVersion; boot_completed=$bootCompleted"
+    $reportedApiLevel = ((& $adb -s $serial shell getprop ro.build.version.sdk 2>$null) | Out-String).Trim()
+    if ($reportedApiLevel -ne $apiLevel.ToString()) {
+        throw "$avdName reported API $reportedApiLevel instead of expected API $apiLevel."
+    }
+    Write-Host "$avdName is running as $serial; Android $androidVersion / API $reportedApiLevel; boot_completed=$bootCompleted"
 }
 
 switch ($Action) {
@@ -191,11 +243,11 @@ switch ($Action) {
     "stop" {
         $serial = Get-KelimioEmulatorSerial
         if (-not $serial) {
-            Write-Host "$AvdName is already stopped."
+            Write-Host "$avdName is already stopped."
             break
         }
         & $adb -s $serial emu kill | Out-Null
-        Write-Host "Stopped $AvdName ($serial)."
+        Write-Host "Stopped $avdName ($serial)."
     }
     "start" {
         Ensure-Avd
@@ -203,10 +255,10 @@ switch ($Action) {
         if (-not $serial) {
             $logRoot = Join-Path $env:LOCALAPPDATA "Kelimio\emulator-logs"
             New-Item -ItemType Directory -Path $logRoot -Force | Out-Null
-            $stdout = Join-Path $logRoot "$AvdName.stdout.log"
-            $stderr = Join-Path $logRoot "$AvdName.stderr.log"
+            $stdout = Join-Path $logRoot "$avdName.stdout.log"
+            $stderr = Join-Path $logRoot "$avdName.stderr.log"
             $arguments = @(
-                "-avd", $AvdName,
+                "-avd", $avdName,
                 "-no-snapshot",
                 "-no-boot-anim",
                 "-gpu", "software",
@@ -238,7 +290,7 @@ switch ($Action) {
         } while ((Get-Date) -lt $deadline)
 
         if (-not $serial -or $bootCompleted -ne "1") {
-            $stderr = Join-Path $env:LOCALAPPDATA "Kelimio\emulator-logs\$AvdName.stderr.log"
+            $stderr = Join-Path $env:LOCALAPPDATA "Kelimio\emulator-logs\$avdName.stderr.log"
             $tail = if (Test-Path -LiteralPath $stderr) {
                 (Get-Content -LiteralPath $stderr -Tail 80) -join "`n"
             } else {

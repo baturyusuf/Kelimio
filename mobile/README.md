@@ -73,6 +73,15 @@ The script configures ADB reverse mappings for the API and Keycloak ports. The
 AVD contains Google APIs but intentionally has no Play Store; store billing and
 Play Integrity remain separate release-stage tests.
 
+The broader local Android smoke matrix is run from the repository root with
+`scripts\android-device-matrix.cmd -Headless`. It sequentially covers the
+declared API 24 minimum on Nexus 5, API 30 on Pixel 3a, and the API 36 target on
+Pixel 7. Each profile runs the existing five isolated secure-storage, Drift,
+auth-restore, and signed-out-startup checks under `com.kelimio.app.smoke`.
+`docs/ANDROID_DEVICE_MATRIX.md` records the state-preservation guarantees,
+optional minimum/current endpoint E2E run, and remaining real-device/release
+limitations.
+
 From the repository root, `scripts\local-android-e2e.cmd` runs the isolated
 real-registration acceptance flow. It uses a fresh Flyway V8 database, a
 per-run random 32-byte matching-replay key, separate Compose volumes and ports,
