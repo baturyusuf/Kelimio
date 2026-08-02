@@ -12,6 +12,8 @@ output "foundation" {
     bucket_names        = module.foundation.bucket_names
     worker_queue_url    = module.foundation.worker_queue_url
     worker_dlq_url      = module.foundation.worker_dlq_url
+    import_queue_url    = module.foundation.import_queue_url
+    import_dlq_url      = module.foundation.import_dlq_url
     ecr_repository_urls = module.foundation.ecr_repository_urls
   }
 }

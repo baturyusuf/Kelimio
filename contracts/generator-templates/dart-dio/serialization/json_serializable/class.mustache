@@ -122,13 +122,21 @@ class {{{classname}}} {
   String toString() {
   {{#vendorExtensions.x-kelimio-redacted-to-string}}
     final json = toJson();
-    {{#vars}}
-    {{#vendorExtensions.x-kelimio-sensitive}}
+    {{^vendorExtensions.x-kelimio-redacted-field-names}}
+      {{#vars}}
+      {{#vendorExtensions.x-kelimio-sensitive}}
     if (json.containsKey(r'{{{baseName}}}')) {
       json[r'{{{baseName}}}'] = '[REDACTED]';
     }
-    {{/vendorExtensions.x-kelimio-sensitive}}
-    {{/vars}}
+      {{/vendorExtensions.x-kelimio-sensitive}}
+      {{/vars}}
+    {{/vendorExtensions.x-kelimio-redacted-field-names}}
+    {{! OpenAPI Generator drops property vendor extensions for some composed/ref schemas. }}
+    {{#vendorExtensions.x-kelimio-redacted-field-names}}
+    if (json.containsKey(r'{{{.}}}')) {
+      json[r'{{{.}}}'] = '[REDACTED]';
+    }
+    {{/vendorExtensions.x-kelimio-redacted-field-names}}
     return json.toString();
   {{/vendorExtensions.x-kelimio-redacted-to-string}}
   {{^vendorExtensions.x-kelimio-redacted-to-string}}

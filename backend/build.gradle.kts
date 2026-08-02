@@ -18,6 +18,7 @@ java {
 }
 
 dependencies {
+    implementation(platform("software.amazon.awssdk:bom:2.50.2"))
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("org.springframework.boot:spring-boot-starter-jooq")
     implementation("org.springframework.boot:spring-boot-starter-oauth2-resource-server")
@@ -30,6 +31,9 @@ dependencies {
     implementation("org.flywaydb:flyway-core")
     implementation("org.flywaydb:flyway-database-postgresql")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
+    implementation("software.amazon.awssdk:s3")
+    implementation("software.amazon.awssdk:sqs")
+    implementation("software.amazon.awssdk:url-connection-client")
 
     runtimeOnly("org.postgresql:postgresql")
 

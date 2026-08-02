@@ -104,7 +104,7 @@ class CatalogApi {
   ///
   ///
   /// Parameters:
-  /// * [cursor]
+  /// * [cursor] - Opaque tamper-evident cursor bound to the authenticated owner, import, immutable preview/report identity, and position. It contains no workbook text or storage coordinates.
   /// * [limit]
   /// * [targetLanguage]
   /// * [supportLanguage]

@@ -11,7 +11,7 @@ $repositoryRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
 $composePath = Join-Path $repositoryRoot "compose.yaml"
 $mobilePath = Join-Path $repositoryRoot "mobile"
 $testPath = "integration_test/real_local_auth_to_progress_test.dart"
-$expectedFlywayVersion = "8"
+$expectedFlywayVersion = "9"
 $projectPattern = '^kelimio-e2e-[0-9a-f]{12}$'
 $environmentNames = @(
     "KELIMIO_LOCAL_DB_PASSWORD",
@@ -29,6 +29,7 @@ $environmentNames = @(
     "KELIMIO_LOCAL_OIDC_ISSUER",
     "KELIMIO_MATCHING_REPLAY_ACTIVE_KEY_VERSION",
     "KELIMIO_MATCHING_REPLAY_KEYS",
+    "KELIMIO_LOCAL_IMPORT_CURSOR_HMAC_KEY",
     "KELIMIO_LOCAL_RESTART_POLICY"
 )
 
@@ -265,7 +266,7 @@ function Assert-FlywayVersion {
         [string] $ExpectedVersion
     )
 
-    if ($ExpectedVersion -ne "8") {
+    if ($ExpectedVersion -ne "9") {
         throw "The isolated Flyway version guard rejected its configured expectation."
     }
     $rows = @(& $Docker compose -f $composePath -p $Project exec -T postgres `
@@ -576,6 +577,7 @@ try {
     }
 
     $matchingReplayKey = New-RandomBase64Key
+    $importCursorKey = New-RandomBase64Key
     $environmentValues = @{
         KELIMIO_LOCAL_DB_PASSWORD = New-RandomSecret
         KELIMIO_LOCAL_KEYCLOAK_ADMIN = "e2e-admin-$(New-RandomHex -ByteCount 6)"
@@ -592,6 +594,7 @@ try {
         KELIMIO_LOCAL_OIDC_ISSUER = "http://localhost:$($ports.Keycloak)/realms/kelimio"
         KELIMIO_MATCHING_REPLAY_ACTIVE_KEY_VERSION = "e2e-v1"
         KELIMIO_MATCHING_REPLAY_KEYS = "e2e-v1=$matchingReplayKey"
+        KELIMIO_LOCAL_IMPORT_CURSOR_HMAC_KEY = $importCursorKey
         KELIMIO_LOCAL_RESTART_POLICY = "no"
     }
     foreach ($entry in $environmentValues.GetEnumerator()) {
@@ -600,6 +603,8 @@ try {
     $entry = $null
     [void] $environmentValues.Remove("KELIMIO_MATCHING_REPLAY_KEYS")
     $matchingReplayKey = $null
+    [void] $environmentValues.Remove("KELIMIO_LOCAL_IMPORT_CURSOR_HMAC_KEY")
+    $importCursorKey = $null
 
     $stage = "isolated Compose guard"
     $configuration = Get-ComposeConfiguration -Docker $dockerCommand.Source -Project $project
@@ -622,7 +627,7 @@ try {
     if ($apiHealth.status -ne "UP") {
         throw "The isolated API readiness probe failed."
     }
-    $stage = "Flyway V8 schema guard"
+    $stage = "Flyway V9 schema guard"
     Assert-FlywayVersion `
         -Docker $dockerCommand.Source `
         -Project $project `

@@ -2,7 +2,7 @@
 
 Kelimio is a multilingual language-learning and course-marketplace product. The intended production system includes a Flutter Android/iOS application, a Kotlin/Spring backend, internal administration and public legal web surfaces, versioned API contracts, and AWS infrastructure.
 
-> Current state: Phase 0 foundations, a secure deterministic Excel-preview core, and a partial auth-to-answer vertical slice are implemented and locally buildable. The product is still **BLOCKED — external owner action required; NOT PUBLISH-READY** because production integrations, staging evidence, complete product flows, signed artifacts, and owner approvals are outstanding. See [status](docs/STATUS.md) and [launch blockers](docs/LAUNCH_BLOCKERS.md).
+> Current state: Phase 0 foundations, a local/test-only approval-only secure Excel intake, and a partial auth-to-answer vertical slice are implemented and locally buildable. The product is still **BLOCKED — external owner action required; NOT PUBLISH-READY** because production integrations, staging evidence, complete product flows, signed artifacts, and owner approvals are outstanding. See [status](docs/STATUS.md) and [launch blockers](docs/LAUNCH_BLOCKERS.md).
 
 ## Architecture baseline
 
@@ -50,8 +50,9 @@ Prepare and start the repository's Android 16 / API 36 development emulator:
 
 The script creates `kelimio_api36`, a Pixel 7 profile with Google APIs but no
 Play Store. It uses a cold boot to avoid host snapshot incompatibilities and
-reverses ports `8080` and `8081`, so the emulator can reach the local API and
-OIDC provider through `localhost`. Check or stop it with `-Action status` and
+reverses ports `4566`, `8080`, and `8081`, so the emulator can reach LocalStack,
+the local API, and the OIDC provider through `localhost`. Check or stop it with
+`-Action status` and
 `-Action stop`. The `.cmd` launcher applies a process-only PowerShell execution
 policy and does not change the workstation's persistent security settings.
 Google Play Console access is not required for this emulator.
@@ -70,7 +71,9 @@ the originally running Kelimio emulator and its ADB mappings. See
 the optional endpoint E2E command, and the release gates this evidence does not
 close.
 
-Keycloak is available at `http://localhost:8081`, the API at `http://localhost:8080`, Mailpit at `http://localhost:8025`, and LocalStack at `http://localhost:4566`. The realm has no demo user. Register through OIDC, verify the captured message in Mailpit on a fresh realm, and complete the in-app profile setup. When local development tools are enabled, an authenticated and profile-complete user can explicitly install the immutable reviewed mixed Type-A/Type-B/Type-C/Type-D starter course, including when an older local starter is already present. Starter release v4 contains five Type-A questions, one Type-B question, the exact reviewed-workbook Type-C row, and one four-pair Type-D question from the unambiguous `EV` group (`Pencere`/`Window`, `Kapı`/`Door`, `Masa`/`Table`, and `Sandalye`/`Chair`). This is bounded local test content using English as its support language; it is not the production Excel-import workflow, creates no learning results, and does not enable the still-blocked production workbook-to-Type-D conversion. The repository also tests a side-effect-free secure preview of the exact reviewed XLSX; it does not yet expose upload, approval, persistence, or publication.
+Keycloak is available at `http://localhost:8081`, the API at `http://localhost:8080`, Mailpit at `http://localhost:8025`, and LocalStack at `http://localhost:4566`. The realm has no demo user. Register through OIDC, verify the captured message in Mailpit on a fresh realm, and complete the in-app profile setup. When local development tools are enabled, an authenticated and profile-complete user can explicitly install the immutable reviewed mixed Type-A/Type-B/Type-C/Type-D starter course, including when an older local starter is already present. Starter release v4 contains five Type-A questions, one Type-B question, the exact reviewed-workbook Type-C row, and one four-pair Type-D question from the unambiguous `EV` group (`Pencere`/`Window`, `Kapı`/`Door`, `Masa`/`Table`, and `Sandalye`/`Chair`). This is bounded local test content using English as its support language; it creates no learning results and does not enable the still-blocked production workbook-to-Type-D conversion.
+
+The local/test-only course-import intake accepts an owner-scoped, checksum-bound multipart upload through presigned S3 requests, dispatches it through an SQS/DLQ-backed worker, scans it with network-isolated ClamAV, persists immutable source/report provenance, exposes bounded preview and issue pages, and records approval against one exact preview binding. Approval deliberately creates no course, revision, release, entitlement, or publication. Staging and production remain fail closed until author eligibility, consent, least-privilege runtime identities, retention, import commit, and publication gates are implemented.
 
 Run the backend checks:
 
@@ -82,6 +85,21 @@ cd backend
 
 The explicit Docker endpoint keeps Testcontainers on Docker Desktop's active
 engine instead of silently skipping the real-PostgreSQL integration test.
+
+Run the isolated real-service Excel intake acceptance flow with:
+
+```powershell
+.\scripts\local-import-e2e.cmd
+```
+
+The guarded runner creates a randomly named Compose project and disposable
+ports, networks, volumes, users, and secrets. It exercises the exact reviewed
+workbook through upload, malware scan, preview, ownership checks, and approval;
+also verifies clean-invalid and EICAR rejection paths, queue drain, immutable
+evidence, and the absence of any course commit. It then removes only its
+validated isolated resources and confirms that the normal Compose containers
+were unchanged. Neither an AWS account nor Google Play Console is needed for
+this local acceptance flow.
 
 Generate clients and run the mobile checks:
 
@@ -135,7 +153,7 @@ verifies the Mailpit message; exchanges a real Authorization Code + S256 PKCE
 code; and drives the production Flutter repositories, controllers, Drift store,
 and UI through profile setup, enrollment, eight answers, Type-B replay,
 Type-C replay/reconciliation, Type-D matching replay/reconciliation, projection,
-and sign-out. The guarded run boots a fresh Flyway V8 stack with a per-run
+and sign-out. The guarded run boots a fresh Flyway V9 stack with a per-run
 random 32-byte matching-replay key, passes 8/8 with 480/480 projected score at
 projection version 9, rejects a changed matching edge without mutation, purges
 private state, and verifies isolated cleanup. Random credentials and the replay
@@ -193,7 +211,7 @@ See [ADR-000](docs/adr/ADR-000-source-of-truth.md) for source priority and norma
 
 ## Delivery roadmap
 
-The implementation sequence is maintained in [docs/IMPLEMENTATION_PLAN.md]. The first executable milestone is a real vertical slice:
+The implementation sequence is maintained in [docs/IMPLEMENTATION_PLAN.md]. The first local executable milestone below is implemented; its staging exit gate remains open:
 
 ```text
 OIDC sign-in -> course read/enroll -> one online question ->

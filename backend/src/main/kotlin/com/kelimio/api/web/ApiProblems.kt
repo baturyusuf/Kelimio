@@ -5,6 +5,7 @@ import jakarta.validation.ConstraintViolationException
 import org.slf4j.LoggerFactory
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.http.HttpStatus
+import org.springframework.http.CacheControl
 import org.springframework.http.ProblemDetail
 import org.springframework.http.ResponseEntity
 import org.springframework.http.converter.HttpMessageNotReadableException
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException
 import java.net.URI
+import java.sql.SQLException
 
 sealed class ApiProblem(
     val status: HttpStatus,
@@ -33,6 +35,12 @@ class ProfileSetupRequiredProblem :
 
 class UnprocessableProblem(message: String) :
     ApiProblem(HttpStatus.UNPROCESSABLE_ENTITY, "unprocessable-entity", message)
+
+class ServiceUnavailableProblem(message: String) :
+    ApiProblem(HttpStatus.SERVICE_UNAVAILABLE, "service-unavailable", message)
+
+class TooManyRequestsProblem(message: String) :
+    ApiProblem(HttpStatus.TOO_MANY_REQUESTS, "too-many-requests", message)
 
 @RestControllerAdvice
 class ApiExceptionHandler {
@@ -78,12 +86,24 @@ class ApiExceptionHandler {
         exception: Exception,
         request: HttpServletRequest,
     ): ResponseEntity<ProblemDetail> {
+        val sqlException = findSqlException(exception)
         logger.error(
-            "Unhandled API failure requestId={} exceptionType={}",
+            "Unhandled API failure requestId={} exceptionType={} sqlState={} vendorCode={}",
             requestId(request),
             exception.javaClass.name,
+            sqlException?.sqlState?.takeIf { it.matches(Regex("[0-9A-Z]{5}")) } ?: "unavailable",
+            sqlException?.errorCode ?: 0,
         )
         return problem(HttpStatus.INTERNAL_SERVER_ERROR, "internal-error", "An unexpected error occurred.", request)
+    }
+
+    private fun findSqlException(exception: Throwable): SQLException? {
+        var current: Throwable? = exception
+        repeat(16) {
+            if (current is SQLException) return current
+            current = current?.cause
+        }
+        return null
     }
 
     private fun problem(
@@ -97,7 +117,7 @@ class ApiExceptionHandler {
         body.title = status.reasonPhrase
         body.instance = URI.create(request.requestURI)
         body.setProperty("requestId", requestId(request))
-        return ResponseEntity.status(status).body(body)
+        return ResponseEntity.status(status).cacheControl(CacheControl.noStore()).body(body)
     }
 
     private fun requestId(request: HttpServletRequest): Any? =

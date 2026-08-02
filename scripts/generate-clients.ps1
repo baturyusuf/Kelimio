@@ -64,6 +64,53 @@ function Normalize-GeneratedText {
     }
 }
 
+function Repair-GeneratedTypeScriptNullableDates {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $Path
+    )
+
+    # OpenAPI Generator 7.14 emits a direct toISOString() call for a required
+    # nullable date/date-time. The cast is emitted only for nullable values, so
+    # this narrowly repairs that unsafe shape while leaving required dates and
+    # optional-nullable dates unchanged.
+    $unsafePattern = "(?m)^(?<indent>\s*)'(?<baseName>[^']+)': \(\(value\['(?<name>[^']+)'\] as any\)\.toISOString\(\)(?<dateOnly>\.substring\(0,10\))?\),"
+    $utf8WithoutBom = [System.Text.UTF8Encoding]::new($false)
+    $replacement = [System.Text.RegularExpressions.MatchEvaluator] {
+        param([System.Text.RegularExpressions.Match] $match)
+
+        $indent = $match.Groups['indent'].Value
+        $baseName = $match.Groups['baseName'].Value
+        $name = $match.Groups['name'].Value
+        $dateOnly = $match.Groups['dateOnly'].Value
+        return "$indent'$baseName': value['$name'] == null ? null : ((value['$name'] as any).toISOString()$dateOnly),"
+    }
+
+    Get-ChildItem -LiteralPath $Path -Recurse -File -Filter "*.ts" | ForEach-Object {
+        $content = [System.IO.File]::ReadAllText($_.FullName)
+        $repaired = [System.Text.RegularExpressions.Regex]::Replace(
+            $content,
+            $unsafePattern,
+            $replacement,
+            [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
+        )
+        if ($repaired -ne $content) {
+            [System.IO.File]::WriteAllText($_.FullName, $repaired, $utf8WithoutBom)
+        }
+    }
+
+    $remaining = Get-ChildItem -LiteralPath $Path -Recurse -File -Filter "*.ts" | Where-Object {
+        [System.Text.RegularExpressions.Regex]::IsMatch(
+            [System.IO.File]::ReadAllText($_.FullName),
+            $unsafePattern,
+            [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
+        )
+    }
+    if ($remaining) {
+        throw "Generated TypeScript retains an unsafe required-nullable date serializer."
+    }
+}
+
 function Invoke-OpenApiGenerator {
     param(
         [Parameter(Mandatory = $true)]
@@ -187,6 +234,7 @@ try {
     Pop-Location
 }
 
+Repair-GeneratedTypeScriptNullableDates -Path $webOutput
 Normalize-GeneratedText -Path $mobileOutput
 Normalize-GeneratedText -Path $webOutput
 

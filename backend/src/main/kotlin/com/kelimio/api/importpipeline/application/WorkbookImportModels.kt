@@ -85,7 +85,7 @@ data class WorkbookCellSource(
     val rowNumber: Int,
     val columnNumber: Int? = null,
     val reference: String? = null,
-)
+) { override fun toString(): String = "WorkbookCellSource(redacted)" }
 
 enum class WorkbookImportIssueSeverity {
     WARNING,
@@ -136,7 +136,7 @@ data class WorkbookImportIssue(
     val code: WorkbookImportIssueCode,
     val source: WorkbookCellSource?,
     val message: String,
-)
+) { override fun toString(): String = "WorkbookImportIssue(redacted)" }
 
 class WorkbookImportPreview internal constructor(
     val rulesVersion: String,
@@ -144,6 +144,7 @@ class WorkbookImportPreview internal constructor(
     rows: Collection<NormalizedWorkbookRow>,
     val plan: TestPlan?,
     issues: Collection<WorkbookImportIssue>,
+    checkpoint: () -> Unit = {},
 ) {
     val rows: List<NormalizedWorkbookRow> = immutableList(rows)
     val issues: List<WorkbookImportIssue> = immutableList(issues)
@@ -152,7 +153,7 @@ class WorkbookImportPreview internal constructor(
             plan?.isValid == true &&
             this.issues.none { it.severity == WorkbookImportIssueSeverity.ERROR }
 
-    val allocationSha256: String? = if (isValid) checkNotNull(plan).allocationSha256() else null
+    val allocationSha256: String? = if (isValid) checkNotNull(plan).allocationSha256(checkpoint) else null
     val previewSha256: String? = if (isValid) {
         CanonicalWorkbookImportPreviewDigest.sha256(
             settings = checkNotNull(settings),
@@ -161,10 +162,25 @@ class WorkbookImportPreview internal constructor(
     } else {
         null
     }
-    val levelCount: Int = this.rows.map { it.path.level }.distinct().size
-    val unitCount: Int = this.rows.map { it.path.level to it.path.unit }.distinct().size
-    val topicCount: Int = this.rows.map { Triple(it.path.level, it.path.unit, it.path.topic) }.distinct().size
+    val levelCount: Int
+    val unitCount: Int
+    val topicCount: Int
     val testCount: Int = plan?.tests?.size ?: 0
+
+    init {
+        val levels = mutableSetOf<String>()
+        val units = mutableSetOf<Pair<String, String>>()
+        val topics = mutableSetOf<Triple<String, String, String>>()
+        this.rows.forEach { row ->
+            checkpoint()
+            levels += row.path.level
+            units += row.path.level to row.path.unit
+            topics += Triple(row.path.level, row.path.unit, row.path.topic)
+        }
+        levelCount = levels.size
+        unitCount = units.size
+        topicCount = topics.size
+    }
 }
 
 internal fun ImportValidationIssue.toWorkbookIssue(): WorkbookImportIssue = WorkbookImportIssue(

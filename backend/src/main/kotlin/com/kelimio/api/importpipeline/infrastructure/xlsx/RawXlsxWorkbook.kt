@@ -11,22 +11,22 @@ package com.kelimio.api.importpipeline.infrastructure.xlsx
 data class RawXlsxWorkbook(
     val rulesVersion: String,
     val sheets: List<RawXlsxSheet>,
-)
+) { override fun toString(): String = "RawXlsxWorkbook(redacted)" }
 
 data class RawXlsxSheet(
     val ordinal: Int,
     val name: String,
     val rows: List<RawXlsxRow>,
-)
+) { override fun toString(): String = "RawXlsxSheet(redacted)" }
 
 data class RawXlsxRow(
     val rowNumber: Int,
     val cells: List<RawXlsxCell>,
-)
+) { override fun toString(): String = "RawXlsxRow(redacted)" }
 
 data class RawXlsxCell(
     val rowNumber: Int,
     val columnNumber: Int,
     val reference: String,
     val value: String,
-)
+) { override fun toString(): String = "RawXlsxCell(redacted)" }

@@ -753,4 +753,367 @@ assert.equal(
   "runtime response validation must require exact issued-ID coverage",
 );
 
-console.log("Course, profile, A/B/C/D question, and answer schemas accept valid fixtures and reject unsafe drift.");
+const importPaths = [
+  "/v1/courses/imports",
+  "/v1/courses/imports/{importId}",
+  "/v1/courses/imports/{importId}/complete",
+  "/v1/courses/imports/{importId}/preview",
+  "/v1/courses/imports/{importId}/issues",
+  "/v1/courses/imports/{importId}/approve",
+];
+for (const importPath of importPaths) {
+  assert.ok(contract.paths[importPath], `course-import contract path must exist: ${importPath}`);
+  for (const operation of Object.values(contract.paths[importPath])) {
+    for (const [status, responseOrReference] of Object.entries(operation.responses)) {
+      const response = responseOrReference.$ref === "#/components/responses/Problem"
+        ? contract.components.responses.Problem
+        : responseOrReference;
+      assert.equal(
+        response.headers["Cache-Control"].$ref,
+        "#/components/headers/NoStore",
+        `${operation.operationId} response ${status} must remain non-cacheable`,
+      );
+    }
+  }
+}
+for (const [path, method, statuses] of [
+  ["/v1/courses/imports", "post",
+    ["200", "201", "400", "401", "409", "413", "422", "429", "503", "default"]],
+  ["/v1/courses/imports/{importId}", "get", ["200", "400", "401", "404", "default"]],
+  ["/v1/courses/imports/{importId}/complete", "post",
+    ["200", "202", "400", "401", "404", "409", "413", "422", "503", "default"]],
+  ["/v1/courses/imports/{importId}/preview", "get", ["200", "400", "401", "404", "409", "default"]],
+  ["/v1/courses/imports/{importId}/issues", "get", ["200", "400", "401", "404", "409", "default"]],
+  ["/v1/courses/imports/{importId}/approve", "post",
+    ["200", "201", "400", "401", "404", "409", "413", "422", "default"]],
+]) {
+  assert.deepEqual(
+    Object.keys(contract.paths[path][method].responses).sort(),
+    [...statuses].sort(),
+    `${contract.paths[path][method].operationId} must retain its explicit HTTP outcome matrix`,
+  );
+}
+for (const [path, method] of [
+  ["/v1/courses/imports", "post"],
+  ["/v1/courses/imports/{importId}/complete", "post"],
+  ["/v1/courses/imports/{importId}/approve", "post"],
+]) {
+  assert.equal(
+    contract.paths[path][method]["x-kelimio-max-request-body-bytes"],
+    8192,
+    `${contract.paths[path][method].operationId} must keep a pre-parser JSON body limit`,
+  );
+}
+assert.equal(
+  contract.paths["/v1/courses/imports/{importId}/commit"],
+  undefined,
+  "approval-only intake must not expose course import commit",
+);
+
+const validPartSha256 = `${"A".repeat(43)}=`;
+const validSourceSha256 = "a".repeat(64);
+const validCreateImport = {
+  originalFileName: "course.xlsx",
+  declaredMediaType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  fileSizeBytes: 5242881,
+  sourceSha256: validSourceSha256,
+  parts: [
+    { partNumber: 1, sizeBytes: 5242880, sha256: validPartSha256 },
+    { partNumber: 2, sizeBytes: 1, sha256: validPartSha256 },
+  ],
+};
+const validateCreateCourseImport = compileSchema("CreateCourseImportRequest");
+assert.equal(
+  validateCreateCourseImport(validCreateImport),
+  true,
+  `valid multipart import create request must pass: ${ajv.errorsText(validateCreateCourseImport.errors)}`,
+);
+assert.equal(
+  validateCreateCourseImport({ ...validCreateImport, originalFileName: "../course.xlsx" }),
+  false,
+  "import filenames must reject path-derived object keys",
+);
+assert.equal(
+  validateCreateCourseImport({ ...validCreateImport, originalFileName: "safe\u202Efdp.xlsx" }),
+  false,
+  "import filenames must reject bidi display spoofing",
+);
+assert.equal(
+  validateCreateCourseImport({ ...validCreateImport, originalFileName: "safe\u0085name.xlsx" }),
+  false,
+  "import filenames must reject C1 controls",
+);
+assert.equal(
+  validateCreateCourseImport({ ...validCreateImport, originalFileName: "safe\u0600name.xlsx" }),
+  false,
+  "import filenames must reject Unicode format controls outside the named spoofing ranges",
+);
+assert.equal(
+  validateCreateCourseImport({ ...validCreateImport, originalFileName: "safe\u2065name.xlsx" }),
+  false,
+  "import filenames must reject unassigned default-ignorable code points",
+);
+assert.equal(
+  validateCreateCourseImport({ ...validCreateImport, originalFileName: `safe${String.fromCodePoint(0x1bca0)}name.xlsx` }),
+  false,
+  "import filenames must reject supplementary default-ignorable shorthand controls",
+);
+assert.equal(
+  validateCreateCourseImport({ ...validCreateImport, originalFileName: `safe${String.fromCodePoint(0xe0100)}name.xlsx` }),
+  false,
+  "import filenames must reject supplementary variation selectors",
+);
+assert.equal(
+  validateCreateCourseImport({ ...validCreateImport, declaredMediaType: "application/zip" }),
+  false,
+  "generic ZIP uploads must be rejected",
+);
+assert.equal(
+  validateCreateCourseImport({ ...validCreateImport, sourceSha256: "A".repeat(64) }),
+  false,
+  "whole-file SHA-256 must use canonical lowercase hex",
+);
+assert.equal(
+  validateCreateCourseImport({ ...validCreateImport, fileSizeBytes: 26214401 }),
+  false,
+  "import uploads must remain capped at 25 MiB",
+);
+assert.equal(
+  contract.components.schemas.CreateCourseImportRequest["x-kelimio-redacted-to-string"],
+  true,
+  "import create diagnostics must stay redacted",
+);
+assert.equal(
+  contract.components.schemas.CreateCourseImportRequest["x-kelimio-redaction-test-course-import"],
+  true,
+  "generated Dart import redaction regression test must remain enabled",
+);
+assert.equal(
+  contract.components.schemas.CreateCourseImportRequest.properties.originalFileName["x-kelimio-sensitive"],
+  true,
+  "owner filenames must remain marked sensitive",
+);
+assert.equal(
+  contract.components.schemas.CreateCourseImportRequest.properties.originalFileName["x-kelimio-normalization"],
+  "NFC",
+  "owner filenames must retain canonical Unicode normalization",
+);
+assert.equal(
+  contract.components.schemas.CreateCourseImportRequest.properties.originalFileName[
+    "x-kelimio-reject-default-ignorable-code-points"
+  ],
+  true,
+  "owner filenames must reject the complete default-ignorable deny-set",
+);
+assert.equal(
+  contract.components.schemas.CourseImportPresignedPart.properties.url["x-kelimio-sensitive"],
+  true,
+  "presigned URLs must remain marked sensitive",
+);
+assert.equal(
+  contract.components.schemas.CourseImportPreviewSummary.properties.warningCount.maximum,
+  2000,
+  "persisted import warnings must remain bounded",
+);
+assert.equal(
+  contract.components.schemas.CourseImportPreviewSummary.properties.errorCount.maximum,
+  2000,
+  "persisted import errors must remain bounded",
+);
+assert.equal(
+  contract.components.schemas.CourseImportValidationIssue.properties.ordinal.maximum,
+  2000,
+  "validation issue pagination must remain bounded by the persisted issue budget",
+);
+assert.match(
+  contract.components.schemas.CourseImportUploadInstructions.properties.expiresAt.description,
+  /Earliest exact expiry among the signed part-upload URLs.*no URL.*remains valid after this instant/s,
+  "the response must expose a conservative exact not-after time for every signed part URL",
+);
+assert.equal(
+  contract.components.schemas.CompletedCourseImportPart.properties.eTag.pattern,
+  "^[!-~]{1,256}$",
+  "multipart ETags must remain bounded printable ASCII opaque values",
+);
+assert.equal(
+  contract.components.schemas.CourseImportPreviewRow.properties.translations.minProperties,
+  undefined,
+  "valid cloze preview rows must be able to expose their intentionally empty translation map",
+);
+assert.ok(
+  contract.components.schemas.CourseImportPreviewRow["x-kelimio-cross-field-invariants"]
+    .some((rule) => rule.includes("non-empty for WORD") && rule.includes("empty for MULTIPLE_CHOICE_CLOZE")),
+  "record-type-specific translation cardinality must remain explicit",
+);
+assert.equal(
+  contract.components.schemas.CourseImportPreviewRow["x-kelimio-redacted-to-string"],
+  true,
+  "workbook preview row diagnostics must stay redacted",
+);
+for (const field of ["level", "unit", "topic", "targetText", "translations", "sentence",
+  "correctAnswer", "alternativeCorrectAnswer", "wrongAnswers", "matchingGroup", "note"]) {
+  assert.equal(
+    contract.components.schemas.CourseImportPreviewRow.properties[field]["x-kelimio-sensitive"],
+    true,
+    `workbook-authored preview field must remain sensitive: ${field}`,
+  );
+}
+for (const [schemaName, sensitiveFields] of Object.entries({
+  CreateCourseImportRequest: ["originalFileName", "sourceSha256", "parts"],
+  CourseImportPartDeclaration: ["sha256"],
+  CourseImportUploadSessionResponse: ["import", "upload"],
+  CourseImportUploadInstructions: ["parts"],
+  CourseImportPresignedPart: ["url", "requiredHeaders"],
+  CourseImportPartHeaders: ["sha256"],
+  CompleteCourseImportUploadRequest: ["sourceSha256", "parts"],
+  CompletedCourseImportPart: ["eTag", "sha256"],
+  CourseImportStatusResponse: ["originalFileName", "preview", "approvalBindingSha256"],
+  CourseImportPreviewSummary: ["validationReportSha256", "allocationSha256", "previewSha256"],
+  CourseImportPreviewPage: ["items", "nextCursor"],
+  CourseImportPreviewRow: ["source", "level", "unit", "topic", "targetText", "translations",
+    "sentence", "correctAnswer", "alternativeCorrectAnswer", "wrongAnswers", "matchingGroup", "note"],
+  CourseImportSource: ["sheetName", "reference"],
+  CourseImportIssuePage: ["items", "nextCursor"],
+  CourseImportValidationIssue: ["source", "message"],
+  ApproveCourseImportRequest: ["approvalBindingSha256"],
+  CourseImportApprovalResponse: ["approvalBindingSha256"],
+})) {
+  const schema = contract.components.schemas[schemaName];
+  assert.equal(schema["x-kelimio-redacted-to-string"], true, `${schemaName} must redact toString`);
+  for (const field of sensitiveFields) {
+    assert.equal(
+      schema.properties[field]["x-kelimio-sensitive"],
+      true,
+      `${schemaName}.${field} must remain sensitive`,
+    );
+  }
+  assert.deepEqual(
+    [...schema["x-kelimio-redacted-field-names"]].sort(),
+    [...sensitiveFields].sort(),
+    `${schemaName} must give the Dart generator an explicit complete redaction list`,
+  );
+}
+
+assert.ok(
+  contract.components.schemas.CreateCourseImportRequest["x-kelimio-cross-field-invariants"].length >= 3,
+  "multipart cross-field invariants must remain explicit for backend validator tests",
+);
+const hasDocumentedCanonicalMultipartShape = (request) => {
+  if (request.parts.length < 1 || request.parts.length > 5) return false;
+  let total = 0;
+  for (let index = 0; index < request.parts.length; index += 1) {
+    const part = request.parts[index];
+    const finalPart = index === request.parts.length - 1;
+    if (part.partNumber !== index + 1) return false;
+    if (!finalPart && part.sizeBytes !== 5242880) return false;
+    if (finalPart && (part.sizeBytes < 1 || part.sizeBytes > 5242880)) return false;
+    total += part.sizeBytes;
+  }
+  return total === request.fileSizeBytes;
+};
+assert.equal(hasDocumentedCanonicalMultipartShape(validCreateImport), true);
+assert.equal(
+  hasDocumentedCanonicalMultipartShape({
+    ...validCreateImport,
+    parts: validCreateImport.parts.map((part, index) => index === 1
+      ? { ...part, partNumber: 3 }
+      : part),
+  }),
+  false,
+  "the documented multipart invariant rejects non-consecutive import parts",
+);
+assert.equal(
+  hasDocumentedCanonicalMultipartShape({ ...validCreateImport, fileSizeBytes: 5242882 }),
+  false,
+  "the documented multipart invariant requires exact byte totals",
+);
+
+const validateCompleteCourseImportUpload = compileSchema("CompleteCourseImportUploadRequest");
+const validCompleteImport = {
+  sourceSha256: validSourceSha256,
+  parts: validCreateImport.parts.map((part) => ({
+    partNumber: part.partNumber,
+    eTag: `\"part-${part.partNumber}\"`,
+    sha256: part.sha256,
+  })),
+};
+assert.equal(
+  validateCompleteCourseImportUpload(validCompleteImport),
+  true,
+  `valid multipart completion must pass: ${ajv.errorsText(validateCompleteCourseImportUpload.errors)}`,
+);
+assert.equal(
+  validateCompleteCourseImportUpload({
+    ...validCompleteImport,
+    parts: validCompleteImport.parts.map((part, index) => index === 0
+      ? { ...part, claimedClean: true }
+      : part),
+  }),
+  false,
+  "completion must reject client-asserted scanner verdicts",
+);
+assert.equal(
+  validateCompleteCourseImportUpload({ ...validCompleteImport, objectVersion: "client-version" }),
+  false,
+  "completion must reject client-asserted storage versions",
+);
+const completionMatchesCreate = (created, completed) =>
+  completed.sourceSha256 === created.sourceSha256 &&
+  completed.parts.length === created.parts.length &&
+  completed.parts.every((part, index) =>
+    part.partNumber === created.parts[index].partNumber &&
+    part.sha256 === created.parts[index].sha256);
+assert.equal(completionMatchesCreate(validCreateImport, validCompleteImport), true);
+assert.equal(
+  completionMatchesCreate(validCreateImport, {
+    ...validCompleteImport,
+    sourceSha256: "b".repeat(64),
+  }),
+  false,
+  "the documented completion invariant rejects a changed whole-file digest",
+);
+assert.equal(
+  completionMatchesCreate(validCreateImport, {
+    ...validCompleteImport,
+    parts: validCompleteImport.parts.map((part, index) => index === 1
+      ? { ...part, sha256: `${"B".repeat(43)}=` }
+      : part),
+  }),
+  false,
+  "the documented completion invariant rejects a changed part digest",
+);
+
+const validateCourseImportStatus = compileSchema("CourseImportStatusResponse");
+const validImportStatus = {
+  id: "00000000-0000-4000-8000-000000000990",
+  status: "UPLOADING",
+  originalFileName: "course.xlsx",
+  declaredMediaType: validCreateImport.declaredMediaType,
+  fileSizeBytes: validCreateImport.fileSizeBytes,
+  rulesVersion: "xlsx-v1",
+  processingAttempts: 0,
+  createdAt: "2026-08-02T08:00:00Z",
+  updatedAt: "2026-08-02T08:00:00Z",
+  uploadExpiresAt: "2026-08-02T08:15:00Z",
+  preview: null,
+  approvalBindingSha256: null,
+  approvedAt: null,
+  failureCode: null,
+};
+assert.equal(
+  validateCourseImportStatus(validImportStatus),
+  true,
+  `owner import status must satisfy the closed response schema: ${ajv.errorsText(validateCourseImportStatus.errors)}`,
+);
+assert.equal(
+  validateCourseImportStatus({ ...validImportStatus, quarantineObjectKey: "secret/key" }),
+  false,
+  "status must not expose storage coordinates",
+);
+assert.equal(
+  validateCourseImportStatus({ ...validImportStatus, scannerResponse: "stream: OK" }),
+  false,
+  "status must not expose raw scanner responses",
+);
+
+console.log("Course, profile, A/B/C/D answer, and approval-only import schemas reject unsafe drift.");

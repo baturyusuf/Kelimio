@@ -8,6 +8,7 @@ import 'package:kelimio_api_client/src/auth/basic_auth.dart';
 import 'package:kelimio_api_client/src/auth/bearer_auth.dart';
 import 'package:kelimio_api_client/src/auth/oauth.dart';
 import 'package:kelimio_api_client/src/api/catalog_api.dart';
+import 'package:kelimio_api_client/src/api/course_import_api.dart';
 import 'package:kelimio_api_client/src/api/development_api.dart';
 import 'package:kelimio_api_client/src/api/energy_api.dart';
 import 'package:kelimio_api_client/src/api/enrollment_api.dart';
@@ -87,6 +88,12 @@ class KelimioApiClient {
   /// by doing that all interceptors will not be executed
   CatalogApi getCatalogApi() {
     return CatalogApi(dio);
+  }
+
+  /// Get CourseImportApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  CourseImportApi getCourseImportApi() {
+    return CourseImportApi(dio);
   }
 
   /// Get DevelopmentApi instance, base route and serializer can be overridden by a given but be careful,

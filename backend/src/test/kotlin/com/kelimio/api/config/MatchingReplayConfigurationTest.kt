@@ -2,6 +2,8 @@ package com.kelimio.api.config
 
 import com.kelimio.api.learningsession.MatchingAnswerReplayDigest
 import com.kelimio.api.learningsession.MatchingReplayConfigurationException
+import com.kelimio.api.learningsession.LearningSessionController
+import com.kelimio.api.learningsession.LearningSessionService
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
@@ -11,6 +13,23 @@ import java.util.Base64
 class MatchingReplayConfigurationTest {
     private val key = ByteArray(MatchingAnswerReplayDigest.KEY_BYTES) { (it + 1).toByte() }
     private val encodedKey = Base64.getEncoder().encodeToString(key)
+
+    @Test
+    fun `worker application slice boots without API replay secrets or learning API beans`() {
+        ApplicationContextRunner()
+            .withUserConfiguration(
+                ApplicationConfig::class.java,
+                LearningSessionService::class.java,
+                LearningSessionController::class.java,
+            )
+            .withPropertyValues("KELIMIO_RUNTIME_ROLE=worker")
+            .run { context ->
+                assertThat(context).hasNotFailed()
+                assertThat(context).doesNotHaveBean(MatchingAnswerReplayDigest::class.java)
+                assertThat(context).doesNotHaveBean(LearningSessionService::class.java)
+                assertThat(context).doesNotHaveBean(LearningSessionController::class.java)
+            }
+    }
 
     @Test
     fun `application startup requires valid matching replay configuration`() {

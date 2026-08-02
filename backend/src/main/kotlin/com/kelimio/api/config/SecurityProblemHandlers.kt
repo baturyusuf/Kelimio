@@ -5,6 +5,7 @@ import com.kelimio.api.web.CorrelationIdFilter
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import org.springframework.http.HttpStatus
+import org.springframework.http.CacheControl
 import org.springframework.http.MediaType
 import org.springframework.security.access.AccessDeniedException
 import org.springframework.security.core.AuthenticationException
@@ -25,6 +26,7 @@ class SecurityProblemWriter(
     ) {
         response.status = status.value()
         response.contentType = MediaType.APPLICATION_PROBLEM_JSON_VALUE
+        response.setHeader("Cache-Control", CacheControl.noStore().headerValue)
         objectMapper.writeValue(
             response.outputStream,
             mapOf(

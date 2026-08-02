@@ -3,9 +3,15 @@ package com.kelimio.api
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.kelimio.api.language.TypedAnswerPolicy
 import com.kelimio.api.language.MatchingLabelPolicy
+import com.kelimio.api.importpipeline.intake.CourseImportRepository
+import com.kelimio.api.importpipeline.intake.CourseImportWorkerRepository
+import com.kelimio.api.importpipeline.intake.ImportQueueCommand
+import com.kelimio.api.outbox.RecordedOutboxEvent
+import com.kelimio.api.outbox.TransactionalOutbox
 import com.kelimio.api.progress.LearningProgressProjectionWorker
 import com.kelimio.api.web.AnswerSubmissionBodyLimitFilter
 import org.assertj.core.api.Assertions.assertThat
+import org.jooq.DSLContext
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
@@ -26,6 +32,7 @@ import org.testcontainers.junit.jupiter.Testcontainers
 import org.testcontainers.utility.DockerImageName
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
+import java.time.Clock
 import java.util.Base64
 import java.util.UUID
 import java.util.concurrent.CountDownLatch
@@ -50,6 +57,75 @@ class VerticalSliceIntegrationTest {
 
     @Autowired
     private lateinit var projectionWorker: LearningProgressProjectionWorker
+
+    @Autowired
+    private lateinit var outbox: TransactionalOutbox
+
+    @Autowired
+    private lateinit var dsl: DSLContext
+
+    @Autowired
+    private lateinit var courseImportRepository: CourseImportRepository
+
+    @Test
+    fun `transactional outbox writes explicitly identified jsonb events through its module boundary`() {
+        val eventId = UUID.randomUUID()
+        val aggregateId = UUID.randomUUID()
+        val occurredAt = OffsetDateTime.parse("2026-08-02T09:30:00.123456Z")
+        transactionTemplate.executeWithoutResult {
+            outbox.appendRecorded(
+                RecordedOutboxEvent(
+                    id = eventId,
+                    aggregateType = "course-import",
+                    aggregateId = aggregateId,
+                    eventType = "import.processing-requested.v1",
+                    schemaVersion = 1,
+                    payload = mapOf("eventId" to eventId, "importId" to aggregateId),
+                    correlationId = "integration-$eventId",
+                    occurredAt = occurredAt,
+                ),
+            )
+        }
+
+        val payload = jdbcTemplate.queryForObject(
+            "select payload::text from outbox_event where id = ?",
+            String::class.java,
+            eventId,
+        )
+        assertThat(objectMapper.readTree(payload)).isEqualTo(
+            objectMapper.readTree("""{"eventId":"$eventId","importId":"$aggregateId"}"""),
+        )
+        assertThat(
+            jdbcTemplate.queryForObject(
+                "select count(*) from outbox_delivery where event_id = ? and attempt_count = 0",
+                Int::class.java,
+                eventId,
+            ),
+        ).isEqualTo(1)
+        assertThat(
+            jdbcTemplate.queryForObject(
+                "select occurred_at from outbox_event where id = ?",
+                OffsetDateTime::class.java,
+                eventId,
+            ),
+        ).isEqualTo(occurredAt)
+
+        val workerRepository = CourseImportWorkerRepository(
+            dsl,
+            courseImportRepository,
+            objectMapper,
+            Clock.systemUTC(),
+        )
+        assertThat(
+            workerRepository.validateCommand(ImportQueueCommand(1, eventId, aggregateId)),
+        ).isTrue()
+        assertThat(
+            workerRepository.validateCommand(ImportQueueCommand(2, eventId, aggregateId)),
+        ).isFalse()
+        assertThat(
+            workerRepository.validateCommand(ImportQueueCommand(1, eventId, UUID.randomUUID())),
+        ).isFalse()
+    }
 
     @Test
     fun `authenticated user completes first login profile setup idempotently`() {

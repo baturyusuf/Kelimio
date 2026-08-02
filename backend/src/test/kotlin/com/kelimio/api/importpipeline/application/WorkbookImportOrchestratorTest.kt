@@ -420,6 +420,33 @@ class WorkbookImportOrchestratorTest {
             .isInstanceOf(UnsupportedOperationException::class.java)
     }
 
+    @Test
+    fun `checks the hard deadline throughout a valid maximum-row planning and digest path`() {
+        val maximumWorkbook = workbook(contentRows = (2..10_001).map(::wordRow))
+        var checkpoints = 0
+
+        assertThatThrownBy {
+            orchestrator.preview(maximumWorkbook) {
+                checkpoints += 1
+                if (checkpoints > 40_000) throw DeadlineCheckpointReached()
+            }
+        }.isInstanceOf(DeadlineCheckpointReached::class.java)
+        assertThat(checkpoints).isEqualTo(40_001)
+    }
+
+    @Test
+    fun `rejects normalized structural and content values beyond response limits`() {
+        val structural = wordRow(2).copy(
+            cells = wordRow(2).cells.filterNot { it.columnNumber == 1 } + cell(2, 1, "u".repeat(161)),
+        )
+        assertThat(orchestrator.preview(workbook(contentRows = listOf(structural))).issueCodes())
+            .contains(WorkbookImportIssueCode.INVALID_STRUCTURAL_TEXT)
+
+        val expandingContent = wordRow(2, target = "\u0344".repeat(1_001))
+        assertThat(orchestrator.preview(workbook(contentRows = listOf(expandingContent))).issueCodes())
+            .contains(WorkbookImportIssueCode.INVALID_TEXT)
+    }
+
     private fun WorkbookImportPreview.issueCodes(): List<WorkbookImportIssueCode> = issues.map { it.code }
 
     private fun workbook(
@@ -559,4 +586,6 @@ class WorkbookImportOrchestratorTest {
         reference = "${('A'.code + column - 1).toChar()}$rowNumber",
         value = value,
     )
+
+    private class DeadlineCheckpointReached : RuntimeException()
 }

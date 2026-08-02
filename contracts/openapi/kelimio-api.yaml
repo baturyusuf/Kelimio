@@ -24,6 +24,8 @@ tags:
     description: Authoritative online attempts and answer evaluation.
   - name: Energy
     description: Free-course energy state managed by the server.
+  - name: Course Import
+    description: Owner-scoped XLSX intake, isolated validation preview, and provenance-bound approval.
   - name: Development
     description: Explicit local-only utilities that are unavailable outside the local environment.
 security:
@@ -317,6 +319,260 @@ paths:
           $ref: "#/components/responses/Problem"
         default:
           $ref: "#/components/responses/Problem"
+  /v1/courses/imports:
+    post:
+      operationId: createCourseImport
+      x-kelimio-max-request-body-bytes: 8192
+      tags: [Course Import]
+      summary: Create an owner-scoped resumable XLSX upload session
+      description: >-
+        Creates one bounded S3 multipart upload for an untrusted XLSX. The API
+        never receives or parses workbook bytes. The whole-file and per-part
+        digests are client assertions that the isolated worker recomputes or
+        verifies before any scan, preview, archive, or approval can succeed.
+        The JSON command body is rejected before parsing when it exceeds 8192
+        bytes; workbook bytes travel only through the bounded direct upload.
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCourseImportRequest"
+      responses:
+        "201":
+          description: Import and resumable upload instructions created
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CourseImportUploadSessionResponse"
+        "200":
+          description: Existing import returned for an idempotent retry
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CourseImportUploadSessionResponse"
+        "400":
+          $ref: "#/components/responses/Problem"
+        "401":
+          $ref: "#/components/responses/Problem"
+        "413":
+          $ref: "#/components/responses/Problem"
+        "409":
+          $ref: "#/components/responses/Problem"
+        "422":
+          $ref: "#/components/responses/Problem"
+        "429":
+          $ref: "#/components/responses/Problem"
+        "503":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/courses/imports/{importId}:
+    get:
+      operationId: getCourseImport
+      tags: [Course Import]
+      summary: Return the current owner-scoped import state
+      description: >-
+        Missing and non-owned imports are indistinguishable. Storage keys,
+        object versions, upload IDs, scanner internals, and raw failures are
+        deliberately absent.
+      parameters:
+        - $ref: "#/components/parameters/ImportId"
+      responses:
+        "200":
+          description: Current import state and immutable preview summary, when available
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CourseImportStatusResponse"
+        "400":
+          $ref: "#/components/responses/Problem"
+        "401":
+          $ref: "#/components/responses/Problem"
+        "404":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/courses/imports/{importId}/complete:
+    post:
+      operationId: completeCourseImportUpload
+      x-kelimio-max-request-body-bytes: 8192
+      tags: [Course Import]
+      summary: Complete the exact multipart object and queue isolated processing
+      description: >-
+        Completes only the server-created multipart upload with its exact
+        consecutive part list. A successful command records one non-null S3
+        VersionId and transactional outbox event. It does not claim that the
+        workbook is clean, valid, archived, approved, or committed.
+        The JSON completion command is rejected before parsing when it exceeds
+        8192 bytes.
+      parameters:
+        - $ref: "#/components/parameters/ImportId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CompleteCourseImportUploadRequest"
+      responses:
+        "202":
+          description: Exact object version accepted and processing queued
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CourseImportStatusResponse"
+        "200":
+          description: Existing queued or later result returned for an idempotent retry
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CourseImportStatusResponse"
+        "400":
+          $ref: "#/components/responses/Problem"
+        "401":
+          $ref: "#/components/responses/Problem"
+        "413":
+          $ref: "#/components/responses/Problem"
+        "404":
+          $ref: "#/components/responses/Problem"
+        "409":
+          $ref: "#/components/responses/Problem"
+        "422":
+          $ref: "#/components/responses/Problem"
+        "503":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/courses/imports/{importId}/preview:
+    get:
+      operationId: listCourseImportPreviewRows
+      tags: [Course Import]
+      summary: Page through the immutable normalized owner preview
+      parameters:
+        - $ref: "#/components/parameters/ImportId"
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: One immutable page from the isolated parser result
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CourseImportPreviewPage"
+        "400":
+          $ref: "#/components/responses/Problem"
+        "401":
+          $ref: "#/components/responses/Problem"
+        "404":
+          $ref: "#/components/responses/Problem"
+        "409":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/courses/imports/{importId}/issues:
+    get:
+      operationId: listCourseImportValidationIssues
+      tags: [Course Import]
+      summary: Page through the immutable owner-scoped validation report
+      parameters:
+        - $ref: "#/components/parameters/ImportId"
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: One immutable validation-report page
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CourseImportIssuePage"
+        "400":
+          $ref: "#/components/responses/Problem"
+        "401":
+          $ref: "#/components/responses/Problem"
+        "404":
+          $ref: "#/components/responses/Problem"
+        "409":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/courses/imports/{importId}/approve:
+    post:
+      operationId: approveCourseImport
+      x-kelimio-max-request-body-bytes: 8192
+      tags: [Course Import]
+      summary: Approve one exact immutable preview and provenance tuple
+      description: >-
+        Appends owner approval only when the supplied binding digest matches the
+        current PREVIEW_READY fact. Approval creates no course, revision,
+        release, entitlement, or publication side effect.
+        The JSON approval command is rejected before parsing when it exceeds
+        8192 bytes.
+      parameters:
+        - $ref: "#/components/parameters/ImportId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApproveCourseImportRequest"
+      responses:
+        "201":
+          description: Approval fact appended
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CourseImportApprovalResponse"
+        "200":
+          description: Existing approval returned for an idempotent retry
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CourseImportApprovalResponse"
+        "400":
+          $ref: "#/components/responses/Problem"
+        "401":
+          $ref: "#/components/responses/Problem"
+        "413":
+          $ref: "#/components/responses/Problem"
+        "404":
+          $ref: "#/components/responses/Problem"
+        "409":
+          $ref: "#/components/responses/Problem"
+        "422":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
   /v1/development/starter-course:
     post:
       operationId: installLocalStarterCourse
@@ -362,7 +618,7 @@ components:
         type: string
         format: uuid
     NoStore:
-      description: Prevents answer submissions and answer-key feedback from being cached.
+      description: Prevents sensitive answer feedback and owner-scoped import data from being cached.
       schema:
         type: string
         const: no-store
@@ -379,9 +635,19 @@ components:
       required: true
       schema:
         $ref: "#/components/schemas/Id"
+    ImportId:
+      name: importId
+      in: path
+      required: true
+      schema:
+        $ref: "#/components/schemas/Id"
     Cursor:
       name: cursor
       in: query
+      description: >-
+        Opaque tamper-evident cursor bound to the authenticated owner, import,
+        immutable preview/report identity, and position. It contains no
+        workbook text or storage coordinates.
       schema:
         type: string
         maxLength: 512
@@ -404,6 +670,9 @@ components:
   responses:
     Problem:
       description: RFC 9457 problem details
+      headers:
+        Cache-Control:
+          $ref: "#/components/headers/NoStore"
       content:
         application/problem+json:
           schema:
@@ -1021,6 +1290,585 @@ components:
         asOf:
           type: string
           format: date-time
+    Sha256Hex:
+      type: string
+      pattern: "^[0-9a-f]{64}$"
+    Sha256Base64:
+      type: string
+      minLength: 44
+      maxLength: 44
+      pattern: "^[A-Za-z0-9+/]{43}=$"
+    CreateCourseImportRequest:
+      type: object
+      additionalProperties: false
+      x-kelimio-redacted-to-string: true
+      x-kelimio-redacted-field-names: [originalFileName, sourceSha256, parts]
+      x-kelimio-redaction-test-course-import: true
+      description: >-
+        The part declarations must be consecutive from one, sum exactly to
+        fileSizeBytes, use 5 MiB for every non-final part, and contain no more
+        than five parts. The server initiates S3 multipart upload with SHA-256
+        checksum validation selected. Each digest is computed before upload so
+        its presigned part request and final multipart completion can bind the
+        same checksum.
+      x-kelimio-cross-field-invariants:
+        - parts use consecutive partNumber values beginning at 1.
+        - every non-final part has sizeBytes 5242880 and the final part has sizeBytes from 1 through 5242880.
+        - the sum of part sizeBytes equals the top-level fileSizeBytes.
+      required: [originalFileName, declaredMediaType, fileSizeBytes, sourceSha256, parts]
+      properties:
+        originalFileName:
+          type: string
+          x-kelimio-sensitive: true
+          x-kelimio-normalization: NFC
+          x-kelimio-reject-default-ignorable-code-points: true
+          minLength: 6
+          maxLength: 255
+          pattern: '^(?!.*[\p{Cf}\u034f\u115f-\u1160\u17b4-\u17b5\u180b-\u180f\u2060-\u206f\u3164\ufe00-\ufe0f\uffa0\ufff0-\ufff8\u{1bca0}-\u{1bca3}\u{1d173}-\u{1d17a}\u{e0000}-\u{e0fff}])(?=\S)[^/:\\\u0000-\u001f\u007f-\u009f]{1,250}\.[xX][lL][sS][xX]$'
+        declaredMediaType:
+          type: string
+          const: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+        fileSizeBytes:
+          type: integer
+          format: int64
+          minimum: 1
+          maximum: 26214400
+        sourceSha256:
+          $ref: "#/components/schemas/Sha256Hex"
+          x-kelimio-sensitive: true
+        parts:
+          type: array
+          x-kelimio-sensitive: true
+          minItems: 1
+          maxItems: 5
+          items:
+            $ref: "#/components/schemas/CourseImportPartDeclaration"
+    CourseImportPartDeclaration:
+      type: object
+      additionalProperties: false
+      x-kelimio-redacted-to-string: true
+      x-kelimio-redacted-field-names: [sha256]
+      required: [partNumber, sizeBytes, sha256]
+      properties:
+        partNumber:
+          type: integer
+          minimum: 1
+          maximum: 5
+        sizeBytes:
+          type: integer
+          format: int64
+          minimum: 1
+          maximum: 5242880
+        sha256:
+          $ref: "#/components/schemas/Sha256Base64"
+          x-kelimio-sensitive: true
+    CourseImportUploadSessionResponse:
+      type: object
+      additionalProperties: false
+      x-kelimio-redacted-to-string: true
+      x-kelimio-redacted-field-names: [import, upload]
+      required: [created, import, upload]
+      properties:
+        created:
+          type: boolean
+        import:
+          $ref: "#/components/schemas/CourseImportStatusResponse"
+          x-kelimio-sensitive: true
+        upload:
+          x-kelimio-sensitive: true
+          oneOf:
+            - $ref: "#/components/schemas/CourseImportUploadInstructions"
+            - type: "null"
+          description: >-
+            Present only while the import remains UPLOADING and the server
+            can safely issue URLs for the original multipart upload.
+    CourseImportUploadInstructions:
+      type: object
+      additionalProperties: false
+      x-kelimio-redacted-to-string: true
+      x-kelimio-redacted-field-names: [parts]
+      required: [expiresAt, parts]
+      properties:
+        expiresAt:
+          type: string
+          format: date-time
+          description: >-
+            Earliest exact expiry among the signed part-upload URLs in this
+            response; no URL in the response remains valid after this instant.
+            This can be earlier than the import session's uploadExpiresAt value.
+        parts:
+          type: array
+          x-kelimio-sensitive: true
+          minItems: 1
+          maxItems: 5
+          items:
+            $ref: "#/components/schemas/CourseImportPresignedPart"
+    CourseImportPresignedPart:
+      type: object
+      additionalProperties: false
+      x-kelimio-redacted-to-string: true
+      x-kelimio-redacted-field-names: [url, requiredHeaders]
+      required: [partNumber, sizeBytes, url, requiredHeaders]
+      properties:
+        partNumber:
+          type: integer
+          minimum: 1
+          maximum: 5
+        sizeBytes:
+          type: integer
+          format: int64
+          minimum: 1
+          maximum: 5242880
+        url:
+          type: string
+          x-kelimio-sensitive: true
+          format: uri
+          maxLength: 8192
+        requiredHeaders:
+          $ref: "#/components/schemas/CourseImportPartHeaders"
+          x-kelimio-sensitive: true
+    CourseImportPartHeaders:
+      type: object
+      additionalProperties: false
+      x-kelimio-redacted-to-string: true
+      x-kelimio-redacted-field-names: [sha256]
+      required: [contentLength, sha256]
+      properties:
+        contentLength:
+          type: string
+          pattern: "^[1-9][0-9]{0,7}$"
+          description: Exact decimal Content-Length header value.
+        sha256:
+          $ref: "#/components/schemas/Sha256Base64"
+          x-kelimio-sensitive: true
+          description: Exact x-amz-checksum-sha256 header value.
+    CompleteCourseImportUploadRequest:
+      type: object
+      additionalProperties: false
+      x-kelimio-redacted-to-string: true
+      x-kelimio-redacted-field-names: [sourceSha256, parts]
+      description: >-
+        The whole-file digest, part numbers, and part checksums must match the
+        immutable create command. Part sizes and total size are reloaded from
+        that command and verified against S3. ETags are opaque S3 values and
+        are never interpreted as content hashes.
+      required: [sourceSha256, parts]
+      properties:
+        sourceSha256:
+          $ref: "#/components/schemas/Sha256Hex"
+          x-kelimio-sensitive: true
+        parts:
+          type: array
+          x-kelimio-sensitive: true
+          minItems: 1
+          maxItems: 5
+          items:
+            $ref: "#/components/schemas/CompletedCourseImportPart"
+    CompletedCourseImportPart:
+      type: object
+      additionalProperties: false
+      x-kelimio-redacted-to-string: true
+      x-kelimio-redacted-field-names: [eTag, sha256]
+      required: [partNumber, eTag, sha256]
+      properties:
+        partNumber:
+          type: integer
+          minimum: 1
+          maximum: 5
+        eTag:
+          type: string
+          x-kelimio-sensitive: true
+          minLength: 1
+          maxLength: 256
+          pattern: "^[!-~]{1,256}$"
+        sha256:
+          $ref: "#/components/schemas/Sha256Base64"
+          x-kelimio-sensitive: true
+    CourseImportStatus:
+      type: string
+      enum:
+        - UPLOADING
+        - QUEUED
+        - PROCESSING
+        - PREVIEW_READY
+        - VALIDATION_FAILED
+        - MALWARE_REJECTED
+        - PROCESSING_FAILED
+        - EXPIRED
+        - APPROVED
+    CourseImportStatusResponse:
+      type: object
+      additionalProperties: false
+      x-kelimio-redacted-to-string: true
+      x-kelimio-redacted-field-names: [originalFileName, preview, approvalBindingSha256]
+      required:
+        - id
+        - status
+        - originalFileName
+        - declaredMediaType
+        - fileSizeBytes
+        - rulesVersion
+        - processingAttempts
+        - createdAt
+        - updatedAt
+        - uploadExpiresAt
+        - preview
+        - approvalBindingSha256
+        - approvedAt
+        - failureCode
+      properties:
+        id:
+          $ref: "#/components/schemas/Id"
+        status:
+          $ref: "#/components/schemas/CourseImportStatus"
+        originalFileName:
+          type: string
+          x-kelimio-sensitive: true
+          minLength: 6
+          maxLength: 255
+        declaredMediaType:
+          type: string
+          const: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+        fileSizeBytes:
+          type: integer
+          format: int64
+          minimum: 1
+          maximum: 26214400
+        rulesVersion:
+          type: string
+          const: xlsx-v1
+        processingAttempts:
+          type: integer
+          minimum: 0
+          maximum: 5
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        uploadExpiresAt:
+          type: string
+          format: date-time
+        preview:
+          x-kelimio-sensitive: true
+          oneOf:
+            - $ref: "#/components/schemas/CourseImportPreviewSummary"
+            - type: "null"
+        approvalBindingSha256:
+          type: [string, "null"]
+          x-kelimio-sensitive: true
+          pattern: "^[0-9a-f]{64}$"
+        approvedAt:
+          type: [string, "null"]
+          format: date-time
+        failureCode:
+          type: [string, "null"]
+          pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+          maxLength: 80
+    CourseImportPreviewSummary:
+      type: object
+      additionalProperties: false
+      x-kelimio-redacted-to-string: true
+      x-kelimio-redacted-field-names: [validationReportSha256, allocationSha256, previewSha256]
+      required:
+        - isValid
+        - rowCount
+        - levelCount
+        - unitCount
+        - topicCount
+        - testCount
+        - warningCount
+        - errorCount
+        - validationReportSha256
+        - allocationSha256
+        - previewSha256
+      properties:
+        isValid:
+          type: boolean
+        rowCount:
+          type: integer
+          minimum: 0
+          maximum: 10000
+        levelCount:
+          type: integer
+          minimum: 0
+          maximum: 64
+        unitCount:
+          type: integer
+          minimum: 0
+          maximum: 10000
+        topicCount:
+          type: integer
+          minimum: 0
+          maximum: 10000
+        testCount:
+          type: integer
+          minimum: 0
+          maximum: 10000
+        warningCount:
+          type: integer
+          minimum: 0
+          maximum: 2000
+        errorCount:
+          type: integer
+          minimum: 0
+          maximum: 2000
+        validationReportSha256:
+          $ref: "#/components/schemas/Sha256Hex"
+          x-kelimio-sensitive: true
+        allocationSha256:
+          type: [string, "null"]
+          x-kelimio-sensitive: true
+          pattern: "^[0-9a-f]{64}$"
+        previewSha256:
+          type: [string, "null"]
+          x-kelimio-sensitive: true
+          pattern: "^[0-9a-f]{64}$"
+    CourseImportPreviewPage:
+      type: object
+      additionalProperties: false
+      x-kelimio-redacted-to-string: true
+      x-kelimio-redacted-field-names: [items, nextCursor]
+      required: [items]
+      properties:
+        items:
+          type: array
+          x-kelimio-sensitive: true
+          maxItems: 100
+          items:
+            $ref: "#/components/schemas/CourseImportPreviewRow"
+        nextCursor:
+          type: [string, "null"]
+          x-kelimio-sensitive: true
+          maxLength: 512
+    CourseImportPreviewRow:
+      type: object
+      additionalProperties: false
+      x-kelimio-redacted-to-string: true
+      x-kelimio-cross-field-invariants:
+        - translations is non-empty for WORD and empty for MULTIPLE_CHOICE_CLOZE or TYPED_CLOZE under xlsx-v1.
+      x-kelimio-redacted-field-names:
+        - source
+        - level
+        - unit
+        - topic
+        - targetText
+        - translations
+        - sentence
+        - correctAnswer
+        - alternativeCorrectAnswer
+        - wrongAnswers
+        - matchingGroup
+        - note
+      required:
+        - ordinal
+        - source
+        - level
+        - unit
+        - topic
+        - testNumber
+        - allocationKind
+        - allocationReason
+        - resolvedMode
+        - recordType
+        - targetText
+        - translations
+        - sentence
+        - correctAnswer
+        - alternativeCorrectAnswer
+        - wrongAnswers
+        - matchingGroup
+        - hidden
+        - note
+      properties:
+        ordinal:
+          type: integer
+          minimum: 1
+          maximum: 10000
+        source:
+          $ref: "#/components/schemas/CourseImportSource"
+          x-kelimio-sensitive: true
+        level:
+          type: string
+          x-kelimio-sensitive: true
+          minLength: 1
+          maxLength: 160
+        unit:
+          type: string
+          x-kelimio-sensitive: true
+          minLength: 1
+          maxLength: 160
+        topic:
+          type: string
+          x-kelimio-sensitive: true
+          minLength: 1
+          maxLength: 160
+        testNumber:
+          type: integer
+          minimum: 1
+          maximum: 10000
+        allocationKind:
+          type: string
+          enum: [FIXED, AUTOMATIC]
+        allocationReason:
+          type: string
+          enum: [FIXED_DECLARATION, FIXED_TEST_FILL, AUTOMATIC]
+        resolvedMode:
+          type: string
+          enum: [MIXED, WORD, MATCHING, MULTIPLE_CHOICE_CLOZE, TYPED_CLOZE]
+        recordType:
+          type: string
+          enum: [WORD, MULTIPLE_CHOICE_CLOZE, TYPED_CLOZE]
+        targetText:
+          type: string
+          x-kelimio-sensitive: true
+          minLength: 1
+          maxLength: 2000
+        translations:
+          type: object
+          x-kelimio-sensitive: true
+          description: >-
+            Required non-empty language map for WORD rows; intentionally empty
+            for MULTIPLE_CHOICE_CLOZE and TYPED_CLOZE rows under xlsx-v1.
+          maxProperties: 64
+          additionalProperties:
+            type: string
+            minLength: 1
+            maxLength: 2000
+        sentence:
+          type: [string, "null"]
+          x-kelimio-sensitive: true
+          maxLength: 2000
+        correctAnswer:
+          type: [string, "null"]
+          x-kelimio-sensitive: true
+          maxLength: 2000
+        alternativeCorrectAnswer:
+          type: [string, "null"]
+          x-kelimio-sensitive: true
+          maxLength: 2000
+        wrongAnswers:
+          type: array
+          x-kelimio-sensitive: true
+          maxItems: 3
+          items:
+            type: string
+            minLength: 1
+            maxLength: 2000
+        matchingGroup:
+          type: [string, "null"]
+          x-kelimio-sensitive: true
+          maxLength: 160
+        hidden:
+          type: boolean
+        note:
+          type: [string, "null"]
+          x-kelimio-sensitive: true
+          maxLength: 2000
+    CourseImportSource:
+      type: object
+      additionalProperties: false
+      x-kelimio-redacted-to-string: true
+      x-kelimio-redacted-field-names: [sheetName, reference]
+      required: [sheetOrdinal, sheetName, rowNumber, columnNumber, reference]
+      properties:
+        sheetOrdinal:
+          type: integer
+          minimum: 0
+          maximum: 63
+        sheetName:
+          type: string
+          x-kelimio-sensitive: true
+          minLength: 1
+          maxLength: 31
+        rowNumber:
+          type: integer
+          minimum: 1
+          maximum: 1048576
+        columnNumber:
+          type: [integer, "null"]
+          minimum: 1
+          maximum: 64
+        reference:
+          type: [string, "null"]
+          x-kelimio-sensitive: true
+          maxLength: 16
+    CourseImportIssuePage:
+      type: object
+      additionalProperties: false
+      x-kelimio-redacted-to-string: true
+      x-kelimio-redacted-field-names: [items, nextCursor]
+      required: [items]
+      properties:
+        items:
+          type: array
+          x-kelimio-sensitive: true
+          maxItems: 100
+          items:
+            $ref: "#/components/schemas/CourseImportValidationIssue"
+        nextCursor:
+          type: [string, "null"]
+          x-kelimio-sensitive: true
+          maxLength: 512
+    CourseImportValidationIssue:
+      type: object
+      additionalProperties: false
+      x-kelimio-redacted-to-string: true
+      x-kelimio-redacted-field-names: [source, message]
+      required: [ordinal, severity, code, source, message]
+      properties:
+        ordinal:
+          type: integer
+          minimum: 1
+          maximum: 2000
+        severity:
+          type: string
+          enum: [WARNING, ERROR]
+        code:
+          type: string
+          pattern: "^[A-Z][A-Z0-9_]*$"
+          maxLength: 80
+        source:
+          x-kelimio-sensitive: true
+          oneOf:
+            - $ref: "#/components/schemas/CourseImportSource"
+            - type: "null"
+        message:
+          type: string
+          x-kelimio-sensitive: true
+          minLength: 1
+          maxLength: 500
+    ApproveCourseImportRequest:
+      type: object
+      additionalProperties: false
+      x-kelimio-redacted-to-string: true
+      x-kelimio-redacted-field-names: [approvalBindingSha256]
+      required: [approvalBindingSha256]
+      properties:
+        approvalBindingSha256:
+          $ref: "#/components/schemas/Sha256Hex"
+          x-kelimio-sensitive: true
+    CourseImportApprovalResponse:
+      type: object
+      additionalProperties: false
+      x-kelimio-redacted-to-string: true
+      x-kelimio-redacted-field-names: [approvalBindingSha256]
+      required: [importId, status, approvalBindingSha256, approvedAt, created]
+      properties:
+        importId:
+          $ref: "#/components/schemas/Id"
+        status:
+          type: string
+          const: APPROVED
+        approvalBindingSha256:
+          $ref: "#/components/schemas/Sha256Hex"
+          x-kelimio-sensitive: true
+        approvedAt:
+          type: string
+          format: date-time
+        created:
+          type: boolean
     LocalStarterCourseResponse:
       type: object
       additionalProperties: false

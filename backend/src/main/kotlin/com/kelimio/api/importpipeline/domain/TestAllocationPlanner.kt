@@ -11,20 +11,27 @@ object TestAllocationPlanner {
     fun plan(
         rows: Collection<TestPlanningRow>,
         policy: TestAllocationPolicy,
+        checkpoint: () -> Unit = {},
     ): TestPlan {
+        checkpoint()
         val orderedRows = rows.sortedBy(TestPlanningRow::source)
-        val duplicateIssues = duplicateSourceIssues(orderedRows)
+        checkpoint()
+        val duplicateIssues = duplicateSourceIssues(orderedRows, checkpoint)
         if (duplicateIssues.isNotEmpty()) {
             return TestPlan(policy = policy, tests = emptyList(), issues = duplicateIssues)
         }
 
         val groupedRows = linkedMapOf<CourseContentPath, MutableList<TestPlanningRow>>()
-        orderedRows.forEach { row -> groupedRows.getOrPut(row.path, ::mutableListOf).add(row) }
+        orderedRows.forEach { row ->
+            checkpoint()
+            groupedRows.getOrPut(row.path, ::mutableListOf).add(row)
+        }
 
         val plannedTests = mutableListOf<PlannedTest>()
         val issues = mutableListOf<ImportValidationIssue>()
         groupedRows.forEach { (path, groupRows) ->
-            val groupPlan = planGroup(path, groupRows, policy)
+            checkpoint()
+            val groupPlan = planGroup(path, groupRows, policy, checkpoint)
             plannedTests += groupPlan.first
             issues += groupPlan.second
         }
@@ -35,12 +42,14 @@ object TestAllocationPlanner {
         path: CourseContentPath,
         rows: List<TestPlanningRow>,
         policy: TestAllocationPolicy,
+        checkpoint: () -> Unit,
     ): Pair<List<PlannedTest>, List<ImportValidationIssue>> {
         val issues = mutableListOf<ImportValidationIssue>()
         val fixed = TreeMap<Int, MutableList<PlannedRow>>()
         val unassigned = ArrayDeque<TestPlanningRow>()
 
         rows.forEach { row ->
+            checkpoint()
             val fixedNumber = row.fixedTestNumber
             if (fixedNumber == null) {
                 unassigned.addLast(row)
@@ -51,6 +60,7 @@ object TestAllocationPlanner {
         }
 
         fixed.forEach { (testNumber, plannedRows) ->
+            checkpoint()
             if (plannedRows.size > policy.targetTestSize) {
                 issues += ImportValidationIssue(
                     severity = ImportIssueSeverity.WARNING,
@@ -77,6 +87,7 @@ object TestAllocationPlanner {
 
         val automaticChunks = mutableListOf<MutableList<PlannedRow>>()
         while (unassigned.isNotEmpty()) {
+            checkpoint()
             val chunk = mutableListOf<PlannedRow>()
             repeat(minOf(policy.targetTestSize, unassigned.size)) {
                 chunk += PlannedRow(unassigned.removeFirst(), RowAllocationReason.AUTOMATIC)
@@ -107,12 +118,15 @@ object TestAllocationPlanner {
 
         var nextAutomaticNumber = maximumFixedNumber.toLong() + 1L
         automaticChunks.forEach { chunk ->
+            checkpoint()
             testDrafts += TestDraft(nextAutomaticNumber.toInt(), TestAllocationKind.AUTOMATIC, chunk)
             nextAutomaticNumber += 1L
         }
 
         val tests = testDrafts.map { draft ->
+            checkpoint()
             val physicalRows = draft.rows.sortedBy { it.row.source }
+            checkpoint()
             val resolution = TestModeResolver.resolve(
                 rows = physicalRows.map(PlannedRow::row),
                 defaultMode = policy.defaultMode,
@@ -130,9 +144,13 @@ object TestAllocationPlanner {
         return tests to issues
     }
 
-    private fun duplicateSourceIssues(rows: List<TestPlanningRow>): List<ImportValidationIssue> {
+    private fun duplicateSourceIssues(
+        rows: List<TestPlanningRow>,
+        checkpoint: () -> Unit,
+    ): List<ImportValidationIssue> {
         val seen = mutableSetOf<Pair<Int, Int>>()
         return rows.mapNotNull { row ->
+            checkpoint()
             val position = row.source.sheetOrdinal to row.source.rowNumber
             if (seen.add(position)) {
                 null
@@ -168,10 +186,10 @@ object CanonicalTestPlanDigest {
     private const val FORMAT_VERSION = "kelimio-test-allocation-v1"
     private const val HEX_DIGITS = "0123456789abcdef"
 
-    fun sha256(plan: TestPlan): String {
+    fun sha256(plan: TestPlan, checkpoint: () -> Unit = {}): String {
         require(plan.isValid) { "An invalid test plan cannot produce an allocation digest" }
         val bytes = ByteArrayOutputStream().use { output ->
-            DataOutputStream(output).use { data -> writePlan(data, plan) }
+            DataOutputStream(output).use { data -> writePlan(data, plan, checkpoint) }
             output.toByteArray()
         }
         return MessageDigest.getInstance("SHA-256")
@@ -184,7 +202,8 @@ object CanonicalTestPlanDigest {
             .toString()
     }
 
-    private fun writePlan(output: DataOutputStream, plan: TestPlan) {
+    private fun writePlan(output: DataOutputStream, plan: TestPlan, checkpoint: () -> Unit) {
+        checkpoint()
         output.writeString(FORMAT_VERSION)
         output.writeString(plan.policy.rulesVersion)
         output.writeInt(plan.policy.targetTestSize)
@@ -193,6 +212,7 @@ object CanonicalTestPlanDigest {
         output.writeString(plan.policy.defaultMode.name)
         output.writeInt(plan.tests.size)
         plan.tests.forEach { test ->
+            checkpoint()
             output.writeString(test.path.level)
             output.writeString(test.path.unit)
             output.writeString(test.path.topic)
@@ -201,6 +221,7 @@ object CanonicalTestPlanDigest {
             output.writeString(checkNotNull(test.resolvedMode).name)
             output.writeInt(test.rows.size)
             test.rows.forEach { planned ->
+                checkpoint()
                 val row = planned.row
                 output.writeInt(row.source.sheetOrdinal)
                 output.writeString(row.source.sheetName)

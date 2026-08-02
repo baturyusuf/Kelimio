@@ -12,6 +12,7 @@ These versions are owner-approved starting pins. Scaffold and CI must enforce th
 | Kotlin | 2.4.10 | Backend plugin/version catalog | Compatibility must be verified by the initial build and CI matrix. |
 | Apache POI | 5.5.1 | Backend dependency declaration and Gradle lockfile | Used only by the isolated XLSX import worker/parser boundary; production parsing uses the event/SAX APIs and never evaluates formulas. |
 | Apache Commons Compress | 1.28.0 | Backend dependency declaration and Gradle lockfile | Gives preflight and POI one ZIP-name model; `xlsx-v1` additionally rejects all ZIP extras/comments to prevent Unicode-path decoder differentials. |
+| AWS SDK for Java v2 | 2.50.2 | Backend BOM, dependency declarations, and Gradle lockfile | Exact pin for S3 multipart presigning/version-bound object access and SQS delivery; upgrade service modules as one BOM-governed set. |
 | Flutter | 3.44.0 stable | FVM config and CI setup | One mobile codebase for Android and iOS. |
 | Dart | 3.12.x | Bundled with the pinned Flutter SDK; `pubspec` constraint | Flutter 3.44.0 stable currently bundles Dart 3.12.0; do not select Dart independently. |
 | Android | target/compile API 36; min SDK 24 | Gradle Android configuration and CI | Raise target API when store policy requires it; lowering min SDK requires an ADR and device/support analysis. |

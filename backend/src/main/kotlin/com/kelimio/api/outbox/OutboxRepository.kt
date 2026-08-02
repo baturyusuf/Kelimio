@@ -12,13 +12,28 @@ import java.time.OffsetDateTime
 import java.time.ZoneOffset
 import java.util.UUID
 
+interface TransactionalOutbox {
+    fun appendRecorded(event: RecordedOutboxEvent)
+}
+
+data class RecordedOutboxEvent(
+    val id: UUID,
+    val aggregateType: String,
+    val aggregateId: UUID,
+    val eventType: String,
+    val schemaVersion: Int,
+    val payload: Map<String, Any?>,
+    val correlationId: String,
+    val occurredAt: OffsetDateTime,
+)
+
 @Repository
 class OutboxRepository(
     private val dsl: DSLContext,
     private val objectMapper: ObjectMapper,
     private val correlationIdProvider: CorrelationIdProvider,
     private val clock: Clock,
-) {
+) : TransactionalOutbox {
     fun append(
         aggregateType: String,
         aggregateId: UUID,
@@ -26,6 +41,22 @@ class OutboxRepository(
         payload: Map<String, Any?>,
     ): UUID {
         val eventId = UUID.randomUUID()
+        appendRecorded(
+            RecordedOutboxEvent(
+                id = eventId,
+                aggregateType = aggregateType,
+                aggregateId = aggregateId,
+                eventType = eventType,
+                schemaVersion = 1,
+                payload = payload,
+                correlationId = correlationIdProvider.current(),
+                occurredAt = OffsetDateTime.ofInstant(clock.instant(), ZoneOffset.UTC),
+            ),
+        )
+        return eventId
+    }
+
+    override fun appendRecorded(event: RecordedOutboxEvent) {
         dsl.insertInto(OutboxEvents.TABLE)
             .columns(
                 OutboxEvents.ID,
@@ -38,14 +69,14 @@ class OutboxRepository(
                 OutboxEvents.OCCURRED_AT,
             )
             .values(
-                eventId,
-                aggregateType,
-                aggregateId,
-                eventType,
-                1,
-                JSONB.valueOf(objectMapper.writeValueAsString(payload)),
-                correlationIdProvider.current(),
-                OffsetDateTime.ofInstant(clock.instant(), ZoneOffset.UTC),
+                event.id,
+                event.aggregateType,
+                event.aggregateId,
+                event.eventType,
+                event.schemaVersion,
+                JSONB.valueOf(objectMapper.writeValueAsString(event.payload)),
+                event.correlationId,
+                event.occurredAt,
             )
             .execute()
         dsl.insertInto(OutboxDeliveries.TABLE)
@@ -53,8 +84,7 @@ class OutboxRepository(
                 OutboxDeliveries.EVENT_ID,
                 OutboxDeliveries.ATTEMPT_COUNT,
             )
-            .values(eventId, 0)
+            .values(event.id, 0)
             .execute()
-        return eventId
     }
 }

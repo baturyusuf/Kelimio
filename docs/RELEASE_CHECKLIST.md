@@ -49,11 +49,18 @@ This is an evidence checklist, not a statement of completion. Check an item only
 
 ## Excel import, authoring, and content releases
 
+Local/test upload-through-approval evidence exists under ADR-010. Every item
+below remains unchecked until production-equivalent staging and the
+course-commit/release path pass.
+
 - [ ] Only `.xlsx` is accepted; file type, size, checksum, malware, zip bomb, XML/path, formula, external-link, Unicode, and resource limits are enforced in an isolated worker.
+- [ ] Production import proves checksum-bound multipart upload, exact object-version acceptance and lost-response recovery, queue/DLQ/lease/retry behavior, private malware scanning, immutable quarantine/archive/report provenance, owner-scoped no-store reads, and digest-bound approval.
+- [ ] API and worker use separate least-privilege IAM and database identities; the worker has no HTTP/OIDC/replay/cursor secrets or Flyway authority, the API cannot read workbook bytes or reach the scanner, and production KMS/Object Lock/retention/legal-hold/scanner-freshness policy is evidenced.
 - [ ] Language-code normalization and test-mode inheritance match ADR-000/ADR-003 and workbook regression fixtures.
 - [ ] Deterministic fixed/automatic test allocation passes every required edge case without loss or duplication.
 - [ ] Production Type-D workbook conversion has approved and tested matching-group allocation semantics, never guesses pair relationships, and publication is enforced by a stored minimum-client/capability gate for unsupported clients.
-- [ ] Upload, preview/error report, approval, import commit, and original-file archive are idempotent and auditable; a course cannot be updated by a second Excel import.
+- [ ] Upload, preview/error report, approval, and original-file archive are idempotent, immutable, ownership-safe, and auditable.
+- [ ] One idempotent import commit creates a course exactly once; a second Excel import cannot update that course, and lost/conflicting commit responses cannot create duplicate revisions or releases.
 - [ ] Mobile teacher edits use ETag/If-Match, show conflicts/diffs, and never silently apply last-write-wins.
 - [ ] Draft change sets, impact preview, immutable revisions/releases, publication, rollback, package versioning, and idempotent reprojection pass end-to-end and failure tests.
 - [ ] A 10,000-row import completes in under 5 minutes and normal projection lag is under 10 seconds at the approved baseline.

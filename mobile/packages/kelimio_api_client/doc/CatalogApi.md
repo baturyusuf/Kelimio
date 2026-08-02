@@ -64,7 +64,7 @@ List public, published courses
 import 'package:kelimio_api_client/api.dart';
 
 final api = KelimioApiClient().getCatalogApi();
-final String cursor = cursor_example; // String |
+final String cursor = cursor_example; // String | Opaque tamper-evident cursor bound to the authenticated owner, import, immutable preview/report identity, and position. It contains no workbook text or storage coordinates.
 final int limit = 56; // int |
 final String targetLanguage = targetLanguage_example; // String |
 final String supportLanguage = supportLanguage_example; // String |
@@ -81,7 +81,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **cursor** | **String**|  | [optional]
+ **cursor** | **String**| Opaque tamper-evident cursor bound to the authenticated owner, import, immutable preview/report identity, and position. It contains no workbook text or storage coordinates. | [optional]
  **limit** | **int**|  | [optional] [default to 20]
  **targetLanguage** | **String**|  | [optional]
  **supportLanguage** | **String**|  | [optional]

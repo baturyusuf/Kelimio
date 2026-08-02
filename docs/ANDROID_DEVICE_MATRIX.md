@@ -59,6 +59,12 @@ Docker environment. It does not exercise the native FlutterAppAuth Custom Tab
 or redirect handoff; the real protocol session is injected at the mobile auth
 interfaces as documented in `mobile/README.md`.
 
+Each repository-managed emulator receives loopback reverse mappings for
+LocalStack (`4566`), the API (`8080`), and Keycloak (`8081`). Consequently,
+owner-scoped presigned upload URLs using the local-only `localhost` endpoint
+remain reachable without accepting emulator-specific hosts in backend
+configuration.
+
 ## State and resource safety
 
 The runner is serial and holds a machine-wide Kelimio matrix mutex. Before it

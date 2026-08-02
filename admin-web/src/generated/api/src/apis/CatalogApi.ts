@@ -64,7 +64,7 @@ export interface CatalogApiInterface {
     /**
      *
      * @summary List public, published courses
-     * @param {string} [cursor]
+     * @param {string} [cursor] Opaque tamper-evident cursor bound to the authenticated owner, import, immutable preview/report identity, and position. It contains no workbook text or storage coordinates.
      * @param {number} [limit]
      * @param {string} [targetLanguage]
      * @param {string} [supportLanguage]

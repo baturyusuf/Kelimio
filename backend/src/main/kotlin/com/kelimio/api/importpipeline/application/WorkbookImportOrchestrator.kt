@@ -25,8 +25,12 @@ import java.util.Locale
  * Invalid workbooks return issues and never produce a partial test plan.
  */
 class WorkbookImportOrchestrator {
-    fun preview(workbook: RawXlsxWorkbook): WorkbookImportPreview {
-        val issues = mutableListOf<WorkbookImportIssue>()
+    fun preview(
+        workbook: RawXlsxWorkbook,
+        checkpoint: () -> Unit = {},
+    ): WorkbookImportPreview {
+        checkpoint()
+        val issues = CappedWorkbookIssueList(MAX_COLLECTED_ISSUES, checkpoint)
         if (workbook.rulesVersion != SUPPORTED_RULES_VERSION) {
             issues.error(
                 WorkbookImportIssueCode.INVALID_SETTING_VALUE,
@@ -36,6 +40,7 @@ class WorkbookImportOrchestrator {
         }
 
         val sheets = workbook.sheets.sortedBy(RawXlsxSheet::ordinal)
+        checkpoint()
         validateWorkbookSheetIdentity(sheets, issues)
 
         val settingsSheets = sheets.filter { it.name == SETTINGS_SHEET_NAME }
@@ -60,8 +65,12 @@ class WorkbookImportOrchestrator {
         val rows = if (settings == null) {
             emptyList()
         } else {
-            contentSheets.flatMap { sheet -> parseContentSheet(sheet, settings, issues) }
+            contentSheets.flatMap { sheet ->
+                checkpoint()
+                parseContentSheet(sheet, settings, issues, checkpoint)
+            }
         }
+        checkpoint()
         if (settings != null && contentSheets.isNotEmpty() && rows.isEmpty()) {
             issues.error(
                 WorkbookImportIssueCode.CONTENT_ROW_MISSING,
@@ -75,7 +84,10 @@ class WorkbookImportOrchestrator {
         } else {
             val validSettings = checkNotNull(settings)
             TestAllocationPlanner.plan(
-                rows = rows.map { row -> row.toPlanningRow() },
+                rows = rows.map { row ->
+                    checkpoint()
+                    row.toPlanningRow()
+                },
                 policy = TestAllocationPolicy(
                     rulesVersion = workbook.rulesVersion,
                     targetTestSize = validSettings.targetTestSize,
@@ -83,9 +95,10 @@ class WorkbookImportOrchestrator {
                     fillFixedTests = validSettings.fillFixedTests,
                     defaultMode = validSettings.defaultTestMode,
                 ),
+                checkpoint = checkpoint,
             ).also { testPlan ->
                 issues += testPlan.issues.map { it.toWorkbookIssue() }
-                validatePlannedTestSemantics(testPlan.tests, issues)
+                validatePlannedTestSemantics(testPlan.tests, issues, checkpoint)
             }
         }
 
@@ -95,6 +108,7 @@ class WorkbookImportOrchestrator {
             rows = rows,
             plan = plan,
             issues = issues,
+            checkpoint = checkpoint,
         )
     }
 
@@ -296,6 +310,7 @@ class WorkbookImportOrchestrator {
         sheet: RawXlsxSheet,
         settings: CourseImportSettings,
         issues: MutableList<WorkbookImportIssue>,
+        checkpoint: () -> Unit,
     ): List<NormalizedWorkbookRow> {
         val level = normalizeStructuralText(
             raw = sheet.name,
@@ -331,6 +346,7 @@ class WorkbookImportOrchestrator {
         return semanticRows
             .asSequence()
             .mapNotNull { row ->
+                checkpoint()
                 parseContentRow(sheet, level, settings.targetLanguageCode, row, header, issues)
             }
             .toList()
@@ -870,8 +886,10 @@ class WorkbookImportOrchestrator {
     private fun validatePlannedTestSemantics(
         tests: List<PlannedTest>,
         issues: MutableList<WorkbookImportIssue>,
+        checkpoint: () -> Unit,
     ) {
         tests.forEach { test ->
+            checkpoint()
             val mode = test.resolvedMode ?: return@forEach
             if (mode == ResolvedTestMode.MATCHING) {
                 val source = test.rows.first().row.source
@@ -890,7 +908,10 @@ class WorkbookImportOrchestrator {
                 ResolvedTestMode.MATCHING -> error("Handled above")
             }
             if (requiredRecordType != null) {
-                test.rows.firstOrNull { planned -> planned.row.recordType != requiredRecordType }?.let { incompatible ->
+                test.rows.firstOrNull { planned ->
+                    checkpoint()
+                    planned.row.recordType != requiredRecordType
+                }?.let { incompatible ->
                     issues.error(
                         WorkbookImportIssueCode.INCOMPATIBLE_TEST_MODE,
                         incompatible.row.source.toCellSource(),
@@ -1039,6 +1060,15 @@ class WorkbookImportOrchestrator {
             return null
         }
         val normalized = Normalizer.normalize(raw, Normalizer.Form.NFC)
+        val maximumCodePoints = if (structural) MAX_STRUCTURAL_TEXT_CODE_POINTS else MAX_CONTENT_TEXT_CODE_POINTS
+        if (normalized.codePointCount(0, normalized.length) > maximumCodePoints) {
+            issues.error(
+                if (structural) WorkbookImportIssueCode.INVALID_STRUCTURAL_TEXT else WorkbookImportIssueCode.INVALID_TEXT,
+                source,
+                "Cell text exceeds the xlsx-v1 character limit",
+            )
+            return null
+        }
         val forbidden = normalized.codePoints().anyMatch { codePoint ->
             if (structural && codePoint.isXlsxV1DefaultIgnorable()) {
                 true
@@ -1152,6 +1182,9 @@ class WorkbookImportOrchestrator {
     )
 
     private companion object {
+        const val MAX_COLLECTED_ISSUES = 2_001
+        const val MAX_STRUCTURAL_TEXT_CODE_POINTS = 160
+        const val MAX_CONTENT_TEXT_CODE_POINTS = 2_000
         const val SUPPORTED_RULES_VERSION = "xlsx-v1"
         const val SETTINGS_SHEET_NAME = "BILGI_AYARLAR"
         const val HEADER_ROW = 1
@@ -1263,6 +1296,27 @@ class WorkbookImportOrchestrator {
             "Private" to CourseVisibility.PRIVATE,
         )
     }
+}
+
+private class CappedWorkbookIssueList(
+    private val maximumSize: Int,
+    private val checkpoint: () -> Unit,
+) : AbstractMutableList<WorkbookImportIssue>() {
+    private val delegate = ArrayList<WorkbookImportIssue>(maximumSize)
+
+    override val size: Int
+        get() = delegate.size
+
+    override fun get(index: Int): WorkbookImportIssue = delegate[index]
+
+    override fun add(index: Int, element: WorkbookImportIssue) {
+        checkpoint()
+        if (delegate.size < maximumSize) delegate.add(index.coerceAtMost(delegate.size), element)
+    }
+
+    override fun removeAt(index: Int): WorkbookImportIssue = delegate.removeAt(index)
+
+    override fun set(index: Int, element: WorkbookImportIssue): WorkbookImportIssue = delegate.set(index, element)
 }
 
 private fun Int.isXlsxV1DefaultIgnorable(): Boolean =

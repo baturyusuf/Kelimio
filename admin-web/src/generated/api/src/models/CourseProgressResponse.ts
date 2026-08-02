@@ -141,6 +141,6 @@ export function CourseProgressResponseToJSONTyped(value?: CourseProgressResponse
         'lifetimeScore': value['lifetimeScore'],
         'projectionVersion': value['projectionVersion'],
         'updating': value['updating'],
-        'updatedAt': ((value['updatedAt'] as any).toISOString()),
+        'updatedAt': value['updatedAt'] == null ? null : ((value['updatedAt'] as any).toISOString()),
     };
 }

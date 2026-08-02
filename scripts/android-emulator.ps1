@@ -38,7 +38,7 @@ $avdName = [string] $selectedProfile.AvdName
 $apiLevel = [int] $selectedProfile.ApiLevel
 $systemImage = [string] $selectedProfile.SystemImage
 $deviceProfile = [string] $selectedProfile.DeviceProfile
-$reversePorts = @(8080, 8081)
+$reversePorts = @(4566, 8080, 8081)
 
 function Resolve-AndroidSdkRoot {
     $candidates = @(

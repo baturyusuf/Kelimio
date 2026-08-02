@@ -20,6 +20,7 @@ import com.kelimio.api.web.ForbiddenProblem
 import com.kelimio.api.web.NotFoundProblem
 import com.kelimio.api.web.UnprocessableProblem
 import org.jooq.JSONB
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.math.BigDecimal
@@ -34,6 +35,7 @@ import java.util.Random
 import java.util.UUID
 
 @Service
+@ConditionalOnProperty(name = ["KELIMIO_RUNTIME_ROLE"], havingValue = "api", matchIfMissing = true)
 class LearningSessionService(
     private val learningContentQuery: LearningContentQuery,
     private val repository: LearningSessionRepository,

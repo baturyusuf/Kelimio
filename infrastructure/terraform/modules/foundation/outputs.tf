@@ -14,6 +14,14 @@ output "worker_dlq_url" {
   value = aws_sqs_queue.worker_dlq.id
 }
 
+output "import_queue_url" {
+  value = aws_sqs_queue.import.id
+}
+
+output "import_dlq_url" {
+  value = aws_sqs_queue.import_dlq.id
+}
+
 output "ecr_repository_urls" {
   value = { for name, repository in aws_ecr_repository.service : name => repository.repository_url }
 }

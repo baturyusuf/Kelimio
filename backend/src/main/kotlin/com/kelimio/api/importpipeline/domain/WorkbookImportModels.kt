@@ -24,6 +24,8 @@ data class WorkbookRowSource(
             WorkbookRowSource::rowNumber,
             WorkbookRowSource::sheetName,
         )
+
+    override fun toString(): String = "WorkbookRowSource(redacted)"
 }
 
 data class CourseContentPath(
@@ -36,6 +38,8 @@ data class CourseContentPath(
         require(unit.isNotBlank()) { "Unit must not be blank" }
         require(topic.isNotBlank()) { "Topic must not be blank" }
     }
+
+    override fun toString(): String = "CourseContentPath(redacted)"
 }
 
 /** A workbook directive. DEFAULT is resolved to the course default after allocation. */
@@ -85,6 +89,8 @@ data class TestPlanningRow(
     private companion object {
         val SHA_256_PATTERN = Regex("[0-9a-f]{64}")
     }
+
+    override fun toString(): String = "TestPlanningRow(redacted)"
 }
 
 data class TestAllocationPolicy(
@@ -117,7 +123,7 @@ enum class RowAllocationReason {
 data class PlannedRow(
     val row: TestPlanningRow,
     val reason: RowAllocationReason,
-)
+) { override fun toString(): String = "PlannedRow(redacted)" }
 
 class PlannedTest internal constructor(
     val path: CourseContentPath,
@@ -153,7 +159,7 @@ data class ImportValidationIssue(
     val path: CourseContentPath?,
     val testNumber: Int?,
     val message: String,
-)
+) { override fun toString(): String = "ImportValidationIssue(redacted)" }
 
 class TestPlan internal constructor(
     val policy: TestAllocationPolicy,
@@ -164,7 +170,7 @@ class TestPlan internal constructor(
     val issues: List<ImportValidationIssue> = immutableList(issues)
     val isValid: Boolean = this.issues.none { it.severity == ImportIssueSeverity.ERROR }
 
-    fun allocationSha256(): String = CanonicalTestPlanDigest.sha256(this)
+    fun allocationSha256(checkpoint: () -> Unit = {}): String = CanonicalTestPlanDigest.sha256(this, checkpoint)
 }
 
 class ModeResolution internal constructor(

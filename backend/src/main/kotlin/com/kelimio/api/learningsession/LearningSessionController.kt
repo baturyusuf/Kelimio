@@ -13,6 +13,7 @@ import jakarta.validation.constraints.NotNull
 import org.springframework.http.CacheControl
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.security.oauth2.jwt.Jwt
 import org.springframework.web.bind.annotation.PathVariable
@@ -29,6 +30,7 @@ import java.util.UUID
 
 @RestController
 @RequestMapping("/v1")
+@ConditionalOnProperty(name = ["KELIMIO_RUNTIME_ROLE"], havingValue = "api", matchIfMissing = true)
 class LearningSessionController(
     private val currentUserService: CurrentUserService,
     private val learningSessionService: LearningSessionService,

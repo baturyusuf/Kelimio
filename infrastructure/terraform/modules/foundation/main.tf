@@ -5,7 +5,10 @@ data "aws_region" "current" {}
 locals {
   bucket_prefix = "${var.name_prefix}-${data.aws_caller_identity.current.account_id}-${data.aws_region.current.region}"
   bucket_names = toset([
+    # Retained for state compatibility; removal requires a separate data-retention migration.
     "imports",
+    "import-quarantine",
+    "import-archive",
     "media",
     "offline-packages",
     "exports"
@@ -110,6 +113,25 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "private" {
   }
 }
 
+resource "aws_s3_bucket_lifecycle_configuration" "import_quarantine" {
+  bucket = aws_s3_bucket.private["import-quarantine"].id
+
+  rule {
+    id     = "abort-incomplete-import-multipart-uploads"
+    status = "Enabled"
+
+    filter {
+      prefix = "quarantine/"
+    }
+
+    abort_incomplete_multipart_upload {
+      days_after_initiation = 1
+    }
+  }
+
+  depends_on = [aws_s3_bucket_versioning.private]
+}
+
 resource "aws_s3_bucket_policy" "tls_only" {
   for_each = aws_s3_bucket.private
 
@@ -147,6 +169,34 @@ resource "aws_sqs_queue" "worker" {
     maxReceiveCount     = 5
   })
   tags = var.tags
+}
+
+resource "aws_sqs_queue" "import_dlq" {
+  name                      = "${var.name_prefix}-import-dlq"
+  message_retention_seconds = 1209600
+  kms_master_key_id         = aws_kms_key.application.arn
+  tags                      = var.tags
+}
+
+resource "aws_sqs_queue" "import" {
+  name                       = "${var.name_prefix}-import"
+  visibility_timeout_seconds = 480
+  message_retention_seconds  = 345600
+  receive_wait_time_seconds  = 20
+  kms_master_key_id          = aws_kms_key.application.arn
+  redrive_policy = jsonencode({
+    deadLetterTargetArn = aws_sqs_queue.import_dlq.arn
+    maxReceiveCount     = 5
+  })
+  tags = var.tags
+}
+
+resource "aws_sqs_queue_redrive_allow_policy" "import_dlq" {
+  queue_url = aws_sqs_queue.import_dlq.id
+  redrive_allow_policy = jsonencode({
+    redrivePermission = "byQueue"
+    sourceQueueArns   = [aws_sqs_queue.import.arn]
+  })
 }
 
 resource "aws_sqs_queue_redrive_allow_policy" "worker_dlq" {

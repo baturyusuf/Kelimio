@@ -18,6 +18,15 @@ KELIMIO_MATCHING_REPLAY_ACTIVE_KEY_VERSION=<canonical-active-version>
 KELIMIO_MATCHING_REPLAY_KEYS=<version>=<base64-encoded-32-byte-key>[,...]
 ```
 
+When the local/test-only import intake is enabled, the API and worker run as
+separate `KELIMIO_RUNTIME_ROLE=api|worker` processes. Both require the S3 bucket
+and SQS/DLQ names plus approved local/test endpoints; only the API receives the
+OIDC settings, matching-replay key ring, cursor HMAC key, and S3 presigner. Only
+the worker receives SQS polling and private ClamAV network access, runs without
+an HTTP server, and has Flyway disabled. The root Compose file supplies isolated
+local defaults. Do not reuse those public values or the shared local database
+role outside local development.
+
 `KELIMIO_OIDC_JWK_SET_URI` is optional for a private network path to the same
 issuer's keys; issuer and audience validation still apply. Never commit a real
 database password, client secret, access token, or provider credential.
@@ -108,18 +117,28 @@ This local runtime does not authorize production workbook matching conversion.
 That path remains fail-closed until group allocation semantics and a stored
 minimum-client/capability gate are implemented and verified.
 
-## Secure Excel preview core
+## Approval-only secure Excel intake
 
-The backend contains an isolated, side-effect-free core for the reviewed XLSX
-format. It snapshots the input, applies bounded ZIP/XML and relationship
-preflight checks, streams visible inert cells, normalizes the multilingual
-workbook grammar, deterministically allocates tests, and produces versioned
-allocation and complete-preview SHA-256 digests. Formula, hidden, active,
-external, unsupported, incomplete, or ambiguous content fails closed.
+Flyway V9 and the local/test API/worker boundary implement an owner-scoped,
+approval-only intake for the reviewed XLSX format. Creation binds the filename,
+media type, total size, whole-file SHA-256, fixed multipart plan, and per-part
+checksums. The API returns short-lived presigned S3 part requests, verifies the
+exact completed object version, and appends the processing request through the
+transactional outbox. The worker claims a bounded lease, streams the versioned
+quarantine object through a network-isolated ClamAV process, archives an
+immutable source and validation report, and invokes the existing fail-closed
+ZIP/XML parser and deterministic planner. Formula, hidden, active, external,
+unsupported, incomplete, ambiguous, oversized, stale, or identity-changing
+content fails closed.
 
-This is not a production import endpoint. It has no S3 quarantine/scanner
-worker, immutable archive/provenance approval, database commit, course-release,
-or teacher-authoring side effect. Those Phase 3 gates remain open.
+Status, preview, issue, and approval responses are owner-scoped and `no-store`;
+opaque page cursors are HMAC-bound to the owner, import, immutable preview, and
+scope. Approval appends one exact provenance/digest binding. It intentionally
+has no course/revision/release/entitlement/publication side effect, so it cannot
+change an existing course or grant access. Staging and production imports fail
+startup until the outstanding author-eligibility, consent, separate
+least-privilege database/runtime identities, retention/Object Lock/KMS, commit,
+publication, and operational gates are implemented and approved.
 
 Run the focused evidence with:
 
@@ -127,18 +146,30 @@ Run the focused evidence with:
 .\gradlew.bat test --tests "com.kelimio.api.importpipeline.*" --no-daemon
 ```
 
+From the repository root, run the isolated real PostgreSQL/S3/SQS/ClamAV/OIDC
+acceptance journey with:
+
+```powershell
+.\scripts\local-import-e2e.cmd
+```
+
+It verifies valid approval, clean-invalid validation, EICAR rejection,
+cross-owner denial, queue drain, immutable evidence, and the absence of any
+course commit without using AWS or Google Play accounts.
+
 ## Verification
 
 ```powershell
 .\gradlew.bat clean build
 ```
 
-The current Type-D backend checks include V7 content/language migration evidence,
-the V8 empty/upgrade/precondition rehearsal, HMAC key-ring and fail-closed
-configuration tests, matching privacy/order/replay tests, real-PostgreSQL
-authoritative answer flows, support-language pinning, and local starter v4
-multi-user installation. The complete unskipped backend run passes 28 suites
-and 135/135 tests.
+The current backend checks include V7 content/language and V8 matching migration
+evidence; V9 empty-database and retained V8-to-V9 upgrade rehearsal; approval-only
+import state, lease, retry, transition, ownership, artifact, and security invariants;
+HMAC key-ring and fail-closed configuration tests; matching privacy/order/replay
+tests; real-PostgreSQL authoritative answer flows; support-language pinning; and
+local starter v4 multi-user installation. The complete unskipped backend run passes
+33 suites and 160/160 tests.
 
 The vertical-slice integration test uses Testcontainers and a real PostgreSQL
 image. It is explicitly skipped when Docker is unavailable; a green build with

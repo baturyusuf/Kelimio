@@ -68,6 +68,12 @@ Class | Method | HTTP request | Description
 ------------ | ------------- | ------------- | -------------
 [*CatalogApi*](doc/CatalogApi.md) | [**getCourse**](doc/CatalogApi.md#getcourse) | **GET** /v1/courses/{courseId} | Return course details visible to the authenticated user
 [*CatalogApi*](doc/CatalogApi.md) | [**listCatalogCourses**](doc/CatalogApi.md#listcatalogcourses) | **GET** /v1/catalog/courses | List public, published courses
+[*CourseImportApi*](doc/CourseImportApi.md) | [**approveCourseImport**](doc/CourseImportApi.md#approvecourseimport) | **POST** /v1/courses/imports/{importId}/approve | Approve one exact immutable preview and provenance tuple
+[*CourseImportApi*](doc/CourseImportApi.md) | [**completeCourseImportUpload**](doc/CourseImportApi.md#completecourseimportupload) | **POST** /v1/courses/imports/{importId}/complete | Complete the exact multipart object and queue isolated processing
+[*CourseImportApi*](doc/CourseImportApi.md) | [**createCourseImport**](doc/CourseImportApi.md#createcourseimport) | **POST** /v1/courses/imports | Create an owner-scoped resumable XLSX upload session
+[*CourseImportApi*](doc/CourseImportApi.md) | [**getCourseImport**](doc/CourseImportApi.md#getcourseimport) | **GET** /v1/courses/imports/{importId} | Return the current owner-scoped import state
+[*CourseImportApi*](doc/CourseImportApi.md) | [**listCourseImportPreviewRows**](doc/CourseImportApi.md#listcourseimportpreviewrows) | **GET** /v1/courses/imports/{importId}/preview | Page through the immutable normalized owner preview
+[*CourseImportApi*](doc/CourseImportApi.md) | [**listCourseImportValidationIssues**](doc/CourseImportApi.md#listcourseimportvalidationissues) | **GET** /v1/courses/imports/{importId}/issues | Page through the immutable owner-scoped validation report
 [*DevelopmentApi*](doc/DevelopmentApi.md) | [**installLocalStarterCourse**](doc/DevelopmentApi.md#installlocalstartercourse) | **POST** /v1/development/starter-course | Install the authenticated owner&#39;s local starter course idempotently
 [*EnergyApi*](doc/EnergyApi.md) | [**getEnergy**](doc/EnergyApi.md#getenergy) | **GET** /v1/energy | Return the lazily regenerated free-course energy account
 [*EnrollmentApi*](doc/EnrollmentApi.md) | [**enrollInCourse**](doc/EnrollmentApi.md#enrollincourse) | **POST** /v1/courses/{courseId}/enrollments | Enroll the authenticated user in a free public course
@@ -84,12 +90,30 @@ Class | Method | HTTP request | Description
 
  - [AnswerOption](doc/AnswerOption.md)
  - [AnswerRecordedResponse](doc/AnswerRecordedResponse.md)
+ - [ApproveCourseImportRequest](doc/ApproveCourseImportRequest.md)
  - [AttemptResponse](doc/AttemptResponse.md)
  - [AttemptState](doc/AttemptState.md)
+ - [CompleteCourseImportUploadRequest](doc/CompleteCourseImportUploadRequest.md)
+ - [CompletedCourseImportPart](doc/CompletedCourseImportPart.md)
  - [CourseDetail](doc/CourseDetail.md)
+ - [CourseImportApprovalResponse](doc/CourseImportApprovalResponse.md)
+ - [CourseImportIssuePage](doc/CourseImportIssuePage.md)
+ - [CourseImportPartDeclaration](doc/CourseImportPartDeclaration.md)
+ - [CourseImportPartHeaders](doc/CourseImportPartHeaders.md)
+ - [CourseImportPresignedPart](doc/CourseImportPresignedPart.md)
+ - [CourseImportPreviewPage](doc/CourseImportPreviewPage.md)
+ - [CourseImportPreviewRow](doc/CourseImportPreviewRow.md)
+ - [CourseImportPreviewSummary](doc/CourseImportPreviewSummary.md)
+ - [CourseImportSource](doc/CourseImportSource.md)
+ - [CourseImportStatus](doc/CourseImportStatus.md)
+ - [CourseImportStatusResponse](doc/CourseImportStatusResponse.md)
+ - [CourseImportUploadInstructions](doc/CourseImportUploadInstructions.md)
+ - [CourseImportUploadSessionResponse](doc/CourseImportUploadSessionResponse.md)
+ - [CourseImportValidationIssue](doc/CourseImportValidationIssue.md)
  - [CoursePage](doc/CoursePage.md)
  - [CourseProgressResponse](doc/CourseProgressResponse.md)
  - [CourseSummary](doc/CourseSummary.md)
+ - [CreateCourseImportRequest](doc/CreateCourseImportRequest.md)
  - [CreateEnrollmentRequest](doc/CreateEnrollmentRequest.md)
  - [EnergyResponse](doc/EnergyResponse.md)
  - [EnrollmentResponse](doc/EnrollmentResponse.md)

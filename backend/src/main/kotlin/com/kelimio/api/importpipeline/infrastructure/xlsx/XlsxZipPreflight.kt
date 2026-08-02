@@ -766,9 +766,12 @@ internal class XlsxZipPreflight(
             if (state != null && !state.equals("visible", ignoreCase = true)) {
                 reject(XlsxRejectionCode.HIDDEN_SHEET)
             }
-            if (attributes.value("name").isNullOrEmpty()) {
-                reject(XlsxRejectionCode.INVALID_PACKAGE_TYPE)
-            }
+            val sheetName = attributes.value("name") ?: reject(XlsxRejectionCode.INVALID_SHEET_NAME)
+            if (
+                sheetName.isBlank() || sheetName.codePointCount(0, sheetName.length) > 31 ||
+                sheetName.any { it in INVALID_EXCEL_SHEET_NAME_CHARACTERS } ||
+                sheetName.startsWith('\'') || sheetName.endsWith('\'')
+            ) reject(XlsxRejectionCode.INVALID_SHEET_NAME)
         }
 
         private fun inspectWorksheet(
@@ -1089,6 +1092,9 @@ private fun unicodeCaseFold(value: String): String =
 
 internal fun parseColumnNumber(reference: String): Int {
     if (!CELL_REFERENCE.matches(reference)) reject(XlsxRejectionCode.INVALID_CELL_REFERENCE)
+    val rowNumber = reference.dropWhile(Char::isLetter).toIntOrNull()
+        ?: reject(XlsxRejectionCode.INVALID_CELL_REFERENCE)
+    if (rowNumber !in 1..MAX_XLSX_ROW_NUMBER) reject(XlsxRejectionCode.INVALID_CELL_REFERENCE)
     var result = 0
     reference.takeWhile(Char::isLetter).forEach { letter ->
         result = Math.addExact(Math.multiplyExact(result, 26), letter.code - 'A'.code + 1)
@@ -1099,3 +1105,5 @@ internal fun parseColumnNumber(reference: String): Int {
 internal fun reject(code: XlsxRejectionCode): Nothing = throw XlsxRejectedException(code)
 
 private val CELL_REFERENCE = Regex("^[A-Z]{1,3}[1-9][0-9]{0,6}$")
+private const val MAX_XLSX_ROW_NUMBER = 1_048_576
+private val INVALID_EXCEL_SHEET_NAME_CHARACTERS = setOf('\\', '/', '?', '*', '[', ']', ':')

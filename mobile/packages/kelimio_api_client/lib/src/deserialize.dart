@@ -1,10 +1,27 @@
 import 'package:kelimio_api_client/src/model/answer_option.dart';
 import 'package:kelimio_api_client/src/model/answer_recorded_response.dart';
+import 'package:kelimio_api_client/src/model/approve_course_import_request.dart';
 import 'package:kelimio_api_client/src/model/attempt_response.dart';
+import 'package:kelimio_api_client/src/model/complete_course_import_upload_request.dart';
+import 'package:kelimio_api_client/src/model/completed_course_import_part.dart';
 import 'package:kelimio_api_client/src/model/course_detail.dart';
+import 'package:kelimio_api_client/src/model/course_import_approval_response.dart';
+import 'package:kelimio_api_client/src/model/course_import_issue_page.dart';
+import 'package:kelimio_api_client/src/model/course_import_part_declaration.dart';
+import 'package:kelimio_api_client/src/model/course_import_part_headers.dart';
+import 'package:kelimio_api_client/src/model/course_import_presigned_part.dart';
+import 'package:kelimio_api_client/src/model/course_import_preview_page.dart';
+import 'package:kelimio_api_client/src/model/course_import_preview_row.dart';
+import 'package:kelimio_api_client/src/model/course_import_preview_summary.dart';
+import 'package:kelimio_api_client/src/model/course_import_source.dart';
+import 'package:kelimio_api_client/src/model/course_import_status_response.dart';
+import 'package:kelimio_api_client/src/model/course_import_upload_instructions.dart';
+import 'package:kelimio_api_client/src/model/course_import_upload_session_response.dart';
+import 'package:kelimio_api_client/src/model/course_import_validation_issue.dart';
 import 'package:kelimio_api_client/src/model/course_page.dart';
 import 'package:kelimio_api_client/src/model/course_progress_response.dart';
 import 'package:kelimio_api_client/src/model/course_summary.dart';
+import 'package:kelimio_api_client/src/model/create_course_import_request.dart';
 import 'package:kelimio_api_client/src/model/create_enrollment_request.dart';
 import 'package:kelimio_api_client/src/model/energy_response.dart';
 import 'package:kelimio_api_client/src/model/enrollment_response.dart';
@@ -46,12 +63,69 @@ ReturnType deserialize<ReturnType, BaseType>(
     case 'AnswerRecordedResponse':
       return AnswerRecordedResponse.fromJson(value as Map<String, dynamic>)
           as ReturnType;
+    case 'ApproveCourseImportRequest':
+      return ApproveCourseImportRequest.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
     case 'AttemptResponse':
       return AttemptResponse.fromJson(value as Map<String, dynamic>)
           as ReturnType;
     case 'AttemptState':
+    case 'CompleteCourseImportUploadRequest':
+      return CompleteCourseImportUploadRequest.fromJson(
+            value as Map<String, dynamic>,
+          )
+          as ReturnType;
+    case 'CompletedCourseImportPart':
+      return CompletedCourseImportPart.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
     case 'CourseDetail':
       return CourseDetail.fromJson(value as Map<String, dynamic>) as ReturnType;
+    case 'CourseImportApprovalResponse':
+      return CourseImportApprovalResponse.fromJson(
+            value as Map<String, dynamic>,
+          )
+          as ReturnType;
+    case 'CourseImportIssuePage':
+      return CourseImportIssuePage.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'CourseImportPartDeclaration':
+      return CourseImportPartDeclaration.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'CourseImportPartHeaders':
+      return CourseImportPartHeaders.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'CourseImportPresignedPart':
+      return CourseImportPresignedPart.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'CourseImportPreviewPage':
+      return CourseImportPreviewPage.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'CourseImportPreviewRow':
+      return CourseImportPreviewRow.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'CourseImportPreviewSummary':
+      return CourseImportPreviewSummary.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'CourseImportSource':
+      return CourseImportSource.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'CourseImportStatus':
+    case 'CourseImportStatusResponse':
+      return CourseImportStatusResponse.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'CourseImportUploadInstructions':
+      return CourseImportUploadInstructions.fromJson(
+            value as Map<String, dynamic>,
+          )
+          as ReturnType;
+    case 'CourseImportUploadSessionResponse':
+      return CourseImportUploadSessionResponse.fromJson(
+            value as Map<String, dynamic>,
+          )
+          as ReturnType;
+    case 'CourseImportValidationIssue':
+      return CourseImportValidationIssue.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
     case 'CoursePage':
       return CoursePage.fromJson(value as Map<String, dynamic>) as ReturnType;
     case 'CourseProgressResponse':
@@ -59,6 +133,9 @@ ReturnType deserialize<ReturnType, BaseType>(
           as ReturnType;
     case 'CourseSummary':
       return CourseSummary.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'CreateCourseImportRequest':
+      return CreateCourseImportRequest.fromJson(value as Map<String, dynamic>)
           as ReturnType;
     case 'CreateEnrollmentRequest':
       return CreateEnrollmentRequest.fromJson(value as Map<String, dynamic>)

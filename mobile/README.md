@@ -69,9 +69,11 @@ flutter test integration_test -d emulator-5554 `
   --dart-define=KELIMIO_LOCAL_DEVELOPMENT_TOOLS=true
 ```
 
-The script configures ADB reverse mappings for the API and Keycloak ports. The
-AVD contains Google APIs but intentionally has no Play Store; store billing and
-Play Integrity remain separate release-stage tests.
+The script configures ADB reverse mappings for the LocalStack direct-upload,
+API, and Keycloak ports. This lets presigned `http://localhost:4566` upload URLs
+work from the emulator without broadening the backend's local endpoint
+allowlist. The AVD contains Google APIs but intentionally has no Play Store;
+store billing and Play Integrity remain separate release-stage tests.
 
 The broader local Android smoke matrix is run from the repository root with
 `scripts\android-device-matrix.cmd -Headless`. It sequentially covers the
@@ -83,7 +85,7 @@ optional minimum/current endpoint E2E run, and remaining real-device/release
 limitations.
 
 From the repository root, `scripts\local-android-e2e.cmd` runs the isolated
-real-registration acceptance flow. It uses a fresh Flyway V8 database, a
+real-registration acceptance flow. It uses a fresh Flyway V9 database, a
 per-run random 32-byte matching-replay key, separate Compose volumes and ports,
 public Keycloak registration, Mailpit verification, a genuine S256 PKCE token,
 the generated API repositories, real Drift storage, and the production Flutter
@@ -119,7 +121,7 @@ correct mapping.
 
 Flutter analysis is clean and the full suite passes 117/117 tests, including
 the focused 18/18 Type-D domain/controller/widget/accessibility coverage. The
-guarded eight-question Android E2E also passes against fresh Flyway V8 services
+guarded eight-question Android E2E also passes against fresh Flyway V9 services
 with zero isolated resources or images left after cleanup.
 
 Android has explicit `production`, `smoke`, and `e2e` flavors. Normal Android

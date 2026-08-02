@@ -6,18 +6,24 @@ x-local-only-environment: &local-only-environment
   KELIMIO_DB_USER: kelimio
   KELIMIO_DB_PASSWORD: ${KELIMIO_LOCAL_DB_PASSWORD:-kelimio_local_only}
   KELIMIO_REDIS_URL: redis://redis:6379
-  KELIMIO_OIDC_ISSUER: ${KELIMIO_LOCAL_OIDC_ISSUER:-http://localhost:8081/realms/kelimio}
-  KELIMIO_OIDC_JWK_SET_URI: http://keycloak:8080/realms/kelimio/protocol/openid-connect/certs
-  KELIMIO_OIDC_AUDIENCE: kelimio-api
-  # Public, local-only defaults. Production and staging must inject a secret key ring.
-  KELIMIO_MATCHING_REPLAY_ACTIVE_KEY_VERSION: ${KELIMIO_MATCHING_REPLAY_ACTIVE_KEY_VERSION:-local-v1}
-  KELIMIO_MATCHING_REPLAY_KEYS: ${KELIMIO_MATCHING_REPLAY_KEYS:-local-v1=a2VsaW1pby1sb2NhbC1vbmx5LWhtYWMta2V5LTAwMDE=}
-  KELIMIO_LOCAL_STARTER_COURSE_ENABLED: "true"
   AWS_REGION: eu-central-1
   AWS_ACCESS_KEY_ID: localstack
   AWS_SECRET_ACCESS_KEY: localstack
   KELIMIO_S3_ENDPOINT: http://localstack:4566
+  KELIMIO_S3_PUBLIC_ENDPOINT: http://localhost:${KELIMIO_LOCAL_LOCALSTACK_HOST_PORT:-4566}
   KELIMIO_SQS_ENDPOINT: http://localstack:4566
+  KELIMIO_IMPORT_ENABLED: "true"
+  KELIMIO_IMPORT_QUARANTINE_BUCKET: kelimio-local-import-quarantine
+  KELIMIO_IMPORT_ARCHIVE_BUCKET: kelimio-local-import-archive
+  KELIMIO_IMPORT_QUEUE_NAME: kelimio-import
+  KELIMIO_IMPORT_DLQ_NAME: kelimio-import-dlq
+  KELIMIO_CLAMAV_HOST: clamav
+  KELIMIO_CLAMAV_PORT: "3310"
+  KELIMIO_CLAMAV_MIN_ENGINE_VERSION: 1.4.0
+  KELIMIO_CLAMAV_MIN_SIGNATURE_NUMBER: "1"
+  KELIMIO_CLAMAV_MAX_DEFINITION_AGE_SECONDS: "259200"
+  KELIMIO_CLAMAV_FUTURE_SKEW_SECONDS: "86400"
+  KELIMIO_BUILD_REVISION: ${KELIMIO_BUILD_REVISION:-local-development}
   OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
 
 services:
@@ -69,7 +75,7 @@ services:
       test:
         [
           "CMD-SHELL",
-          "test -f /tmp/kelimio-init-complete && awslocal s3api head-bucket --bucket kelimio-local-imports >/dev/null && awslocal s3api head-bucket --bucket kelimio-local-offline-packages >/dev/null && awslocal sqs get-queue-url --queue-name kelimio-worker >/dev/null && awslocal sqs get-queue-url --queue-name kelimio-worker-dlq >/dev/null",
+          "test -f /tmp/kelimio-init-complete && awslocal s3api head-bucket --bucket kelimio-local-import-quarantine >/dev/null && awslocal s3api head-bucket --bucket kelimio-local-import-archive >/dev/null && awslocal s3api head-bucket --bucket kelimio-local-offline-packages >/dev/null && awslocal sqs get-queue-url --queue-name kelimio-import >/dev/null && awslocal sqs get-queue-url --queue-name kelimio-import-dlq >/dev/null",
         ]
       interval: 5s
       timeout: 4s
@@ -143,12 +149,26 @@ services:
 
   clamav:
     image: clamav/clamav:1.4.5@sha256:e7ead98e7e07231b151bce988e0cfb0a3b46e6e7046d9dd44fd838c0df724a03
-    ports:
-      - "127.0.0.1:${KELIMIO_LOCAL_CLAMAV_HOST_PORT:-3310}:3310"
+    environment:
+      KELIMIO_CLAMAV_MAX_DEFINITION_AGE_SECONDS: "259200"
+      KELIMIO_CLAMAV_FUTURE_SKEW_SECONDS: "86400"
+    expose:
+      - "3310"
     volumes:
-      - clamav-data:/var/lib/clamav
+      - type: volume
+        source: clamav-data
+        target: /var/lib/clamav
+        volume:
+          nocopy: true
+      - type: bind
+        source: ./infrastructure/local/clamav/healthcheck.sh
+        target: /usr/local/bin/kelimio-clamav-healthcheck.sh
+        read_only: true
+    networks:
+      - scanner-only
+      - scanner-egress
     healthcheck:
-      test: ["CMD", "/usr/local/bin/clamdcheck.sh"]
+      test: ["CMD", "/bin/sh", "/usr/local/bin/kelimio-clamav-healthcheck.sh"]
       interval: 30s
       timeout: 10s
       retries: 20
@@ -173,6 +193,15 @@ services:
       target: runtime
     environment:
       <<: *local-only-environment
+      KELIMIO_RUNTIME_ROLE: api
+      KELIMIO_OIDC_ISSUER: ${KELIMIO_LOCAL_OIDC_ISSUER:-http://localhost:8081/realms/kelimio}
+      KELIMIO_OIDC_JWK_SET_URI: http://keycloak:8080/realms/kelimio/protocol/openid-connect/certs
+      KELIMIO_OIDC_AUDIENCE: kelimio-api
+      # Public, local-only defaults. Production and staging must inject a secret key ring.
+      KELIMIO_MATCHING_REPLAY_ACTIVE_KEY_VERSION: ${KELIMIO_MATCHING_REPLAY_ACTIVE_KEY_VERSION:-local-v1}
+      KELIMIO_MATCHING_REPLAY_KEYS: ${KELIMIO_MATCHING_REPLAY_KEYS:-local-v1=a2VsaW1pby1sb2NhbC1vbmx5LWhtYWMta2V5LTAwMDE=}
+      KELIMIO_LOCAL_STARTER_COURSE_ENABLED: "true"
+      KELIMIO_IMPORT_CURSOR_HMAC_KEY: ${KELIMIO_LOCAL_IMPORT_CURSOR_HMAC_KEY:-a2VsaW1pby1sb2NhbC1pbXBvcnQtY3Vyc29yLTAwMDE=}
     ports:
       - "127.0.0.1:${KELIMIO_LOCAL_API_HOST_PORT:-8080}:8080"
     depends_on:
@@ -193,6 +222,39 @@ services:
       retries: 20
       start_period: 30s
     restart: "${KELIMIO_LOCAL_RESTART_POLICY:-unless-stopped}"
+
+  import-worker:
+    profiles: [app]
+    build:
+      context: ./backend
+      target: runtime
+    environment:
+      <<: *local-only-environment
+      KELIMIO_RUNTIME_ROLE: worker
+      SPRING_MAIN_WEB_APPLICATION_TYPE: none
+      SPRING_FLYWAY_ENABLED: "false"
+      KELIMIO_PROJECTION_ENABLED: "false"
+      KELIMIO_LOCAL_STARTER_COURSE_ENABLED: "false"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      localstack:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+      clamav:
+        condition: service_healthy
+    networks:
+      - default
+      - scanner-only
+    restart: "${KELIMIO_LOCAL_RESTART_POLICY:-unless-stopped}"
+
+networks:
+  scanner-only:
+    internal: true
+  scanner-egress:
 
 volumes:
   postgres-data:
