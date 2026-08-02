@@ -98,7 +98,7 @@ This selects the transaction-specific feedback requirement over a literal readin
 | The master permits safe cached formula values or rejection, while cached values cannot prove calculation freshness. | Reject every formula cell and parse only inert workbook values inside the isolated import boundary. | ADR-006 |
 | Payment diagrams suggest permanent entitlement, but refund/void/chargeback must revoke access. | Entitlement is a revocable state projection derived from immutable store events. | ADR-004 |
 | Matching email addresses suggest one person, but email text alone cannot safely authorize an account merge. | The managed OIDC broker links identities only after verified ownership; the backend keys users by stable subject and never auto-links by email. | ADR-005 |
-| The workbook represents matching through grouped word rows, while the runtime and scoring model require one question revision and the sources do not define pair-by-pair commands, mixed-mode conversion, or cross-test groups. | Type D is one bounded complete-bijection question under `matching-v1`; production workbook composition remains fail-closed until its allocation semantics are separately fixed. | ADR-009 |
+| The workbook represents matching through grouped word rows, while the runtime and scoring model require one question revision and the sources do not define pair-by-pair commands, mixed-mode conversion, or cross-test groups. | Type D is one bounded complete-bijection question under `matching-v1`; `xlsx-v2` performs allocation first and composes only complete in-test groups under immutable source lineage and a stored release-capability gate. | ADR-009 and ADR-012 |
 
 ## Consequences
 

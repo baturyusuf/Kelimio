@@ -10,12 +10,14 @@ export 'package:kelimio_api_client/src/auth/oauth.dart';
 
 export 'package:kelimio_api_client/src/api/catalog_api.dart';
 export 'package:kelimio_api_client/src/api/course_import_api.dart';
+export 'package:kelimio_api_client/src/api/course_release_api.dart';
 export 'package:kelimio_api_client/src/api/development_api.dart';
 export 'package:kelimio_api_client/src/api/energy_api.dart';
 export 'package:kelimio_api_client/src/api/enrollment_api.dart';
 export 'package:kelimio_api_client/src/api/learning_api.dart';
 export 'package:kelimio_api_client/src/api/profile_api.dart';
 
+export 'package:kelimio_api_client/src/model/activate_course_release_request.dart';
 export 'package:kelimio_api_client/src/model/answer_option.dart';
 export 'package:kelimio_api_client/src/model/answer_recorded_response.dart';
 export 'package:kelimio_api_client/src/model/approve_course_import_request.dart';
@@ -44,6 +46,9 @@ export 'package:kelimio_api_client/src/model/course_import_upload_session_respon
 export 'package:kelimio_api_client/src/model/course_import_validation_issue.dart';
 export 'package:kelimio_api_client/src/model/course_page.dart';
 export 'package:kelimio_api_client/src/model/course_progress_response.dart';
+export 'package:kelimio_api_client/src/model/course_release_activation_response.dart';
+export 'package:kelimio_api_client/src/model/course_release_impact_response.dart';
+export 'package:kelimio_api_client/src/model/course_release_operation.dart';
 export 'package:kelimio_api_client/src/model/course_summary.dart';
 export 'package:kelimio_api_client/src/model/create_course_import_request.dart';
 export 'package:kelimio_api_client/src/model/create_enrollment_request.dart';

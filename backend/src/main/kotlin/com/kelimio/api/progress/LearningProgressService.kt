@@ -20,6 +20,6 @@ class LearningProgressService(
         if (course.visibility != "PUBLIC" && !course.enrolled) {
             throw ForbiddenProblem("Course progress is not accessible.")
         }
-        return projectionRepository.getProgress(user.id, courseId)
+        return projectionRepository.getProgress(user.id, courseId, course.releaseId)
     }
 }

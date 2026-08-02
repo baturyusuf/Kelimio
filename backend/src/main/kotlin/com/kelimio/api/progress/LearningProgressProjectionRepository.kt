@@ -86,15 +86,27 @@ class LearningProgressProjectionRepository(
         eventId: UUID,
         now: OffsetDateTime,
     ) {
-        val counts = readCounts(context)
+        val courseReleaseId = activeReleaseId(context.courseId, lock = true)
+            ?: error("A progress projection requires an active course release")
+        rebuildCourse(context, eventId, courseReleaseId, now)
+    }
+
+    fun rebuildCourse(
+        context: AttemptProjectionContext,
+        eventId: UUID,
+        courseReleaseId: UUID,
+        now: OffsetDateTime,
+    ) {
+        val counts = readCounts(context, courseReleaseId)
         dsl.execute(
             """
             insert into learner_course_progress_projection(
-                user_id, course_id, answered_questions, correct_answers,
+                user_id, course_id, course_release_id, answered_questions, correct_answers,
                 completed_attempts, passed_attempts, active_score, lifetime_score,
                 projection_version, last_event_id, updated_at
-            ) values (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, cast(? as timestamptz))
+            ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, cast(? as timestamptz))
             on conflict (user_id, course_id) do update set
+                course_release_id = excluded.course_release_id,
                 answered_questions = excluded.answered_questions,
                 correct_answers = excluded.correct_answers,
                 completed_attempts = excluded.completed_attempts,
@@ -107,6 +119,7 @@ class LearningProgressProjectionRepository(
             """.trimIndent(),
             context.userId,
             context.courseId,
+            courseReleaseId,
             counts.answeredQuestions,
             counts.correctAnswers,
             counts.completedAttempts,
@@ -157,19 +170,21 @@ class LearningProgressProjectionRepository(
         )
     }
 
-    fun getProgress(userId: UUID, courseId: UUID): LearningProgressSnapshot {
+    fun getProgress(userId: UUID, courseId: UUID, activeCourseReleaseId: UUID): LearningProgressSnapshot {
         val row = dsl.fetchOne(
             """
             select answered_questions, correct_answers, completed_attempts, passed_attempts,
-                   active_score, lifetime_score, projection_version, updated_at
+                   active_score, lifetime_score, projection_version, course_release_id, updated_at
               from learner_course_progress_projection
              where user_id = ? and course_id = ?
             """.trimIndent(),
             userId,
             courseId,
         )
+        val representedReleaseId = row?.get("course_release_id", UUID::class.java)
         return LearningProgressSnapshot(
             courseId = courseId,
+            courseReleaseId = representedReleaseId ?: activeCourseReleaseId,
             answeredQuestions = row?.get("answered_questions", Int::class.java) ?: 0,
             correctAnswers = row?.get("correct_answers", Int::class.java) ?: 0,
             completedAttempts = row?.get("completed_attempts", Int::class.java) ?: 0,
@@ -177,12 +192,14 @@ class LearningProgressProjectionRepository(
             activeScore = row?.get("active_score", Long::class.java) ?: 0,
             lifetimeScore = row?.get("lifetime_score", Long::class.java) ?: 0,
             projectionVersion = row?.get("projection_version", Long::class.java) ?: 0,
-            updating = hasPendingEvents(userId, courseId),
+            updating = row != null && representedReleaseId != activeCourseReleaseId ||
+                hasPendingEvents(userId, courseId) ||
+                hasPendingReleaseReprojection(userId, courseId, activeCourseReleaseId),
             updatedAt = row?.get("updated_at", OffsetDateTime::class.java),
         )
     }
 
-    private fun readCounts(context: AttemptProjectionContext): LearningProgressCounts {
+    private fun readCounts(context: AttemptProjectionContext, courseReleaseId: UUID): LearningProgressCounts {
         val row = dsl.fetchOne(
             """
             select
@@ -205,7 +222,15 @@ class LearningProgressProjectionRepository(
                 (select coalesce(sum(m.active_score), 0)
                    from question_mastery m
                    join question_revision q on q.id = m.question_revision_id
-                  where m.user_id = ? and q.course_id = ?) as active_score,
+                  where m.user_id = ? and q.course_id = ?
+                    and exists (
+                        select 1
+                          from course_release_test_revision release_test
+                          join test_revision_question test_question
+                            on test_question.test_revision_id = release_test.test_revision_id
+                         where release_test.course_release_id = ?
+                           and test_question.question_revision_id = m.question_revision_id
+                    )) as active_score,
                 (select coalesce(sum(s.lifetime_delta), 0)
                    from score_event s
                    join test_attempt a on a.id = s.attempt_id
@@ -221,6 +246,7 @@ class LearningProgressProjectionRepository(
             context.courseId,
             context.userId,
             context.courseId,
+            courseReleaseId,
             context.userId,
             context.courseId,
         ) ?: error("Unable to rebuild learning progress projection")
@@ -252,6 +278,38 @@ class LearningProgressProjectionRepository(
             userId,
             courseId,
         )?.get("pending", Boolean::class.java) ?: false
+
+    private fun hasPendingReleaseReprojection(
+        userId: UUID,
+        courseId: UUID,
+        activeCourseReleaseId: UUID,
+    ): Boolean = dsl.fetchOne(
+        """
+        select exists (
+            select 1
+              from course_release_reprojection_job job
+              join enrollment enrollment_row
+                on enrollment_row.course_id = job.course_id
+               and enrollment_row.user_id = ?
+               and enrollment_row.status = 'ACTIVE'
+               and enrollment_row.enrolled_at <= job.enrollment_cutoff_at
+             where job.course_id = ?
+               and job.target_release_id = ?
+               and job.status in ('PENDING', 'FAILED')
+        ) as pending
+        """.trimIndent(),
+        userId,
+        courseId,
+        activeCourseReleaseId,
+    )?.get("pending", Boolean::class.java) ?: false
+
+    private fun activeReleaseId(courseId: UUID, lock: Boolean): UUID? {
+        val lockClause = if (lock) " for share" else ""
+        return dsl.fetchOne(
+            "select active_release_id from course where id = ?$lockClause",
+            courseId,
+        )?.get("active_release_id", UUID::class.java)
+    }
 
     companion object {
         const val CONSUMER_NAME = "learning-progress-projection.v1"

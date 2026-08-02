@@ -88,6 +88,17 @@ internal class InitialCourseDraftRepository(
             graph.courseId,
             command.committedAt,
         )
+        dsl.execute(
+            """
+            insert into course_release_source_change_set(
+                course_release_id, course_id, content_change_set_id, created_at
+            ) values (?, ?, ?, cast(? as timestamptz))
+            """.trimIndent(),
+            graph.releaseId,
+            graph.courseId,
+            graph.changeSetId,
+            command.committedAt,
+        )
         insertSettings(command, graph)
         insertHierarchy(command, graph)
         insertQuestions(command, graph)
@@ -371,6 +382,35 @@ internal class InitialCourseDraftRepository(
                     if (matching) command.settings.targetLanguageCode else null,
                     command.committedAt,
                 )
+                question.options.forEach { option ->
+                    dsl.execute(
+                        """
+                        insert into question_revision_option(
+                            id, question_revision_id, option_text, is_correct, position
+                        ) values (?, ?, ?, ?, ?)
+                        """.trimIndent(),
+                        option.id,
+                        question.revisionId,
+                        option.text,
+                        option.correct,
+                        option.position,
+                    )
+                    option.translations.forEach { (language, text) ->
+                        dsl.execute(
+                            """
+                            insert into question_revision_option_translation(
+                                option_id, question_revision_id, course_id,
+                                support_language, option_text
+                            ) values (?, ?, ?, ?, ?)
+                            """.trimIndent(),
+                            option.id,
+                            question.revisionId,
+                            graph.courseId,
+                            language,
+                            text,
+                        )
+                    }
+                }
                 dsl.execute(
                     """
                     insert into question_revision_authoring(

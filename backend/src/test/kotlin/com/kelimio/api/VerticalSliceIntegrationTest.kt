@@ -1872,6 +1872,7 @@ class VerticalSliceIntegrationTest {
             registry.add("KELIMIO_DB_PASSWORD", postgres::getPassword)
             registry.add("KELIMIO_ENVIRONMENT") { "local" }
             registry.add("KELIMIO_LOCAL_STARTER_COURSE_ENABLED") { "true" }
+            registry.add("KELIMIO_COURSE_RELEASE_ENABLED") { "true" }
             registry.add("KELIMIO_PROJECTION_ENABLED") { "false" }
             registry.add("KELIMIO_OIDC_ISSUER") { "https://issuer.integration.invalid" }
             registry.add("KELIMIO_OIDC_AUDIENCE") { "kelimio-mobile" }

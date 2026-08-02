@@ -25,6 +25,7 @@ class LearningProgressController(
 
 data class LearningProgressResponse(
     val courseId: UUID,
+    val courseReleaseId: UUID,
     val answeredQuestions: Int,
     val correctAnswers: Int,
     val completedAttempts: Int,
@@ -38,6 +39,7 @@ data class LearningProgressResponse(
 
 private fun LearningProgressSnapshot.toResponse() = LearningProgressResponse(
     courseId = courseId,
+    courseReleaseId = courseReleaseId,
     answeredQuestions = answeredQuestions,
     correctAnswers = correctAnswers,
     completedAttempts = completedAttempts,

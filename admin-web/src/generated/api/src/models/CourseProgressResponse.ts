@@ -27,6 +27,12 @@ export interface CourseProgressResponse {
     courseId: string;
     /**
      *
+     * @type {string}
+     * @memberof CourseProgressResponse
+     */
+    courseReleaseId: string;
+    /**
+     *
      * @type {number}
      * @memberof CourseProgressResponse
      */
@@ -86,6 +92,7 @@ export interface CourseProgressResponse {
  */
 export function instanceOfCourseProgressResponse(value: object): value is CourseProgressResponse {
     if (!('courseId' in value) || value['courseId'] === undefined) return false;
+    if (!('courseReleaseId' in value) || value['courseReleaseId'] === undefined) return false;
     if (!('answeredQuestions' in value) || value['answeredQuestions'] === undefined) return false;
     if (!('correctAnswers' in value) || value['correctAnswers'] === undefined) return false;
     if (!('completedAttempts' in value) || value['completedAttempts'] === undefined) return false;
@@ -109,6 +116,7 @@ export function CourseProgressResponseFromJSONTyped(json: any, ignoreDiscriminat
     return {
 
         'courseId': json['courseId'],
+        'courseReleaseId': json['courseReleaseId'],
         'answeredQuestions': json['answeredQuestions'],
         'correctAnswers': json['correctAnswers'],
         'completedAttempts': json['completedAttempts'],
@@ -133,6 +141,7 @@ export function CourseProgressResponseToJSONTyped(value?: CourseProgressResponse
     return {
 
         'courseId': value['courseId'],
+        'courseReleaseId': value['courseReleaseId'],
         'answeredQuestions': value['answeredQuestions'],
         'correctAnswers': value['correctAnswers'],
         'completedAttempts': value['completedAttempts'],

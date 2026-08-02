@@ -13,6 +13,11 @@ void main() {
       // TODO
     });
 
+    // String courseReleaseId
+    test('to test the property `courseReleaseId`', () async {
+      // TODO
+    });
+
     // int answeredQuestions
     test('to test the property `answeredQuestions`', () async {
       // TODO

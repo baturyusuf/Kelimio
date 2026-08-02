@@ -6,7 +6,6 @@ import com.kelimio.api.persistence.CourseTests
 import com.kelimio.api.persistence.Courses
 import com.kelimio.api.persistence.Enrollments
 import com.kelimio.api.persistence.QuestionRevisions
-import com.kelimio.api.persistence.QuestionRevisionOptions
 import com.kelimio.api.persistence.QuestionRevisionMatchingPairs
 import com.kelimio.api.persistence.QuestionRevisionMatchingTranslations
 import com.kelimio.api.persistence.TestRevisionQuestions
@@ -350,7 +349,7 @@ class CatalogRepository(
                     questionRevisionId = it.get(QuestionRevisions.ID)!!,
                     type = type,
                     prompt = it.get(QuestionRevisions.PROMPT),
-                    options = findQuestionOptions(it.get(QuestionRevisions.ID)!!),
+                    options = findQuestionOptions(it.get(QuestionRevisions.ID)!!, supportLanguage),
                     typedAnswer = if (type == LearningQuestionType.TYPED_CLOZE) {
                         TypedAnswerSource(
                             primaryAnswerText = it.get(QuestionRevisions.CORRECT_ANSWER)!!,
@@ -412,23 +411,32 @@ class CatalogRepository(
                 )
             }
 
-    private fun findQuestionOptions(questionRevisionId: UUID): List<QuestionOptionSource> =
-        dsl.select(
-            QuestionRevisionOptions.ID,
-            QuestionRevisionOptions.TEXT,
-            QuestionRevisionOptions.IS_CORRECT,
-            QuestionRevisionOptions.POSITION,
-        ).from(QuestionRevisionOptions.TABLE)
-            .where(QuestionRevisionOptions.QUESTION_REVISION_ID.eq(questionRevisionId))
-            .orderBy(QuestionRevisionOptions.POSITION.asc())
-            .fetch {
-                QuestionOptionSource(
-                    id = it.get(QuestionRevisionOptions.ID)!!,
-                    text = it.get(QuestionRevisionOptions.TEXT)!!,
-                    correct = it.get(QuestionRevisionOptions.IS_CORRECT)!!,
-                    position = it.get(QuestionRevisionOptions.POSITION)!!,
-                )
-            }
+    private fun findQuestionOptions(
+        questionRevisionId: UUID,
+        supportLanguage: String,
+    ): List<QuestionOptionSource> = dsl.fetch(
+        """
+        select option_row.id,
+               coalesce(translation.option_text, option_row.option_text) as option_text,
+               option_row.is_correct, option_row.position
+          from question_revision_option option_row
+          left join question_revision_option_translation translation
+            on translation.option_id = option_row.id
+           and translation.question_revision_id = option_row.question_revision_id
+           and translation.support_language = ?
+         where option_row.question_revision_id = ?
+         order by option_row.position
+        """.trimIndent(),
+        supportLanguage,
+        questionRevisionId,
+    ).map {
+        QuestionOptionSource(
+            id = it.get("id", UUID::class.java)!!,
+            text = it.get("option_text", String::class.java)!!,
+            correct = it.get("is_correct", Boolean::class.java)!!,
+            position = it.get("position", Int::class.java)!!,
+        )
+    }
 
     private fun mapCourse(
         id: UUID,

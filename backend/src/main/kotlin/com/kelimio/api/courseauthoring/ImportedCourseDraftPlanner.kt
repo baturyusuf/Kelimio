@@ -71,7 +71,7 @@ internal class ImportedCourseDraftPlanner(
                                 position = topicIndex + 1,
                                 tests = topic.tests.values.mapIndexed { testIndex, test ->
                                     val questions = test.rowsByQuestionOrdinal.values.map { rows ->
-                                        question(rows, command.settings)
+                                        question(rows, command.settings, orderedRows)
                                     }
                                     validateTestComposition(test.resolvedMode, questions)
                                     DraftTest(
@@ -105,6 +105,7 @@ internal class ImportedCourseDraftPlanner(
     private fun question(
         rows: List<InitialCourseDraftRow>,
         settings: InitialCourseDraftSettings,
+        allRows: List<InitialCourseDraftRow>,
     ): DraftQuestion {
         rejectUnless(rows.isNotEmpty())
         val row = rows.first()
@@ -163,6 +164,30 @@ internal class ImportedCourseDraftPlanner(
         } else {
             emptyList()
         }
+        val options = when (row.projectedQuestionType) {
+            InitialProjectedQuestionType.A -> wordOptionRows(row, allRows, settings).mapIndexed { index, optionRow ->
+                DraftQuestionOption(
+                    id = newId(),
+                    text = checkNotNull(optionRow.translations[settings.defaultSupportLanguageCode]),
+                    correct = index == 0,
+                    position = index + 1,
+                    translations = optionRow.translations,
+                )
+            }
+            InitialProjectedQuestionType.B ->
+                (listOf(checkNotNull(correctAnswer)) + row.wrongAnswers).mapIndexed { index, text ->
+                    DraftQuestionOption(
+                        id = newId(),
+                        text = text,
+                        correct = index == 0,
+                        position = index + 1,
+                        translations = emptyMap(),
+                    )
+                }
+            InitialProjectedQuestionType.C,
+            InitialProjectedQuestionType.D,
+            -> emptyList()
+        }
         return DraftQuestion(
             id = newId(),
             revisionId = newId(),
@@ -172,6 +197,7 @@ internal class ImportedCourseDraftPlanner(
             correctAnswer = correctAnswer,
             correctAnswerMatchKey = typedCorrectKey,
             alternativeAnswerMatchKey = typedAlternativeKey,
+            options = options,
             matchingPairs = matchingPairs,
         )
     }
@@ -262,6 +288,36 @@ internal class ImportedCourseDraftPlanner(
         if (!condition) throw InitialCourseDraftValidationException()
     }
 
+    private fun wordOptionRows(
+        correctRow: InitialCourseDraftRow,
+        allRows: List<InitialCourseDraftRow>,
+        settings: InitialCourseDraftSettings,
+    ): List<InitialCourseDraftRow> {
+        val words = allRows.filter { it.recordType == InitialRecordType.WORD }.sortedBy(InitialCourseDraftRow::ordinal)
+        val correctIndex = words.indexOfFirst { it.ordinal == correctRow.ordinal }
+        rejectUnless(correctIndex >= 0)
+        val seenByLanguage = settings.supportLanguageCodes.associateWith { language ->
+            linkedSetOf(checkNotNull(correctRow.translations[language]).optionCollisionKey())
+        }
+        val selected = mutableListOf<InitialCourseDraftRow>()
+        val candidates = words.drop(correctIndex + 1) + words.take(correctIndex)
+        candidates.forEach { candidate ->
+            if (selected.size == 3) return@forEach
+            val isDistinctInEveryLanguage = settings.supportLanguageCodes.all { language ->
+                checkNotNull(candidate.translations[language]).optionCollisionKey() !in checkNotNull(seenByLanguage[language])
+            }
+            if (isDistinctInEveryLanguage) {
+                selected += candidate
+                settings.supportLanguageCodes.forEach { language ->
+                    checkNotNull(seenByLanguage[language]) +=
+                        checkNotNull(candidate.translations[language]).optionCollisionKey()
+                }
+            }
+        }
+        rejectUnless(selected.size == 3)
+        return listOf(correctRow) + selected
+    }
+
     private data class MutableLevel(
         val id: UUID,
         val revisionId: UUID,
@@ -294,6 +350,9 @@ internal class ImportedCourseDraftPlanner(
 
     private fun String.groupCollisionKey(): String =
         Normalizer.normalize(uppercase(Locale.ROOT).lowercase(Locale.ROOT), Normalizer.Form.NFC)
+
+    private fun String.optionCollisionKey(): String =
+        Normalizer.normalize(trim().lowercase(Locale.ROOT), Normalizer.Form.NFC)
 }
 
 internal data class ImportedCourseDraftGraph(
@@ -361,7 +420,16 @@ internal data class DraftQuestion(
     val correctAnswer: String?,
     val correctAnswerMatchKey: String?,
     val alternativeAnswerMatchKey: String?,
+    val options: List<DraftQuestionOption>,
     val matchingPairs: List<DraftMatchingPair>,
+)
+
+internal data class DraftQuestionOption(
+    val id: UUID,
+    val text: String,
+    val correct: Boolean,
+    val position: Int,
+    val translations: Map<String, String>,
 )
 
 internal data class DraftMatchingPair(

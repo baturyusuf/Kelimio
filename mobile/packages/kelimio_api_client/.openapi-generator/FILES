@@ -3,6 +3,7 @@
 README.md
 analysis_options.yaml
 build.yaml
+doc/ActivateCourseReleaseRequest.md
 doc/AnswerOption.md
 doc/AnswerRecordedResponse.md
 doc/ApproveCourseImportRequest.md
@@ -33,6 +34,10 @@ doc/CourseImportUploadSessionResponse.md
 doc/CourseImportValidationIssue.md
 doc/CoursePage.md
 doc/CourseProgressResponse.md
+doc/CourseReleaseActivationResponse.md
+doc/CourseReleaseApi.md
+doc/CourseReleaseImpactResponse.md
+doc/CourseReleaseOperation.md
 doc/CourseSummary.md
 doc/CreateCourseImportRequest.md
 doc/CreateEnrollmentRequest.md
@@ -57,6 +62,7 @@ lib/kelimio_api_client.dart
 lib/src/api.dart
 lib/src/api/catalog_api.dart
 lib/src/api/course_import_api.dart
+lib/src/api/course_release_api.dart
 lib/src/api/development_api.dart
 lib/src/api/energy_api.dart
 lib/src/api/enrollment_api.dart
@@ -68,6 +74,7 @@ lib/src/auth/basic_auth.dart
 lib/src/auth/bearer_auth.dart
 lib/src/auth/oauth.dart
 lib/src/deserialize.dart
+lib/src/model/activate_course_release_request.dart
 lib/src/model/answer_option.dart
 lib/src/model/answer_recorded_response.dart
 lib/src/model/approve_course_import_request.dart
@@ -96,6 +103,9 @@ lib/src/model/course_import_upload_session_response.dart
 lib/src/model/course_import_validation_issue.dart
 lib/src/model/course_page.dart
 lib/src/model/course_progress_response.dart
+lib/src/model/course_release_activation_response.dart
+lib/src/model/course_release_impact_response.dart
+lib/src/model/course_release_operation.dart
 lib/src/model/course_summary.dart
 lib/src/model/create_course_import_request.dart
 lib/src/model/create_enrollment_request.dart
@@ -112,6 +122,7 @@ lib/src/model/question_payload.dart
 lib/src/model/submit_answer_request.dart
 lib/src/model/test_summary.dart
 pubspec.yaml
+test/activate_course_release_request_test.dart
 test/answer_option_test.dart
 test/answer_recorded_response_test.dart
 test/approve_course_import_request_test.dart
@@ -142,6 +153,10 @@ test/course_import_upload_session_response_test.dart
 test/course_import_validation_issue_test.dart
 test/course_page_test.dart
 test/course_progress_response_test.dart
+test/course_release_activation_response_test.dart
+test/course_release_api_test.dart
+test/course_release_impact_response_test.dart
+test/course_release_operation_test.dart
 test/course_summary_test.dart
 test/create_course_import_request_test.dart
 test/create_enrollment_request_test.dart

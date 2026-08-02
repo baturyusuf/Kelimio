@@ -22,7 +22,7 @@ import java.util.concurrent.TimeUnit
 @Testcontainers(disabledWithoutDocker = true)
 class CourseImportIntakeMigrationTest {
     @Test
-    fun `fresh V11 accepts a draft course without an active release and keeps its release draft`() {
+    fun `fresh V12 accepts a draft course without an active release and keeps its release draft`() {
         val schema = newSchema()
         val ownerId = UUID.randomUUID()
         val courseId = UUID.randomUUID()
@@ -235,6 +235,13 @@ class CourseImportIntakeMigrationTest {
 
         assertThat(after).isEqualTo(before)
         connection(schema).use { connection ->
+            assertThat(
+                queryString(
+                    connection,
+                    "select course_release_id::text from learner_course_progress_projection " +
+                        "where user_id = '$userId' and course_id = '$courseId'",
+                ),
+            ).isEqualTo(releaseId.toString())
             assertThat(queryString(connection, "select next_attempt_at::text from outbox_delivery where event_id = '$outboxEventId'"))
                 .isNull()
             assertThat(
@@ -928,7 +935,9 @@ class CourseImportIntakeMigrationTest {
         queryString(connection, "select row_to_json(t)::text from (select * from score_event where id='$scoreEventId') t"),
         queryString(
             connection,
-            "select row_to_json(t)::text from (select * from learner_course_progress_projection " +
+            "select row_to_json(t)::text from (select user_id,course_id,answered_questions,correct_answers," +
+                "completed_attempts,passed_attempts,active_score,lifetime_score,projection_version,last_event_id,updated_at " +
+                "from learner_course_progress_projection " +
                 "where user_id='$userId' and course_id='$courseId') t",
         ),
         queryString(connection, "select row_to_json(t)::text from (select * from outbox_event where id='$outboxEventId') t"),

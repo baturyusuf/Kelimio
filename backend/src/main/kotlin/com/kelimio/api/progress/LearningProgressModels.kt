@@ -5,6 +5,7 @@ import java.util.UUID
 
 data class LearningProgressSnapshot(
     val courseId: UUID,
+    val courseReleaseId: UUID,
     val answeredQuestions: Int,
     val correctAnswers: Int,
     val completedAttempts: Int,

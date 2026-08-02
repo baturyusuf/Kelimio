@@ -1,5 +1,6 @@
 /* tslint:disable */
 /* eslint-disable */
+export * from './ActivateCourseReleaseRequest';
 export * from './AnswerOption';
 export * from './AnswerRecordedResponse';
 export * from './ApproveCourseImportRequest';
@@ -28,6 +29,9 @@ export * from './CourseImportUploadSessionResponse';
 export * from './CourseImportValidationIssue';
 export * from './CoursePage';
 export * from './CourseProgressResponse';
+export * from './CourseReleaseActivationResponse';
+export * from './CourseReleaseImpactResponse';
+export * from './CourseReleaseOperation';
 export * from './CourseSummary';
 export * from './CreateCourseImportRequest';
 export * from './CreateEnrollmentRequest';

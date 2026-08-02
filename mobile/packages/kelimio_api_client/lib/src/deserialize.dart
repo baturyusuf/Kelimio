@@ -1,3 +1,4 @@
+import 'package:kelimio_api_client/src/model/activate_course_release_request.dart';
 import 'package:kelimio_api_client/src/model/answer_option.dart';
 import 'package:kelimio_api_client/src/model/answer_recorded_response.dart';
 import 'package:kelimio_api_client/src/model/approve_course_import_request.dart';
@@ -24,6 +25,8 @@ import 'package:kelimio_api_client/src/model/course_import_upload_session_respon
 import 'package:kelimio_api_client/src/model/course_import_validation_issue.dart';
 import 'package:kelimio_api_client/src/model/course_page.dart';
 import 'package:kelimio_api_client/src/model/course_progress_response.dart';
+import 'package:kelimio_api_client/src/model/course_release_activation_response.dart';
+import 'package:kelimio_api_client/src/model/course_release_impact_response.dart';
 import 'package:kelimio_api_client/src/model/course_summary.dart';
 import 'package:kelimio_api_client/src/model/create_course_import_request.dart';
 import 'package:kelimio_api_client/src/model/create_enrollment_request.dart';
@@ -62,6 +65,11 @@ ReturnType deserialize<ReturnType, BaseType>(
       return (valueString == 'true' || valueString == '1') as ReturnType;
     case 'double':
       return (value is double ? value : double.parse('$value')) as ReturnType;
+    case 'ActivateCourseReleaseRequest':
+      return ActivateCourseReleaseRequest.fromJson(
+            value as Map<String, dynamic>,
+          )
+          as ReturnType;
     case 'AnswerOption':
       return AnswerOption.fromJson(value as Map<String, dynamic>) as ReturnType;
     case 'AnswerRecordedResponse':
@@ -147,6 +155,15 @@ ReturnType deserialize<ReturnType, BaseType>(
     case 'CourseProgressResponse':
       return CourseProgressResponse.fromJson(value as Map<String, dynamic>)
           as ReturnType;
+    case 'CourseReleaseActivationResponse':
+      return CourseReleaseActivationResponse.fromJson(
+            value as Map<String, dynamic>,
+          )
+          as ReturnType;
+    case 'CourseReleaseImpactResponse':
+      return CourseReleaseImpactResponse.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'CourseReleaseOperation':
     case 'CourseSummary':
       return CourseSummary.fromJson(value as Map<String, dynamic>)
           as ReturnType;

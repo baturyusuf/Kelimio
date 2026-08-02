@@ -1184,6 +1184,121 @@ assert.equal(
   "commit response must not imply publication",
 );
 
+const releaseImpactOperation = contract.paths[
+  "/v1/courses/{courseId}/releases/{releaseId}/impact"
+].get;
+const releaseActivationOperation = contract.paths[
+  "/v1/courses/{courseId}/releases/{releaseId}/activate"
+].post;
+assert.equal(
+  releaseImpactOperation.responses["200"].headers["Cache-Control"].$ref,
+  "#/components/headers/NoStore",
+  "owner-scoped release impact must remain non-cacheable",
+);
+assert.equal(
+  releaseActivationOperation.responses["201"].headers["Cache-Control"].$ref,
+  "#/components/headers/NoStore",
+  "release activation results must remain non-cacheable",
+);
+assert.ok(
+  releaseActivationOperation.parameters.some(
+    (parameter) => parameter.$ref === "#/components/parameters/IdempotencyKey",
+  ),
+  "release activation must remain an idempotent command",
+);
+
+const validateActivationRequest = compileSchema("ActivateCourseReleaseRequest");
+const validImpactBinding = "c".repeat(64);
+assert.equal(
+  validateActivationRequest({ expectedActiveReleaseId: null, impactBindingSha256: validImpactBinding }),
+  true,
+  "initial publication must explicitly bind the absence of an active release",
+);
+assert.equal(
+  validateActivationRequest({ impactBindingSha256: validImpactBinding }),
+  false,
+  "omitting expectedActiveReleaseId must fail closed instead of behaving like null",
+);
+assert.equal(
+  validateActivationRequest({
+    expectedActiveReleaseId: null,
+    impactBindingSha256: validImpactBinding,
+    publish: true,
+  }),
+  false,
+  "release activation must reject client-asserted side effects",
+);
+
+const validReleaseImpact = {
+  courseId: committedImport.courseId,
+  targetReleaseId: committedImport.draftReleaseId,
+  expectedActiveReleaseId: null,
+  sourceChangeSetId: committedImport.contentChangeSetId,
+  operation: "INITIAL_PUBLICATION",
+  releaseRevision: 1,
+  targetQuestionCount: 14,
+  unchangedQuestionCount: 0,
+  changedQuestionCount: 0,
+  addedQuestionCount: 14,
+  removedQuestionCount: 0,
+  affectedEnrollmentCount: 0,
+  requiredClientCapabilities: ["question.matching.v1"],
+  impactBindingSha256: validImpactBinding,
+};
+const validateReleaseImpact = compileSchema("CourseReleaseImpactResponse");
+assert.equal(
+  validateReleaseImpact(validReleaseImpact),
+  true,
+  `release impact must satisfy its closed schema: ${ajv.errorsText(validateReleaseImpact.errors)}`,
+);
+assert.equal(
+  validateReleaseImpact({ ...validReleaseImpact, workbookRows: ["secret"] }),
+  false,
+  "release impact must not expose authored workbook content",
+);
+
+const validateReleaseActivation = compileSchema("CourseReleaseActivationResponse");
+assert.equal(
+  validateReleaseActivation({
+    activationId: "00000000-0000-4000-8000-000000000994",
+    courseId: committedImport.courseId,
+    releaseId: committedImport.draftReleaseId,
+    previousReleaseId: null,
+    sourceChangeSetId: committedImport.contentChangeSetId,
+    operation: "INITIAL_PUBLICATION",
+    releaseRevision: 1,
+    questionCount: 14,
+    requiredClientCapabilities: ["question.matching.v1"],
+    coursePublicationStatus: "PUBLISHED",
+    reprojectionStatus: "PENDING",
+    activatedAt: "2026-08-02T08:06:00Z",
+    created: true,
+  }),
+  true,
+  `release activation must satisfy its closed schema: ${ajv.errorsText(validateReleaseActivation.errors)}`,
+);
+
+const validateCourseProgress = compileSchema("CourseProgressResponse");
+const validCourseProgress = {
+  courseId: committedImport.courseId,
+  courseReleaseId: committedImport.draftReleaseId,
+  answeredQuestions: 0,
+  correctAnswers: 0,
+  completedAttempts: 0,
+  passedAttempts: 0,
+  activeScore: 0,
+  lifetimeScore: 0,
+  projectionVersion: 0,
+  updating: true,
+  updatedAt: null,
+};
+assert.equal(validateCourseProgress(validCourseProgress), true);
+assert.equal(
+  validateCourseProgress({ ...validCourseProgress, courseReleaseId: undefined }),
+  false,
+  "progress must identify the immutable release represented by its active score",
+);
+
 assert.equal(
   validateCourseImportStatus({
     ...validImportStatus,

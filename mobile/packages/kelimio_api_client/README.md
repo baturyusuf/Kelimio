@@ -76,6 +76,8 @@ Class | Method | HTTP request | Description
 [*CourseImportApi*](doc/CourseImportApi.md) | [**getCourseImport**](doc/CourseImportApi.md#getcourseimport) | **GET** /v1/courses/imports/{importId} | Return the current owner-scoped import state
 [*CourseImportApi*](doc/CourseImportApi.md) | [**listCourseImportPreviewRows**](doc/CourseImportApi.md#listcourseimportpreviewrows) | **GET** /v1/courses/imports/{importId}/preview | Page through the immutable normalized owner preview
 [*CourseImportApi*](doc/CourseImportApi.md) | [**listCourseImportValidationIssues**](doc/CourseImportApi.md#listcourseimportvalidationissues) | **GET** /v1/courses/imports/{importId}/issues | Page through the immutable owner-scoped validation report
+[*CourseReleaseApi*](doc/CourseReleaseApi.md) | [**activateCourseRelease**](doc/CourseReleaseApi.md#activatecourserelease) | **POST** /v1/courses/{courseId}/releases/{releaseId}/activate | Publish or roll back to an exact reviewed immutable release
+[*CourseReleaseApi*](doc/CourseReleaseApi.md) | [**getCourseReleaseImpact**](doc/CourseReleaseApi.md#getcoursereleaseimpact) | **GET** /v1/courses/{courseId}/releases/{releaseId}/impact | Review the exact owner-scoped impact of activating an immutable release
 [*DevelopmentApi*](doc/DevelopmentApi.md) | [**installLocalStarterCourse**](doc/DevelopmentApi.md#installlocalstartercourse) | **POST** /v1/development/starter-course | Install the authenticated owner&#39;s local starter course idempotently
 [*EnergyApi*](doc/EnergyApi.md) | [**getEnergy**](doc/EnergyApi.md#getenergy) | **GET** /v1/energy | Return the lazily regenerated free-course energy account
 [*EnrollmentApi*](doc/EnrollmentApi.md) | [**enrollInCourse**](doc/EnrollmentApi.md#enrollincourse) | **POST** /v1/courses/{courseId}/enrollments | Enroll the authenticated user in a free public course
@@ -90,6 +92,7 @@ Class | Method | HTTP request | Description
 
 ## Documentation For Models
 
+ - [ActivateCourseReleaseRequest](doc/ActivateCourseReleaseRequest.md)
  - [AnswerOption](doc/AnswerOption.md)
  - [AnswerRecordedResponse](doc/AnswerRecordedResponse.md)
  - [ApproveCourseImportRequest](doc/ApproveCourseImportRequest.md)
@@ -118,6 +121,9 @@ Class | Method | HTTP request | Description
  - [CourseImportValidationIssue](doc/CourseImportValidationIssue.md)
  - [CoursePage](doc/CoursePage.md)
  - [CourseProgressResponse](doc/CourseProgressResponse.md)
+ - [CourseReleaseActivationResponse](doc/CourseReleaseActivationResponse.md)
+ - [CourseReleaseImpactResponse](doc/CourseReleaseImpactResponse.md)
+ - [CourseReleaseOperation](doc/CourseReleaseOperation.md)
  - [CourseSummary](doc/CourseSummary.md)
  - [CreateCourseImportRequest](doc/CreateCourseImportRequest.md)
  - [CreateEnrollmentRequest](doc/CreateEnrollmentRequest.md)

@@ -92,6 +92,7 @@ CourseProgress _progress(
 }) {
   return CourseProgress(
     courseId: courseId,
+    courseReleaseId: '00000000-0000-4000-8000-000000000201',
     answeredQuestions: version,
     correctAnswers: version,
     completedAttempts: 0,

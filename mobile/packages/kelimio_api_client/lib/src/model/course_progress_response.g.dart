@@ -13,6 +13,7 @@ CourseProgressResponse _$CourseProgressResponseFromJson(
     json,
     requiredKeys: const [
       'courseId',
+      'courseReleaseId',
       'answeredQuestions',
       'correctAnswers',
       'completedAttempts',
@@ -26,6 +27,7 @@ CourseProgressResponse _$CourseProgressResponseFromJson(
   );
   final val = CourseProgressResponse(
     courseId: $checkedConvert('courseId', (v) => v as String),
+    courseReleaseId: $checkedConvert('courseReleaseId', (v) => v as String),
     answeredQuestions: $checkedConvert(
       'answeredQuestions',
       (v) => (v as num).toInt(),
@@ -61,6 +63,7 @@ Map<String, dynamic> _$CourseProgressResponseToJson(
   CourseProgressResponse instance,
 ) => <String, dynamic>{
   'courseId': instance.courseId,
+  'courseReleaseId': instance.courseReleaseId,
   'answeredQuestions': instance.answeredQuestions,
   'correctAnswers': instance.correctAnswers,
   'completedAttempts': instance.completedAttempts,

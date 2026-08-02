@@ -26,6 +26,8 @@ tags:
     description: Free-course energy state managed by the server.
   - name: Course Import
     description: Owner-scoped XLSX intake, isolated validation preview, and provenance-bound approval.
+  - name: Course Release
+    description: Owner-scoped impact review, publication, and rollback of immutable course releases.
   - name: Development
     description: Explicit local-only utilities that are unavailable outside the local environment.
 security:
@@ -637,6 +639,84 @@ paths:
           $ref: "#/components/responses/Problem"
         default:
           $ref: "#/components/responses/Problem"
+  /v1/courses/{courseId}/releases/{releaseId}/impact:
+    get:
+      operationId: getCourseReleaseImpact
+      tags: [Course Release]
+      summary: Review the exact owner-scoped impact of activating an immutable release
+      description: >-
+        Returns a canonical binding digest over the locked release manifests and
+        current active release. The enrollment count is advisory and deliberately
+        excluded from the binding because projection membership is cutoff-bound at activation.
+      parameters:
+        - $ref: "#/components/parameters/CourseId"
+        - $ref: "#/components/parameters/ReleaseId"
+      responses:
+        "200":
+          description: Release activation impact
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CourseReleaseImpactResponse"
+        "401":
+          $ref: "#/components/responses/Problem"
+        "404":
+          $ref: "#/components/responses/Problem"
+        "409":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/courses/{courseId}/releases/{releaseId}/activate:
+    post:
+      operationId: activateCourseRelease
+      tags: [Course Release]
+      summary: Publish or roll back to an exact reviewed immutable release
+      description: >-
+        Atomically activates the reviewed release, appends the activation and
+        outbox facts, and creates a cutoff-bound progress reprojection job.
+        This endpoint is fail-closed outside explicitly enabled local/test environments.
+      parameters:
+        - $ref: "#/components/parameters/CourseId"
+        - $ref: "#/components/parameters/ReleaseId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ActivateCourseReleaseRequest"
+      responses:
+        "201":
+          description: Release activation created
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CourseReleaseActivationResponse"
+        "200":
+          description: Existing activation returned for an idempotent retry
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CourseReleaseActivationResponse"
+        "400":
+          $ref: "#/components/responses/Problem"
+        "401":
+          $ref: "#/components/responses/Problem"
+        "404":
+          $ref: "#/components/responses/Problem"
+        "409":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
   /v1/development/starter-course:
     post:
       operationId: installLocalStarterCourse
@@ -701,6 +781,12 @@ components:
         $ref: "#/components/schemas/Id"
     ImportId:
       name: importId
+      in: path
+      required: true
+      schema:
+        $ref: "#/components/schemas/Id"
+    ReleaseId:
+      name: releaseId
       in: path
       required: true
       schema:
@@ -943,6 +1029,7 @@ components:
       additionalProperties: false
       required:
         - courseId
+        - courseReleaseId
         - answeredQuestions
         - correctAnswers
         - completedAttempts
@@ -954,6 +1041,8 @@ components:
         - updatedAt
       properties:
         courseId:
+          $ref: "#/components/schemas/Id"
+        courseReleaseId:
           $ref: "#/components/schemas/Id"
         answeredQuestions:
           type: integer
@@ -2175,6 +2264,138 @@ components:
           items:
             $ref: "#/components/schemas/ClientCapability"
         committedAt:
+          type: string
+          format: date-time
+        created:
+          type: boolean
+    CourseReleaseOperation:
+      type: string
+      enum: [INITIAL_PUBLICATION, PUBLICATION, ROLLBACK]
+    ActivateCourseReleaseRequest:
+      type: object
+      additionalProperties: false
+      required: [expectedActiveReleaseId, impactBindingSha256]
+      properties:
+        expectedActiveReleaseId:
+          type: [string, "null"]
+          format: uuid
+        impactBindingSha256:
+          $ref: "#/components/schemas/Sha256Hex"
+    CourseReleaseImpactResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - courseId
+        - targetReleaseId
+        - expectedActiveReleaseId
+        - sourceChangeSetId
+        - operation
+        - releaseRevision
+        - targetQuestionCount
+        - unchangedQuestionCount
+        - changedQuestionCount
+        - addedQuestionCount
+        - removedQuestionCount
+        - affectedEnrollmentCount
+        - requiredClientCapabilities
+        - impactBindingSha256
+      properties:
+        courseId:
+          $ref: "#/components/schemas/Id"
+        targetReleaseId:
+          $ref: "#/components/schemas/Id"
+        expectedActiveReleaseId:
+          type: [string, "null"]
+          format: uuid
+        sourceChangeSetId:
+          $ref: "#/components/schemas/Id"
+        operation:
+          $ref: "#/components/schemas/CourseReleaseOperation"
+        releaseRevision:
+          type: integer
+          minimum: 1
+        targetQuestionCount:
+          type: integer
+          minimum: 1
+          maximum: 10000
+        unchangedQuestionCount:
+          type: integer
+          minimum: 0
+          maximum: 10000
+        changedQuestionCount:
+          type: integer
+          minimum: 0
+          maximum: 10000
+        addedQuestionCount:
+          type: integer
+          minimum: 0
+          maximum: 10000
+        removedQuestionCount:
+          type: integer
+          minimum: 0
+          maximum: 10000
+        affectedEnrollmentCount:
+          type: integer
+          minimum: 0
+        requiredClientCapabilities:
+          type: array
+          maxItems: 16
+          uniqueItems: true
+          items:
+            $ref: "#/components/schemas/ClientCapability"
+        impactBindingSha256:
+          $ref: "#/components/schemas/Sha256Hex"
+    CourseReleaseActivationResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - activationId
+        - courseId
+        - releaseId
+        - previousReleaseId
+        - sourceChangeSetId
+        - operation
+        - releaseRevision
+        - questionCount
+        - requiredClientCapabilities
+        - coursePublicationStatus
+        - reprojectionStatus
+        - activatedAt
+        - created
+      properties:
+        activationId:
+          $ref: "#/components/schemas/Id"
+        courseId:
+          $ref: "#/components/schemas/Id"
+        releaseId:
+          $ref: "#/components/schemas/Id"
+        previousReleaseId:
+          type: [string, "null"]
+          format: uuid
+        sourceChangeSetId:
+          $ref: "#/components/schemas/Id"
+        operation:
+          $ref: "#/components/schemas/CourseReleaseOperation"
+        releaseRevision:
+          type: integer
+          minimum: 1
+        questionCount:
+          type: integer
+          minimum: 1
+          maximum: 10000
+        requiredClientCapabilities:
+          type: array
+          maxItems: 16
+          uniqueItems: true
+          items:
+            $ref: "#/components/schemas/ClientCapability"
+        coursePublicationStatus:
+          type: string
+          enum: [PUBLISHED, HIDDEN]
+        reprojectionStatus:
+          type: string
+          enum: [PENDING, FAILED, COMPLETED, DEAD]
+        activatedAt:
           type: string
           format: date-time
         created:

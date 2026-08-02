@@ -57,6 +57,7 @@ final class GeneratedCatalogRepository implements CatalogRepository {
     }
     return CourseProgress(
       courseId: data.courseId,
+      courseReleaseId: data.courseReleaseId,
       answeredQuestions: data.answeredQuestions,
       correctAnswers: data.correctAnswers,
       completedAttempts: data.completedAttempts,

@@ -9,7 +9,7 @@ import java.util.UUID
 
 class ImportedCourseDraftPlannerTest {
     @Test
-    fun `approved rows become one ordered immutable hierarchy without compiling runtime options`() {
+    fun `approved rows become one ordered immutable hierarchy with exact multiple choice options`() {
         val planner = ImportedCourseDraftPlanner(newId = sequentialIds())
 
         val graph = planner.plan(
@@ -19,6 +19,7 @@ class ImportedCourseDraftPlannerTest {
                     typedRow(2, level = "A1", unit = "Temel", topic = "Ev", testNumber = 1),
                     wordRow(3, level = "A1", unit = "Temel", topic = "Günlük", testNumber = 2),
                     wordRow(4, level = "A2", unit = "Seyahat", topic = "Ulaşım", testNumber = 1),
+                    wordRow(5, level = "A2", unit = "Seyahat", topic = "Ulaşım", testNumber = 1),
                 ),
                 expectedLevelCount = 2,
                 expectedUnitCount = 2,
@@ -34,8 +35,8 @@ class ImportedCourseDraftPlannerTest {
             .containsExactly("Ev", "Günlük")
         assertThat(graph.tests.map(DraftTest::number)).containsExactly(1, 2, 1)
         assertThat(graph.tests.map(DraftTest::position)).containsExactly(1, 1, 1)
-        assertThat(graph.questions.map { it.sourceRows.single().ordinal }).containsExactly(1, 2, 3, 4)
-        assertThat(graph.rowCount).isEqualTo(4)
+        assertThat(graph.questions.map { it.sourceRows.single().ordinal }).containsExactly(1, 2, 3, 4, 5)
+        assertThat(graph.rowCount).isEqualTo(5)
 
         val typedQuestion = graph.questions.single { it.questionType == "C" }
         assertThat(typedQuestion.correctAnswerMatchKey)
@@ -43,6 +44,15 @@ class ImportedCourseDraftPlannerTest {
         assertThat(typedQuestion.alternativeAnswerMatchKey)
             .isEqualTo(TypedAnswerPolicy.canonicalize("içeri girerim", "tr"))
         assertThat(graph.questions.first { it.questionType == "A" }.correctAnswerMatchKey).isNull()
+        assertThat(graph.questions.filter { it.questionType == "A" })
+            .allSatisfy { question ->
+                assertThat(question.options.map(DraftQuestionOption::position)).containsExactly(1, 2, 3, 4)
+                assertThat(question.options.map(DraftQuestionOption::correct)).containsExactly(true, false, false, false)
+                assertThat(question.options.flatMap { it.translations.keys }).contains("en", "ar", "fr")
+            }
+        assertThat(graph.questions.first { it.sourceRows.single().ordinal == 1 }.options.map(DraftQuestionOption::text))
+            .containsExactly("window-1", "window-3", "window-4", "window-5")
+        assertThat(typedQuestion.options).isEmpty()
     }
 
     @Test
@@ -101,6 +111,7 @@ class ImportedCourseDraftPlannerTest {
         assertThat(matching.questionType).isEqualTo("D")
         assertThat(matching.prompt).isNull()
         assertThat(matching.correctAnswer).isNull()
+        assertThat(matching.options).isEmpty()
         assertThat(matching.matchingPairs.map(DraftMatchingPair::position)).containsExactly(1, 2)
         assertThat(matching.matchingPairs.map(DraftMatchingPair::targetItemId)).doesNotHaveDuplicates()
         assertThat(matching.matchingPairs.flatMap(DraftMatchingPair::translations).map(DraftMatchingTranslation::supportItemId))
@@ -176,7 +187,11 @@ class ImportedCourseDraftPlannerTest {
         resolvedMode = InitialTestMode.MIXED,
         recordType = InitialRecordType.WORD,
         targetText = "pencere-$ordinal",
-        translations = mapOf("en" to "window", "ar" to "نافذة", "fr" to "fenêtre"),
+        translations = mapOf(
+            "en" to "window-$ordinal",
+            "ar" to "نافذة-$ordinal",
+            "fr" to "fenêtre-$ordinal",
+        ),
         sentence = null,
         correctAnswer = null,
         alternativeCorrectAnswer = null,

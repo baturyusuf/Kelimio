@@ -65,6 +65,7 @@ final class CatalogPage {
 final class CourseProgress {
   const CourseProgress({
     required this.courseId,
+    required this.courseReleaseId,
     required this.answeredQuestions,
     required this.correctAnswers,
     required this.completedAttempts,
@@ -77,6 +78,7 @@ final class CourseProgress {
   });
 
   final String courseId;
+  final String courseReleaseId;
   final int answeredQuestions;
   final int correctAnswers;
   final int completedAttempts;

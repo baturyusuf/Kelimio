@@ -12,6 +12,7 @@ const modelFiles = readdirSync(modelDirectory)
 const unsafeRequiredNullableDate =
   /^\s*'[^']+': \(\(value\['[^']+'\] as any\)\.toISOString\(\)(?:\.substring\(0,10\))?\),$/mu;
 const checked = [];
+let checkedRequiredNullableReleaseId = false;
 
 for (const name of modelFiles) {
   const source = readFileSync(`${modelDirectory}/${name}`, "utf8");
@@ -31,6 +32,11 @@ for (const name of modelFiles) {
     );
     checked.push(`${name}.${property}`);
   }
+  if (name === "ActivateCourseReleaseRequest.ts") {
+    assert.match(source, /expectedActiveReleaseId: string \| null;/u);
+    assert.match(source, /'expectedActiveReleaseId': value\['expectedActiveReleaseId'\],/u);
+    checkedRequiredNullableReleaseId = true;
+  }
 }
 
 assert.ok(
@@ -40,6 +46,11 @@ assert.ok(
 assert.ok(
   checked.includes("CourseProgressResponse.ts.updatedAt"),
   "the existing progress updatedAt regression must remain covered",
+);
+assert.equal(
+  checkedRequiredNullableReleaseId,
+  true,
+  "the activation client's required-nullable optimistic lock must serialize explicit JSON null",
 );
 
 console.log(`Generated TypeScript safely serializes ${checked.length} required-nullable dates.`);

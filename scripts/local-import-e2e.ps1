@@ -270,7 +270,8 @@ function Send-Json {
         [string] $Token,
         [object] $Body,
         [string] $IdempotencyKey,
-        [int[]] $ExpectedStatus = @(200)
+        [int[]] $ExpectedStatus = @(200),
+        [string] $ClientCapabilities = ""
     )
 
     $request = [System.Net.Http.HttpRequestMessage]::new(
@@ -284,6 +285,12 @@ function Send-Json {
         if (-not [string]::IsNullOrWhiteSpace($IdempotencyKey)) {
             [void] $request.Headers.TryAddWithoutValidation("Idempotency-Key", $IdempotencyKey)
         }
+        if (-not [string]::IsNullOrWhiteSpace($ClientCapabilities)) {
+            [void] $request.Headers.TryAddWithoutValidation(
+                "X-Kelimio-Client-Capabilities",
+                $ClientCapabilities
+            )
+        }
         if ($null -ne $Body) {
             $json = $Body | ConvertTo-Json -Depth 20 -Compress
             $request.Content = [System.Net.Http.StringContent]::new(
@@ -296,9 +303,10 @@ function Send-Json {
         try {
             $status = [int] $response.StatusCode
             $raw = $response.Content.ReadAsStringAsync().GetAwaiter().GetResult()
-            if ($Uri.StartsWith("$($script:apiBase)/v1/courses/imports", [StringComparison]::Ordinal) -and
+            if (($Uri.StartsWith("$($script:apiBase)/v1/courses/imports", [StringComparison]::Ordinal) -or
+                $Uri.Contains("/releases/")) -and
                 ($null -eq $response.Headers.CacheControl -or -not $response.Headers.CacheControl.NoStore)) {
-                throw "An isolated course-import response omitted Cache-Control: no-store."
+                throw "A sensitive owner-scoped response omitted Cache-Control: no-store."
             }
             if ($status -notin $ExpectedStatus) {
                 $safePath = ([Uri] $Uri).AbsolutePath -replace `
@@ -491,7 +499,7 @@ function Invoke-DatabaseScalar {
 function Assert-LocalInfrastructure {
     $flyway = Invoke-DatabaseScalar `
         "select version from flyway_schema_history where success and version is not null order by installed_rank desc limit 1"
-    if ($flyway -ne "11") { throw "The isolated database did not reach Flyway V11." }
+    if ($flyway -ne "12") { throw "The isolated database did not reach Flyway V12." }
     foreach ($bucket in @("kelimio-local-import-quarantine", "kelimio-local-import-archive")) {
         $status = Invoke-DockerCapture (Get-ComposeArguments @(
             "exec", "-T", "localstack", "awslocal", "s3api", "get-bucket-versioning",
@@ -788,7 +796,12 @@ try {
         (Invoke-DatabaseScalar "select count(*) from content_topic where course_id = '$courseId'") -ne "$($validStatus.preview.topicCount)" -or
         (Invoke-DatabaseScalar "select count(*) from test_revision where course_id = '$courseId'") -ne "$($validStatus.preview.testCount)" -or
         (Invoke-DatabaseScalar "select count(*) from question_revision where course_id = '$courseId'") -ne "$($validStatus.preview.questionCount)" -or
-        (Invoke-DatabaseScalar "select count(*) from question_revision_option o join question_revision q on q.id = o.question_revision_id where q.course_id = '$courseId'") -ne "0") {
+        (Invoke-DatabaseScalar "select count(*) from question_revision_option o join question_revision q on q.id = o.question_revision_id where q.course_id = '$courseId'") -ne
+            (Invoke-DatabaseScalar "select count(*) * 4 from question_revision where course_id = '$courseId' and question_type in ('A','B')") -or
+        (Invoke-DatabaseScalar "select count(*) from question_revision q where q.course_id = '$courseId' and q.question_type in ('A','B') and (select count(*) from question_revision_option o where o.question_revision_id = q.id) = 4 and (select count(*) from question_revision_option o where o.question_revision_id = q.id and o.is_correct) = 1") -ne
+            (Invoke-DatabaseScalar "select count(*) from question_revision where course_id = '$courseId' and question_type in ('A','B')") -or
+        (Invoke-DatabaseScalar "select count(*) from question_revision_option_translation t join question_revision q on q.id = t.question_revision_id where q.course_id = '$courseId'") -ne
+            (Invoke-DatabaseScalar "select count(*) * 4 * (select count(*) from course_support_language where course_id = '$courseId') from question_revision where course_id = '$courseId' and question_type = 'A'")) {
         throw "The draft hierarchy counts do not match the exact approved preview."
     }
     if ((Invoke-DatabaseScalar "select count(*) from question_revision_import_composition where import_id = '$validImportId'") -ne "$($validStatus.preview.questionCount)" -or
@@ -816,9 +829,78 @@ try {
         "select count(*) from outbox_event where event_type = 'import.processing-requested.v1' and payload::text ilike '%.xlsx%'") -ne "0") {
         throw "An import filename leaked into the transactional outbox."
     }
+
+    $stage = "reviewed initial release publication"
+    Write-Host "Reviewing and activating the exact committed release..."
+    [void] (Send-Json "GET" "$($script:apiBase)/v1/courses/$courseId/releases/$draftReleaseId/impact" `
+        $otherToken $null "" @(404))
+    $impact = Send-Json "GET" "$($script:apiBase)/v1/courses/$courseId/releases/$draftReleaseId/impact" `
+        $ownerToken $null "" @(200)
+    if ($impact.Body.operation -ne "INITIAL_PUBLICATION" -or
+        $null -ne $impact.Body.expectedActiveReleaseId -or
+        $impact.Body.sourceChangeSetId -ne $changeSetId -or
+        $impact.Body.releaseRevision -ne 1 -or
+        $impact.Body.targetQuestionCount -ne 14 -or
+        $impact.Body.addedQuestionCount -ne 14 -or
+        $impact.Body.affectedEnrollmentCount -ne 0 -or
+        @($impact.Body.requiredClientCapabilities).Count -ne 1 -or
+        $impact.Body.requiredClientCapabilities[0] -ne "question.matching.v1" -or
+        $impact.Body.impactBindingSha256 -notmatch '^[0-9a-f]{64}$') {
+        throw "The initial release impact was incomplete or non-deterministic."
+    }
+    [void] (Send-Json "POST" "$($script:apiBase)/v1/courses/$courseId/releases/$draftReleaseId/activate" `
+        $ownerToken @{
+            expectedActiveReleaseId = $null
+            impactBindingSha256 = (("b" * 64) -join "")
+        } ([guid]::NewGuid().ToString()) @(409))
+    $activationKey = [guid]::NewGuid().ToString()
+    $activation = Send-Json "POST" "$($script:apiBase)/v1/courses/$courseId/releases/$draftReleaseId/activate" `
+        $ownerToken @{
+            expectedActiveReleaseId = $null
+            impactBindingSha256 = $impact.Body.impactBindingSha256
+        } $activationKey @(201)
+    if ($activation.Body.created -ne $true -or
+        $activation.Body.operation -ne "INITIAL_PUBLICATION" -or
+        $activation.Body.courseId -ne $courseId -or
+        $activation.Body.releaseId -ne $draftReleaseId -or
+        $activation.Body.coursePublicationStatus -ne "PUBLISHED" -or
+        $activation.Body.reprojectionStatus -ne "PENDING") {
+        throw "The reviewed initial release was not activated exactly once."
+    }
+    $activationReplay = Send-Json "POST" "$($script:apiBase)/v1/courses/$courseId/releases/$draftReleaseId/activate" `
+        $ownerToken @{
+            expectedActiveReleaseId = $null
+            impactBindingSha256 = $impact.Body.impactBindingSha256
+        } $activationKey @(200)
+    if ($activationReplay.Body.created -ne $false -or
+        $activationReplay.Body.activationId -ne $activation.Body.activationId) {
+        throw "The release activation idempotency replay changed the durable result."
+    }
+    [void] (Send-Json "GET" "$($script:apiBase)/v1/courses/$courseId" $ownerToken $null "" @(409))
+    $publishedCourse = Send-Json "GET" "$($script:apiBase)/v1/courses/$courseId" `
+        $ownerToken $null "" @(200) "question.matching.v1"
+    if ($publishedCourse.Body.releaseId -ne $draftReleaseId) {
+        throw "The compatible catalog did not expose the activated immutable release."
+    }
+    $reprojectionDeadline = (Get-Date).AddSeconds(30)
+    do {
+        $reprojectionStatus = Invoke-DatabaseScalar `
+            "select status from course_release_reprojection_job where activation_id = '$($activation.Body.activationId)'"
+        if ($reprojectionStatus -eq "COMPLETED") { break }
+        Start-Sleep -Milliseconds 250
+    } while ((Get-Date) -lt $reprojectionDeadline)
+    if ($reprojectionStatus -ne "COMPLETED" -or
+        (Invoke-DatabaseScalar "select count(*) from course where id = '$courseId' and publication_status = 'PUBLISHED' and active_release_id = '$draftReleaseId'") -ne "1" -or
+        (Invoke-DatabaseScalar "select count(*) from course_release where id = '$draftReleaseId' and status = 'ACTIVE'") -ne "1" -or
+        (Invoke-DatabaseScalar "select count(*) from test_revision where course_id = '$courseId' and status = 'ACTIVE'") -ne "$($validStatus.preview.testCount)" -or
+        (Invoke-DatabaseScalar "select count(*) from question_revision where course_id = '$courseId' and status = 'ACTIVE'") -ne "$($validStatus.preview.questionCount)" -or
+        (Invoke-DatabaseScalar "select count(*) from course_release_activation where id = '$($activation.Body.activationId)' and operation_kind = 'INITIAL_PUBLICATION' and impact_binding_sha256 = '$($impact.Body.impactBindingSha256)'") -ne "1" -or
+        (Invoke-DatabaseScalar "select count(*) from outbox_event where event_type = 'content.release-published.v1' and aggregate_id = '$courseId' and not (payload ?| array['text','prompt','answer'])") -ne "1") {
+        throw "The release activation, outbox fact, or reprojection completion is inconsistent."
+    }
     Wait-QueueDrained "kelimio-import"
     Wait-QueueDrained "kelimio-import-dlq"
-    Write-Host "Local import E2E passed: Type-D composition, exact draft commit, source lineage, release capability, idempotency, no publication, invalid validation, malware rejection, ownership, and queues."
+    Write-Host "Local import E2E passed: Type-D composition, exact draft boundary, reviewed publication, source lineage, capability gate, idempotency, invalid validation, malware rejection, ownership, reprojection, and queues."
 } catch {
     $failure = $_
     try {

@@ -18,6 +18,8 @@ class CourseProgressResponse {
   CourseProgressResponse({
     required this.courseId,
 
+    required this.courseReleaseId,
+
     required this.answeredQuestions,
 
     required this.correctAnswers,
@@ -39,6 +41,9 @@ class CourseProgressResponse {
 
   @JsonKey(name: r'courseId', required: true, includeIfNull: false)
   final String courseId;
+
+  @JsonKey(name: r'courseReleaseId', required: true, includeIfNull: false)
+  final String courseReleaseId;
 
   // minimum: 0
   @JsonKey(name: r'answeredQuestions', required: true, includeIfNull: false)
@@ -79,6 +84,7 @@ class CourseProgressResponse {
       identical(this, other) ||
       other is CourseProgressResponse &&
           other.courseId == courseId &&
+          other.courseReleaseId == courseReleaseId &&
           other.answeredQuestions == answeredQuestions &&
           other.correctAnswers == correctAnswers &&
           other.completedAttempts == completedAttempts &&
@@ -92,6 +98,7 @@ class CourseProgressResponse {
   @override
   int get hashCode =>
       courseId.hashCode +
+      courseReleaseId.hashCode +
       answeredQuestions.hashCode +
       correctAnswers.hashCode +
       completedAttempts.hashCode +

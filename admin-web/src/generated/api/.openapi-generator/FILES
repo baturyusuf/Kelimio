@@ -5,6 +5,7 @@ README.md
 package.json
 src/apis/CatalogApi.ts
 src/apis/CourseImportApi.ts
+src/apis/CourseReleaseApi.ts
 src/apis/DevelopmentApi.ts
 src/apis/EnergyApi.ts
 src/apis/EnrollmentApi.ts
@@ -12,6 +13,7 @@ src/apis/LearningApi.ts
 src/apis/ProfileApi.ts
 src/apis/index.ts
 src/index.ts
+src/models/ActivateCourseReleaseRequest.ts
 src/models/AnswerOption.ts
 src/models/AnswerRecordedResponse.ts
 src/models/ApproveCourseImportRequest.ts
@@ -40,6 +42,9 @@ src/models/CourseImportUploadSessionResponse.ts
 src/models/CourseImportValidationIssue.ts
 src/models/CoursePage.ts
 src/models/CourseProgressResponse.ts
+src/models/CourseReleaseActivationResponse.ts
+src/models/CourseReleaseImpactResponse.ts
+src/models/CourseReleaseOperation.ts
 src/models/CourseSummary.ts
 src/models/CreateCourseImportRequest.ts
 src/models/CreateEnrollmentRequest.ts

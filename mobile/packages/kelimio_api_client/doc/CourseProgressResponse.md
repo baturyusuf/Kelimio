@@ -9,6 +9,7 @@ import 'package:kelimio_api_client/api.dart';
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **courseId** | **String** |  |
+**courseReleaseId** | **String** |  |
 **answeredQuestions** | **int** |  |
 **correctAnswers** | **int** |  |
 **completedAttempts** | **int** |  |
