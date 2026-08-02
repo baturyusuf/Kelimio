@@ -111,6 +111,7 @@ class CourseImportBodyLimitFilter(
             PathPatternParser.defaultInstance.parse("/v1/courses/imports"),
             PathPatternParser.defaultInstance.parse("/v1/courses/imports/{importId}/complete"),
             PathPatternParser.defaultInstance.parse("/v1/courses/imports/{importId}/approve"),
+            PathPatternParser.defaultInstance.parse("/v1/courses/imports/{importId}/commit"),
         )
     }
 }

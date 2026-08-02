@@ -73,6 +73,11 @@ void main() {
       // TODO
     });
 
+    // CourseImportCommitSummary commit
+    test('to test the property `commit`', () async {
+      // TODO
+    });
+
     // String failureCode
     test('to test the property `failureCode`', () async {
       // TODO

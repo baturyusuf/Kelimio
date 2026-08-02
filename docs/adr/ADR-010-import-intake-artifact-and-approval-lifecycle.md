@@ -5,6 +5,8 @@
 - Decision owners: Architecture and product implementation
 - Partially supersedes: ADR-006 intake activation/deferred-provider portion for
   local/test approval-only import exposure
+- Extended by: ADR-011 for a separate local/test idempotent unpublished-draft
+  commit; approval itself remains side-effect-free
 
 ## Context
 

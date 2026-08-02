@@ -26,7 +26,8 @@ export const CourseImportStatus = {
     MalwareRejected: 'MALWARE_REJECTED',
     ProcessingFailed: 'PROCESSING_FAILED',
     Expired: 'EXPIRED',
-    Approved: 'APPROVED'
+    Approved: 'APPROVED',
+    Committed: 'COMMITTED'
 } as const;
 export type CourseImportStatus = typeof CourseImportStatus[keyof typeof CourseImportStatus];
 

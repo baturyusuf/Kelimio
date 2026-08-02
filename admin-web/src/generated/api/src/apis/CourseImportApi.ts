@@ -16,8 +16,10 @@
 import * as runtime from '../runtime';
 import type {
   ApproveCourseImportRequest,
+  CommitCourseImportRequest,
   CompleteCourseImportUploadRequest,
   CourseImportApprovalResponse,
+  CourseImportCommitResponse,
   CourseImportIssuePage,
   CourseImportPreviewPage,
   CourseImportStatusResponse,
@@ -28,10 +30,14 @@ import type {
 import {
     ApproveCourseImportRequestFromJSON,
     ApproveCourseImportRequestToJSON,
+    CommitCourseImportRequestFromJSON,
+    CommitCourseImportRequestToJSON,
     CompleteCourseImportUploadRequestFromJSON,
     CompleteCourseImportUploadRequestToJSON,
     CourseImportApprovalResponseFromJSON,
     CourseImportApprovalResponseToJSON,
+    CourseImportCommitResponseFromJSON,
+    CourseImportCommitResponseToJSON,
     CourseImportIssuePageFromJSON,
     CourseImportIssuePageToJSON,
     CourseImportPreviewPageFromJSON,
@@ -50,6 +56,12 @@ export interface ApproveCourseImportOperationRequest {
     importId: string;
     idempotencyKey: string;
     approveCourseImportRequest: ApproveCourseImportRequest;
+}
+
+export interface CommitCourseImportOperationRequest {
+    importId: string;
+    idempotencyKey: string;
+    commitCourseImportRequest: CommitCourseImportRequest;
 }
 
 export interface CompleteCourseImportUploadOperationRequest {
@@ -103,6 +115,24 @@ export interface CourseImportApiInterface {
      * Approve one exact immutable preview and provenance tuple
      */
     approveCourseImport(requestParameters: ApproveCourseImportOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<CourseImportApprovalResponse>;
+
+    /**
+     * Commits only the exact approved import provenance and versioned import-content-v1 preview. The transaction creates a DRAFT course with no active release, one committed content change set, and one immutable DRAFT release hierarchy. It does not activate or publish a release, expose the course in the catalog, enroll a learner, or grant an entitlement. Legacy approvals without the versioned settings payload remain approval-only. The JSON command body is rejected before parsing when it exceeds 8192 bytes.
+     * @summary Commit one approved preview as an unpublished immutable course draft
+     * @param {string} importId
+     * @param {string} idempotencyKey Stable UUID generated once for the logical command.
+     * @param {CommitCourseImportRequest} commitCourseImportRequest
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof CourseImportApiInterface
+     */
+    commitCourseImportRaw(requestParameters: CommitCourseImportOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<CourseImportCommitResponse>>;
+
+    /**
+     * Commits only the exact approved import provenance and versioned import-content-v1 preview. The transaction creates a DRAFT course with no active release, one committed content change set, and one immutable DRAFT release hierarchy. It does not activate or publish a release, expose the course in the catalog, enroll a learner, or grant an entitlement. Legacy approvals without the versioned settings payload remain approval-only. The JSON command body is rejected before parsing when it exceeds 8192 bytes.
+     * Commit one approved preview as an unpublished immutable course draft
+     */
+    commitCourseImport(requestParameters: CommitCourseImportOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<CourseImportCommitResponse>;
 
     /**
      * Completes only the server-created multipart upload with its exact consecutive part list. A successful command records one non-null S3 VersionId and transactional outbox event. It does not claim that the workbook is clean, valid, archived, approved, or committed. The JSON completion command is rejected before parsing when it exceeds 8192 bytes.
@@ -261,6 +291,74 @@ export class CourseImportApi extends runtime.BaseAPI implements CourseImportApiI
      */
     async approveCourseImport(requestParameters: ApproveCourseImportOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<CourseImportApprovalResponse> {
         const response = await this.approveCourseImportRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Commits only the exact approved import provenance and versioned import-content-v1 preview. The transaction creates a DRAFT course with no active release, one committed content change set, and one immutable DRAFT release hierarchy. It does not activate or publish a release, expose the course in the catalog, enroll a learner, or grant an entitlement. Legacy approvals without the versioned settings payload remain approval-only. The JSON command body is rejected before parsing when it exceeds 8192 bytes.
+     * Commit one approved preview as an unpublished immutable course draft
+     */
+    async commitCourseImportRaw(requestParameters: CommitCourseImportOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<CourseImportCommitResponse>> {
+        if (requestParameters['importId'] == null) {
+            throw new runtime.RequiredError(
+                'importId',
+                'Required parameter "importId" was null or undefined when calling commitCourseImport().'
+            );
+        }
+
+        if (requestParameters['idempotencyKey'] == null) {
+            throw new runtime.RequiredError(
+                'idempotencyKey',
+                'Required parameter "idempotencyKey" was null or undefined when calling commitCourseImport().'
+            );
+        }
+
+        if (requestParameters['commitCourseImportRequest'] == null) {
+            throw new runtime.RequiredError(
+                'commitCourseImportRequest',
+                'Required parameter "commitCourseImportRequest" was null or undefined when calling commitCourseImport().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (requestParameters['idempotencyKey'] != null) {
+            headerParameters['Idempotency-Key'] = String(requestParameters['idempotencyKey']);
+        }
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("bearerAuth", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/v1/courses/imports/{importId}/commit`;
+        urlPath = urlPath.replace(`{${"importId"}}`, encodeURIComponent(String(requestParameters['importId'])));
+
+        const response = await this.request({
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: CommitCourseImportRequestToJSON(requestParameters['commitCourseImportRequest']),
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => CourseImportCommitResponseFromJSON(jsonValue));
+    }
+
+    /**
+     * Commits only the exact approved import provenance and versioned import-content-v1 preview. The transaction creates a DRAFT course with no active release, one committed content change set, and one immutable DRAFT release hierarchy. It does not activate or publish a release, expose the course in the catalog, enroll a learner, or grant an entitlement. Legacy approvals without the versioned settings payload remain approval-only. The JSON command body is rejected before parsing when it exceeds 8192 bytes.
+     * Commit one approved preview as an unpublished immutable course draft
+     */
+    async commitCourseImport(requestParameters: CommitCourseImportOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<CourseImportCommitResponse> {
+        const response = await this.commitCourseImportRaw(requestParameters, initOverrides);
         return await response.value();
     }
 

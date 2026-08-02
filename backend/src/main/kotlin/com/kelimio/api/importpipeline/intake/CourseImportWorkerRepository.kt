@@ -396,10 +396,11 @@ class CourseImportWorkerRepository(
             insert into course_import_preview(
                 import_id, quarantine_artifact_id, archive_source_artifact_id,
                 report_artifact_id, clean_scan_id, rules_version, parser_version,
+                content_schema_version, settings_payload,
                 is_valid, row_count, level_count, unit_count, topic_count, test_count,
                 warning_count, error_count, validation_report_sha256,
                 allocation_sha256, preview_sha256, approval_binding_sha256, created_at
-            ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, cast(? as timestamptz))
+            ) values (?, ?, ?, ?, ?, ?, ?, ?, cast(? as jsonb), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, cast(? as timestamptz))
             """.trimIndent(),
             claim.importId,
             quarantineArtifact.id,
@@ -408,6 +409,8 @@ class CourseImportWorkerRepository(
             cleanScan.id,
             persisted.rulesVersion,
             persisted.parserVersion,
+            persisted.contentSchemaVersion,
+            persisted.summary.settings?.let(objectMapper::writeValueAsString),
             persisted.summary.isValid,
             persisted.summary.rowCount,
             persisted.summary.levelCount,
@@ -785,6 +788,7 @@ data class StoredImportScan(
 data class PersistedImportPreview(
     val rulesVersion: String,
     val parserVersion: String,
+    val contentSchemaVersion: String?,
     val summary: CourseImportPreviewSummary,
     val approvalBindingSha256: String?,
     val rows: List<CourseImportPreviewRow>,

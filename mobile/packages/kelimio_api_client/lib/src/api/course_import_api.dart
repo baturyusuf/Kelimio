@@ -10,8 +10,10 @@ import 'package:kelimio_api_client/src/deserialize.dart';
 import 'package:dio/dio.dart';
 
 import 'package:kelimio_api_client/src/model/approve_course_import_request.dart';
+import 'package:kelimio_api_client/src/model/commit_course_import_request.dart';
 import 'package:kelimio_api_client/src/model/complete_course_import_upload_request.dart';
 import 'package:kelimio_api_client/src/model/course_import_approval_response.dart';
+import 'package:kelimio_api_client/src/model/course_import_commit_response.dart';
 import 'package:kelimio_api_client/src/model/course_import_issue_page.dart';
 import 'package:kelimio_api_client/src/model/course_import_preview_page.dart';
 import 'package:kelimio_api_client/src/model/course_import_status_response.dart';
@@ -116,6 +118,110 @@ class CourseImportApi {
     }
 
     return Response<CourseImportApprovalResponse>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// Commit one approved preview as an unpublished immutable course draft
+  /// Commits only the exact approved import provenance and versioned import-content-v1 preview. The transaction creates a DRAFT course with no active release, one committed content change set, and one immutable DRAFT release hierarchy. It does not activate or publish a release, expose the course in the catalog, enroll a learner, or grant an entitlement. Legacy approvals without the versioned settings payload remain approval-only. The JSON command body is rejected before parsing when it exceeds 8192 bytes.
+  ///
+  /// Parameters:
+  /// * [importId]
+  /// * [idempotencyKey] - Stable UUID generated once for the logical command.
+  /// * [commitCourseImportRequest]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [CourseImportCommitResponse] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<CourseImportCommitResponse>> commitCourseImport({
+    required String importId,
+    required String idempotencyKey,
+    required CommitCourseImportRequest commitCourseImportRequest,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/v1/courses/imports/{importId}/commit'.replaceAll(
+      '{'
+      r'importId'
+      '}',
+      importId.toString(),
+    );
+    final _options = Options(
+      method: r'POST',
+      headers: <String, dynamic>{
+        r'Idempotency-Key': idempotencyKey,
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearerAuth'},
+        ],
+        ...?extra,
+      },
+      contentType: 'application/json',
+      validateStatus: validateStatus,
+    );
+
+    dynamic _bodyData;
+
+    try {
+      _bodyData = jsonEncode(commitCourseImportRequest);
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _options.compose(_dio.options, _path),
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    final _response = await _dio.request<Object>(
+      _path,
+      data: _bodyData,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    CourseImportCommitResponse? _responseData;
+
+    try {
+      final rawData = _response.data;
+      _responseData = rawData == null
+          ? null
+          : deserialize<CourseImportCommitResponse, CourseImportCommitResponse>(
+              rawData,
+              'CourseImportCommitResponse',
+              growable: true,
+            );
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<CourseImportCommitResponse>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,

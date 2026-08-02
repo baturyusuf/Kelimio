@@ -22,6 +22,49 @@ import java.util.concurrent.TimeUnit
 @Testcontainers(disabledWithoutDocker = true)
 class CourseImportIntakeMigrationTest {
     @Test
+    fun `fresh V10 accepts a draft course without an active release and keeps its release draft`() {
+        val schema = newSchema()
+        val ownerId = UUID.randomUUID()
+        val courseId = UUID.randomUUID()
+        val releaseId = UUID.randomUUID()
+
+        transaction(schema) { connection ->
+            insertUser(connection, ownerId)
+            execute(
+                connection,
+                """
+                insert into course(
+                    id, owner_user_id, name, target_language, default_support_language,
+                    visibility, publication_status, access_type, created_at, updated_at, active_release_id
+                ) values (
+                    '$courseId', '$ownerId', 'Draft course', 'tr', 'en',
+                    'PRIVATE', 'DRAFT', 'FREE', '$T0'::timestamptz, '$T0'::timestamptz, null
+                )
+                """,
+            )
+            execute(connection, "insert into course_support_language(course_id,language_code) values ('$courseId','en')")
+            execute(
+                connection,
+                "insert into course_release(id,course_id,revision_number,status,created_at) " +
+                    "values ('$releaseId','$courseId',1,'DRAFT','$T0'::timestamptz)",
+            )
+        }
+
+        connection(schema).use { connection ->
+            assertThat(
+                queryInt(
+                    connection,
+                    "select count(*) from course where id='$courseId' and active_release_id is null " +
+                        "and publication_status='DRAFT'",
+                ),
+            ).isEqualTo(1)
+            assertThat(
+                queryInt(connection, "select count(*) from course_release where id='$releaseId' and status='DRAFT'"),
+            ).isEqualTo(1)
+        }
+    }
+
+    @Test
     fun `populated V8 upgrades without changing existing facts and enforces V9 lease recovery`() {
         val schema = newSchema(MigrationVersion.fromVersion("8"))
         val userId = UUID.randomUUID()

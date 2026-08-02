@@ -10,6 +10,7 @@ All URIs are relative to *http://localhost*
 Method | HTTP request | Description
 ------------- | ------------- | -------------
 [**approveCourseImport**](CourseImportApi.md#approvecourseimport) | **POST** /v1/courses/imports/{importId}/approve | Approve one exact immutable preview and provenance tuple
+[**commitCourseImport**](CourseImportApi.md#commitcourseimport) | **POST** /v1/courses/imports/{importId}/commit | Commit one approved preview as an unpublished immutable course draft
 [**completeCourseImportUpload**](CourseImportApi.md#completecourseimportupload) | **POST** /v1/courses/imports/{importId}/complete | Complete the exact multipart object and queue isolated processing
 [**createCourseImport**](CourseImportApi.md#createcourseimport) | **POST** /v1/courses/imports | Create an owner-scoped resumable XLSX upload session
 [**getCourseImport**](CourseImportApi.md#getcourseimport) | **GET** /v1/courses/imports/{importId} | Return the current owner-scoped import state
@@ -52,6 +53,53 @@ Name | Type | Description  | Notes
 ### Return type
 
 [**CourseImportApprovalResponse**](CourseImportApprovalResponse.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json, application/problem+json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **commitCourseImport**
+> CourseImportCommitResponse commitCourseImport(importId, idempotencyKey, commitCourseImportRequest)
+
+Commit one approved preview as an unpublished immutable course draft
+
+Commits only the exact approved import provenance and versioned import-content-v1 preview. The transaction creates a DRAFT course with no active release, one committed content change set, and one immutable DRAFT release hierarchy. It does not activate or publish a release, expose the course in the catalog, enroll a learner, or grant an entitlement. Legacy approvals without the versioned settings payload remain approval-only. The JSON command body is rejected before parsing when it exceeds 8192 bytes.
+
+### Example
+```dart
+import 'package:kelimio_api_client/api.dart';
+
+final api = KelimioApiClient().getCourseImportApi();
+final String importId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final String idempotencyKey = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String | Stable UUID generated once for the logical command.
+final CommitCourseImportRequest commitCourseImportRequest = ; // CommitCourseImportRequest |
+
+try {
+    final response = api.commitCourseImport(importId, idempotencyKey, commitCourseImportRequest);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling CourseImportApi->commitCourseImport: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **importId** | **String**|  |
+ **idempotencyKey** | **String**| Stable UUID generated once for the logical command. |
+ **commitCourseImportRequest** | [**CommitCourseImportRequest**](CommitCourseImportRequest.md)|  |
+
+### Return type
+
+[**CourseImportCommitResponse**](CourseImportCommitResponse.md)
 
 ### Authorization
 

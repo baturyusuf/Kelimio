@@ -3,6 +3,7 @@
 //
 
 // ignore_for_file: unused_element
+import 'package:kelimio_api_client/src/model/course_import_preview_settings.dart';
 import 'package:json_annotation/json_annotation.dart';
 
 part 'course_import_preview_summary.g.dart';
@@ -37,6 +38,8 @@ class CourseImportPreviewSummary {
     required this.allocationSha256,
 
     required this.previewSha256,
+
+    required this.settings,
   });
 
   @JsonKey(name: r'isValid', required: true, includeIfNull: false)
@@ -90,6 +93,9 @@ class CourseImportPreviewSummary {
   @JsonKey(name: r'previewSha256', required: true, includeIfNull: true)
   final String? previewSha256;
 
+  @JsonKey(name: r'settings', required: true, includeIfNull: true)
+  final CourseImportPreviewSettings? settings;
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -104,7 +110,8 @@ class CourseImportPreviewSummary {
           other.errorCount == errorCount &&
           other.validationReportSha256 == validationReportSha256 &&
           other.allocationSha256 == allocationSha256 &&
-          other.previewSha256 == previewSha256;
+          other.previewSha256 == previewSha256 &&
+          other.settings == settings;
 
   @override
   int get hashCode =>
@@ -118,7 +125,8 @@ class CourseImportPreviewSummary {
       errorCount.hashCode +
       validationReportSha256.hashCode +
       (allocationSha256 == null ? 0 : allocationSha256.hashCode) +
-      (previewSha256 == null ? 0 : previewSha256.hashCode);
+      (previewSha256 == null ? 0 : previewSha256.hashCode) +
+      (settings == null ? 0 : settings.hashCode);
 
   factory CourseImportPreviewSummary.fromJson(Map<String, dynamic> json) =>
       _$CourseImportPreviewSummaryFromJson(json);
@@ -136,6 +144,9 @@ class CourseImportPreviewSummary {
     }
     if (json.containsKey(r'previewSha256')) {
       json[r'previewSha256'] = '[REDACTED]';
+    }
+    if (json.containsKey(r'settings')) {
+      json[r'settings'] = '[REDACTED]';
     }
     return json.toString();
   }

@@ -1,5 +1,15 @@
 package com.kelimio.api.importpipeline.intake
 
+import com.kelimio.api.courseauthoring.InitialAllocationKind
+import com.kelimio.api.courseauthoring.InitialAllocationReason
+import com.kelimio.api.courseauthoring.InitialCourseDraftCommand
+import com.kelimio.api.courseauthoring.InitialCourseDraftCreator
+import com.kelimio.api.courseauthoring.InitialCourseDraftRow
+import com.kelimio.api.courseauthoring.InitialCourseDraftSettings
+import com.kelimio.api.courseauthoring.InitialCourseDraftValidationException
+import com.kelimio.api.courseauthoring.InitialCourseVisibility
+import com.kelimio.api.courseauthoring.InitialRecordType
+import com.kelimio.api.courseauthoring.InitialTestMode
 import com.kelimio.api.idempotency.IdempotencyService
 import com.kelimio.api.identityprofile.AppUser
 import com.kelimio.api.outbox.RecordedOutboxEvent
@@ -47,6 +57,7 @@ class CourseImportService(
     private val cursorCodec: CourseImportCursorCodec,
     private val correlationIdProvider: CorrelationIdProvider,
     private val outbox: TransactionalOutbox,
+    private val initialCourseDraftCreator: InitialCourseDraftCreator,
     private val clock: Clock,
 ) {
     @Transactional
@@ -209,7 +220,12 @@ class CourseImportService(
     @Transactional(readOnly = true)
     fun preview(user: AppUser, importId: UUID, cursor: String?, limit: Int): CourseImportPreviewPage {
         val current = repository.findOwned(user.id, importId)
-        if (current.status !in setOf(CourseImportStatus.PREVIEW_READY, CourseImportStatus.APPROVED)) {
+        if (current.status !in setOf(
+                CourseImportStatus.PREVIEW_READY,
+                CourseImportStatus.APPROVED,
+                CourseImportStatus.COMMITTED,
+            )
+        ) {
             throw ConflictProblem("The course import has no valid preview.")
         }
         val previewIdentity = checkNotNull(repository.preview(importId)).summary.previewSha256!!
@@ -229,6 +245,7 @@ class CourseImportService(
                 CourseImportStatus.PREVIEW_READY,
                 CourseImportStatus.VALIDATION_FAILED,
                 CourseImportStatus.APPROVED,
+                CourseImportStatus.COMMITTED,
             )
         ) {
             throw ConflictProblem("The course import has no validation report.")
@@ -286,6 +303,102 @@ class CourseImportService(
         )
         idempotencyService.record(user.id, APPROVE_OPERATION, idempotencyKey, lookup.fingerprint, importId)
         return approval.toResponse(created = true)
+    }
+
+    @Transactional
+    fun commit(
+        user: AppUser,
+        importId: UUID,
+        idempotencyKey: UUID,
+        request: CommitCourseImportRequest,
+    ): CourseImportCommitResponse {
+        CourseImportRequestPolicy.validateApprovalDigest(request.approvalBindingSha256)
+        val canonical = "$importId:${request.approvalBindingSha256}"
+        val lookup = idempotencyService.lockAndFind(user.id, COMMIT_OPERATION, idempotencyKey, canonical)
+        lookup.resourceId?.let { resourceId ->
+            if (resourceId != importId) throw ConflictProblem("The idempotency record is inconsistent.")
+            repository.findOwned(user.id, importId)
+            val existing = repository.commit(importId)
+                ?: throw ConflictProblem("The prior commit result is unavailable.")
+            return existing.toResponse(created = false)
+        }
+
+        val current = repository.lockOwned(user.id, importId)
+        repository.commit(importId)?.let { existing ->
+            if (existing.approvalBindingSha256 != request.approvalBindingSha256) {
+                throw ConflictProblem("The supplied approval binding is stale.")
+            }
+            idempotencyService.record(user.id, COMMIT_OPERATION, idempotencyKey, lookup.fingerprint, importId)
+            return existing.toResponse(created = false)
+        }
+        if (current.status != CourseImportStatus.APPROVED) {
+            throw ConflictProblem("The course import is not approved for commit.")
+        }
+        val approval = repository.approval(importId)
+            ?: throw ConflictProblem("The course import approval is unavailable.")
+        if (approval.approvalBindingSha256 != request.approvalBindingSha256) {
+            throw ConflictProblem("The supplied approval binding is stale.")
+        }
+        val preview = repository.preview(importId)
+            ?.takeIf {
+                it.summary.isValid && it.contentSchemaVersion == IMPORT_CONTENT_SCHEMA_VERSION &&
+                    it.summary.settings != null && it.approvalBindingSha256 == request.approvalBindingSha256
+            }
+            ?: throw ConflictProblem("The approved preview is not commit-ready.")
+        val rows = repository.previewRows(importId, 0, preview.summary.rowCount + 1)
+        if (
+            rows.size != preview.summary.rowCount ||
+            rows.map(CourseImportPreviewRow::ordinal) != (1..preview.summary.rowCount).toList()
+        ) {
+            throw ConflictProblem("The approved preview is incomplete.")
+        }
+        val committedAt = now()
+        val correlationId = correlationIdProvider.current()
+        val draft = try {
+            initialCourseDraftCreator.create(
+                preview.toDraftCommand(
+                    current = current,
+                    approval = approval,
+                    rows = rows,
+                    correlationId = correlationId,
+                    committedAt = committedAt,
+                ),
+            )
+        } catch (_: InitialCourseDraftValidationException) {
+            throw ConflictProblem("The approved preview is not commit-ready.")
+        }
+        val eventId = UUID.randomUUID()
+        outbox.appendRecorded(
+            RecordedOutboxEvent(
+                id = eventId,
+                aggregateType = "course",
+                aggregateId = draft.courseId,
+                eventType = "course.draft-created-from-import.v1",
+                schemaVersion = 1,
+                payload = mapOf(
+                    "eventId" to eventId,
+                    "importId" to importId,
+                    "courseId" to draft.courseId,
+                    "contentChangeSetId" to draft.contentChangeSetId,
+                    "draftReleaseId" to draft.draftReleaseId,
+                    "rowCount" to draft.rowCount,
+                    "testCount" to draft.testCount,
+                ),
+                correlationId = correlationId,
+                occurredAt = committedAt,
+            ),
+        )
+        val committed = repository.appendCommit(
+            current,
+            approval,
+            preview,
+            draft,
+            eventId,
+            correlationId,
+            committedAt,
+        )
+        idempotencyService.record(user.id, COMMIT_OPERATION, idempotencyKey, lookup.fingerprint, importId)
+        return committed.toResponse(created = true)
     }
 
     private fun uploadResponse(current: StoredCourseImport, created: Boolean): CourseImportUploadSessionResponse {
@@ -471,6 +584,7 @@ class CourseImportService(
     private fun toStatus(current: StoredCourseImport): CourseImportStatusResponse {
         val preview = repository.preview(current.id)
         val approval = repository.approval(current.id)
+        val commit = repository.commit(current.id)
         return CourseImportStatusResponse(
             id = current.id,
             status = current.status,
@@ -485,6 +599,7 @@ class CourseImportService(
             preview = preview?.summary,
             approvalBindingSha256 = preview?.approvalBindingSha256,
             approvedAt = approval?.approvedAt,
+            commit = commit?.toSummary(),
             failureCode = current.failureCode,
         )
     }
@@ -514,6 +629,8 @@ class CourseImportService(
         const val CREATE_OPERATION = "course-import.create"
         const val COMPLETE_OPERATION = "course-import.complete"
         const val APPROVE_OPERATION = "course-import.approve"
+        const val COMMIT_OPERATION = "course-import.commit"
+        const val IMPORT_CONTENT_SCHEMA_VERSION = "import-content-v1"
         val COMPLETE_SEMANTIC_ERROR_CODES = setOf(
             "BadDigest",
             "EntityTooSmall",
@@ -557,3 +674,85 @@ private fun StoredApproval.toResponse(created: Boolean) = CourseImportApprovalRe
     approvedAt = approvedAt,
     created = created,
 )
+
+private fun StoredCourseImportCommit.toSummary() = CourseImportCommitSummary(
+    courseId = courseId,
+    contentChangeSetId = contentChangeSetId,
+    draftReleaseId = draftReleaseId,
+    committedAt = committedAt,
+)
+
+private fun StoredCourseImportCommit.toResponse(created: Boolean) = CourseImportCommitResponse(
+    importId = importId,
+    status = CourseImportStatus.COMMITTED,
+    courseId = courseId,
+    contentChangeSetId = contentChangeSetId,
+    draftReleaseId = draftReleaseId,
+    committedAt = committedAt,
+    created = created,
+)
+
+private fun StoredPreview.toDraftCommand(
+    current: StoredCourseImport,
+    approval: StoredApproval,
+    rows: List<CourseImportPreviewRow>,
+    correlationId: String,
+    committedAt: OffsetDateTime,
+): InitialCourseDraftCommand {
+    val approvedSettings = summary.settings ?: throw InitialCourseDraftValidationException()
+    fun <T : Enum<T>> parse(value: String, enumClass: Class<T>): T = runCatching {
+        java.lang.Enum.valueOf(enumClass, value)
+    }.getOrElse { throw InitialCourseDraftValidationException() }
+    return InitialCourseDraftCommand(
+        ownerUserId = current.ownerUserId,
+        sourceImportId = current.id,
+        sourceSha256 = approval.sourceSha256,
+        correlationId = correlationId,
+        committedAt = committedAt,
+        settings = InitialCourseDraftSettings(
+            courseName = approvedSettings.courseName,
+            targetLanguageCode = approvedSettings.targetLanguageCode,
+            targetLanguageName = approvedSettings.targetLanguageName,
+            supportLanguageCodes = approvedSettings.supportLanguageCodes,
+            defaultSupportLanguageCode = approvedSettings.defaultSupportLanguageCode,
+            defaultTestMode = parse(approvedSettings.defaultTestMode, InitialTestMode::class.java),
+            visibility = parse(approvedSettings.visibility, InitialCourseVisibility::class.java),
+            targetTestSize = approvedSettings.targetTestSize,
+            minimumLastAutomaticTestSize = approvedSettings.minimumLastAutomaticTestSize,
+            fillFixedTests = approvedSettings.fillFixedTests,
+            completionThresholdPercent = approvedSettings.completionThresholdPercent,
+            pricingSource = approvedSettings.pricingSource,
+            maximumTypedAlternativeAnswers = approvedSettings.maximumTypedAlternativeAnswers,
+            offlineMode = approvedSettings.offlineMode,
+        ),
+        rows = rows.map { row ->
+            InitialCourseDraftRow(
+                ordinal = row.ordinal,
+                sourceSheetOrdinal = row.source.sheetOrdinal,
+                sourceSheetName = row.source.sheetName,
+                sourceRowNumber = row.source.rowNumber,
+                level = row.level,
+                unit = row.unit,
+                topic = row.topic,
+                testNumber = row.testNumber,
+                allocationKind = parse(row.allocationKind, InitialAllocationKind::class.java),
+                allocationReason = parse(row.allocationReason, InitialAllocationReason::class.java),
+                resolvedMode = parse(row.resolvedMode, InitialTestMode::class.java),
+                recordType = parse(row.recordType, InitialRecordType::class.java),
+                targetText = row.targetText,
+                translations = row.translations,
+                sentence = row.sentence,
+                correctAnswer = row.correctAnswer,
+                alternativeCorrectAnswer = row.alternativeCorrectAnswer,
+                wrongAnswers = row.wrongAnswers,
+                matchingGroup = row.matchingGroup,
+                hidden = row.hidden,
+                note = row.note,
+            )
+        },
+        expectedLevelCount = summary.levelCount,
+        expectedUnitCount = summary.unitCount,
+        expectedTopicCount = summary.topicCount,
+        expectedTestCount = summary.testCount,
+    )
+}

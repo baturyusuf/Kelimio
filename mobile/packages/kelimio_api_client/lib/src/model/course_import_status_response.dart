@@ -3,6 +3,7 @@
 //
 
 // ignore_for_file: unused_element
+import 'package:kelimio_api_client/src/model/course_import_commit_summary.dart';
 import 'package:kelimio_api_client/src/model/course_import_status.dart';
 import 'package:kelimio_api_client/src/model/course_import_preview_summary.dart';
 import 'package:json_annotation/json_annotation.dart';
@@ -43,6 +44,8 @@ class CourseImportStatusResponse {
     required this.approvalBindingSha256,
 
     required this.approvedAt,
+
+    required this.commit,
 
     required this.failureCode,
   });
@@ -90,6 +93,9 @@ class CourseImportStatusResponse {
   @JsonKey(name: r'approvedAt', required: true, includeIfNull: true)
   final DateTime? approvedAt;
 
+  @JsonKey(name: r'commit', required: true, includeIfNull: true)
+  final CourseImportCommitSummary? commit;
+
   @JsonKey(name: r'failureCode', required: true, includeIfNull: true)
   final String? failureCode;
 
@@ -110,6 +116,7 @@ class CourseImportStatusResponse {
           other.preview == preview &&
           other.approvalBindingSha256 == approvalBindingSha256 &&
           other.approvedAt == approvedAt &&
+          other.commit == commit &&
           other.failureCode == failureCode;
 
   @override
@@ -127,6 +134,7 @@ class CourseImportStatusResponse {
       (preview == null ? 0 : preview.hashCode) +
       (approvalBindingSha256 == null ? 0 : approvalBindingSha256.hashCode) +
       (approvedAt == null ? 0 : approvedAt.hashCode) +
+      (commit == null ? 0 : commit.hashCode) +
       (failureCode == null ? 0 : failureCode.hashCode);
 
   factory CourseImportStatusResponse.fromJson(Map<String, dynamic> json) =>

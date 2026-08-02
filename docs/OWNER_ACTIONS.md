@@ -16,7 +16,7 @@ immutable-identifier work:
 - launch authentication must support app-branded email/password registration and Google sign-in, with secure account linking to one profile when ownership of the same verified email is established;
 - an AWS account exists, but account separation, explicit AWS region names, account IDs, budgets, and deployment roles remain unrecorded;
 - a personal Google Play developer account named **Baturedu** exists; the Play app record, immutable application ID, signing custody, and organization decision are deferred until local testing is complete.
-- the local/test approval-only Excel intake requires neither AWS nor Google Play access; enabling it outside `local`/`test` remains prohibited until the production controls below are approved and evidenced.
+- the local/test Excel intake and unpublished-draft commit require neither AWS nor Google Play access; enabling either outside `local`/`test` remains prohibited until the production controls below are approved and evidenced.
 
 | Order | Priority | Owner action | Why and latest needed point | Safe evidence or delivery | Status |
 | ---: | :---: | --- | --- | --- | :---: |

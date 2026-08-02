@@ -2,7 +2,8 @@
 
 - Status: Accepted
 - Date: 2026-08-01
-- Partially superseded by: ADR-010 for local/test approval-only intake exposure
+- Partially superseded by: ADR-010 for local/test intake/approval exposure and
+  ADR-011 for the separate local/test unpublished-draft commit
 
 Implementation note (2026-08-02): ADR-010 permits the parser/worker boundary to
 be exposed in `local` and `test` before content-authoring interfaces exist, but
@@ -10,8 +11,9 @@ only as an approval-only workflow with no course commit or publication side
 effect. Under that boundary, versioned S3 quarantine/archive storage,
 network-isolated ClamAV scanning, durable state/provenance, paged preview/issues,
 and digest-bound approval are implemented locally. This does not relax this
-ADR's production prohibition, no-commit rule, parser policy, or requirement for
-the production authoring/release interfaces and controls.
+ADR's production prohibition, parser policy, or requirement for production
+authoring/release controls. ADR-011 later permits only the separate local/test
+commit into an unpublished immutable draft; publication remains prohibited.
 
 ## Context
 

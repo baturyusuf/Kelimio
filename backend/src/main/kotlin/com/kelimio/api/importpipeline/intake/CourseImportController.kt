@@ -93,6 +93,17 @@ class CourseImportController(
         return noStore(if (response.created) HttpStatus.CREATED else HttpStatus.OK, response)
     }
 
+    @PostMapping("/{importId}/commit")
+    fun commit(
+        @AuthenticationPrincipal jwt: Jwt,
+        @PathVariable importId: UUID,
+        @RequestHeader("Idempotency-Key") idempotencyKey: UUID,
+        @RequestBody request: CommitCourseImportRequest,
+    ): ResponseEntity<CourseImportCommitResponse> {
+        val response = service.commit(currentUserService.requireCompleted(jwt), importId, idempotencyKey, request)
+        return noStore(if (response.created) HttpStatus.CREATED else HttpStatus.OK, response)
+    }
+
     private fun <T> noStore(status: HttpStatus, body: T): ResponseEntity<T> = ResponseEntity.status(status)
         .cacheControl(CacheControl.noStore())
         .body(body)

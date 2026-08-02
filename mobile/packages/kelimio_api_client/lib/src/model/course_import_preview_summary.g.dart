@@ -23,6 +23,7 @@ CourseImportPreviewSummary _$CourseImportPreviewSummaryFromJson(
       'validationReportSha256',
       'allocationSha256',
       'previewSha256',
+      'settings',
     ],
   );
   final val = CourseImportPreviewSummary(
@@ -40,6 +41,12 @@ CourseImportPreviewSummary _$CourseImportPreviewSummaryFromJson(
     ),
     allocationSha256: $checkedConvert('allocationSha256', (v) => v as String?),
     previewSha256: $checkedConvert('previewSha256', (v) => v as String?),
+    settings: $checkedConvert(
+      'settings',
+      (v) => v == null
+          ? null
+          : CourseImportPreviewSettings.fromJson(v as Map<String, dynamic>),
+    ),
   );
   return val;
 });
@@ -58,4 +65,5 @@ Map<String, dynamic> _$CourseImportPreviewSummaryToJson(
   'validationReportSha256': instance.validationReportSha256,
   'allocationSha256': instance.allocationSha256,
   'previewSha256': instance.previewSha256,
+  'settings': instance.settings?.toJson(),
 };

@@ -15,6 +15,15 @@ void main() {
       // TODO
     });
 
+    // Commit one approved preview as an unpublished immutable course draft
+    //
+    // Commits only the exact approved import provenance and versioned import-content-v1 preview. The transaction creates a DRAFT course with no active release, one committed content change set, and one immutable DRAFT release hierarchy. It does not activate or publish a release, expose the course in the catalog, enroll a learner, or grant an entitlement. Legacy approvals without the versioned settings payload remain approval-only. The JSON command body is rejected before parsing when it exceeds 8192 bytes.
+    //
+    //Future<CourseImportCommitResponse> commitCourseImport(String importId, String idempotencyKey, CommitCourseImportRequest commitCourseImportRequest) async
+    test('test commitCourseImport', () async {
+      // TODO
+    });
+
     // Complete the exact multipart object and queue isolated processing
     //
     // Completes only the server-created multipart upload with its exact consecutive part list. A successful command records one non-null S3 VersionId and transactional outbox event. It does not claim that the workbook is clean, valid, archived, approved, or committed. The JSON completion command is rejected before parsing when it exceeds 8192 bytes.

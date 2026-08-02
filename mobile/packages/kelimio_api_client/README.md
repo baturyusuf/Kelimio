@@ -69,6 +69,7 @@ Class | Method | HTTP request | Description
 [*CatalogApi*](doc/CatalogApi.md) | [**getCourse**](doc/CatalogApi.md#getcourse) | **GET** /v1/courses/{courseId} | Return course details visible to the authenticated user
 [*CatalogApi*](doc/CatalogApi.md) | [**listCatalogCourses**](doc/CatalogApi.md#listcatalogcourses) | **GET** /v1/catalog/courses | List public, published courses
 [*CourseImportApi*](doc/CourseImportApi.md) | [**approveCourseImport**](doc/CourseImportApi.md#approvecourseimport) | **POST** /v1/courses/imports/{importId}/approve | Approve one exact immutable preview and provenance tuple
+[*CourseImportApi*](doc/CourseImportApi.md) | [**commitCourseImport**](doc/CourseImportApi.md#commitcourseimport) | **POST** /v1/courses/imports/{importId}/commit | Commit one approved preview as an unpublished immutable course draft
 [*CourseImportApi*](doc/CourseImportApi.md) | [**completeCourseImportUpload**](doc/CourseImportApi.md#completecourseimportupload) | **POST** /v1/courses/imports/{importId}/complete | Complete the exact multipart object and queue isolated processing
 [*CourseImportApi*](doc/CourseImportApi.md) | [**createCourseImport**](doc/CourseImportApi.md#createcourseimport) | **POST** /v1/courses/imports | Create an owner-scoped resumable XLSX upload session
 [*CourseImportApi*](doc/CourseImportApi.md) | [**getCourseImport**](doc/CourseImportApi.md#getcourseimport) | **GET** /v1/courses/imports/{importId} | Return the current owner-scoped import state
@@ -93,16 +94,20 @@ Class | Method | HTTP request | Description
  - [ApproveCourseImportRequest](doc/ApproveCourseImportRequest.md)
  - [AttemptResponse](doc/AttemptResponse.md)
  - [AttemptState](doc/AttemptState.md)
+ - [CommitCourseImportRequest](doc/CommitCourseImportRequest.md)
  - [CompleteCourseImportUploadRequest](doc/CompleteCourseImportUploadRequest.md)
  - [CompletedCourseImportPart](doc/CompletedCourseImportPart.md)
  - [CourseDetail](doc/CourseDetail.md)
  - [CourseImportApprovalResponse](doc/CourseImportApprovalResponse.md)
+ - [CourseImportCommitResponse](doc/CourseImportCommitResponse.md)
+ - [CourseImportCommitSummary](doc/CourseImportCommitSummary.md)
  - [CourseImportIssuePage](doc/CourseImportIssuePage.md)
  - [CourseImportPartDeclaration](doc/CourseImportPartDeclaration.md)
  - [CourseImportPartHeaders](doc/CourseImportPartHeaders.md)
  - [CourseImportPresignedPart](doc/CourseImportPresignedPart.md)
  - [CourseImportPreviewPage](doc/CourseImportPreviewPage.md)
  - [CourseImportPreviewRow](doc/CourseImportPreviewRow.md)
+ - [CourseImportPreviewSettings](doc/CourseImportPreviewSettings.md)
  - [CourseImportPreviewSummary](doc/CourseImportPreviewSummary.md)
  - [CourseImportSource](doc/CourseImportSource.md)
  - [CourseImportStatus](doc/CourseImportStatus.md)

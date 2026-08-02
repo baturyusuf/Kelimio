@@ -232,6 +232,11 @@ class CourseImportProcessingCoordinator(
                         PersistedImportPreview(
                             rulesVersion = claim.rulesVersion,
                             parserVersion = settings.parserVersion,
+                            contentSchemaVersion = if (materialized.summary.isValid) {
+                                IMPORT_CONTENT_SCHEMA_VERSION
+                            } else {
+                                null
+                            },
                             summary = materialized.summary,
                             approvalBindingSha256 = binding,
                             rows = materialized.rows,
@@ -329,6 +334,7 @@ class CourseImportProcessingCoordinator(
     private fun now(): OffsetDateTime = OffsetDateTime.ofInstant(clock.instant(), ZoneOffset.UTC)
 
     private companion object {
+        const val IMPORT_CONTENT_SCHEMA_VERSION = "import-content-v1"
         val WORKER_DEADLINE: Duration = Duration.ofMinutes(6)
         val PROCESSING_LEASE: Duration = Duration.ofMinutes(7)
     }

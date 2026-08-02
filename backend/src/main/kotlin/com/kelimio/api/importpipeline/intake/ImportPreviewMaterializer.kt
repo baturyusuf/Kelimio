@@ -94,10 +94,28 @@ class ImportPreviewMaterializer(
             previewSha256 = preview.previewSha256.takeIf { effectiveValid },
         )
         check(!counts.isValid || counts.errorCount == 0)
+        val publicSettings = preview.settings?.takeIf { effectiveValid }?.let {
+            CourseImportPreviewSettings(
+                courseName = it.courseName,
+                targetLanguageCode = it.targetLanguageCode,
+                targetLanguageName = it.targetLanguageName,
+                supportLanguageCodes = it.supportLanguageCodes,
+                defaultSupportLanguageCode = it.defaultSupportLanguageCode,
+                defaultTestMode = it.defaultTestMode.name,
+                visibility = it.visibility.name,
+                targetTestSize = it.targetTestSize,
+                minimumLastAutomaticTestSize = it.minimumLastAutomaticTestSize,
+                fillFixedTests = it.fillFixedTests,
+                completionThresholdPercent = it.completionThresholdPercent,
+                pricingSource = it.pricingSource.name,
+                maximumTypedAlternativeAnswers = it.maximumTypedAlternativeAnswers,
+                offlineMode = it.offlineMode.name,
+            )
+        }
         val report = validationReport(claim, counts, issues)
         requireBefore(deadline)
         return MaterializedImportPreview(
-            summary = counts.toSummary(report.sha256),
+            summary = counts.toSummary(report.sha256, publicSettings),
             rows = rows,
             issues = issues,
             reportBytes = report.bytes,
@@ -161,7 +179,7 @@ class ImportPreviewMaterializer(
         )
         val counts = PreviewCounts(false, 0, 0, 0, 0, 0, 0, 1, null, null)
         val report = validationReport(claim, counts, listOf(issue))
-        return MaterializedImportPreview(counts.toSummary(report.sha256), emptyList(), listOf(issue), report.bytes)
+        return MaterializedImportPreview(counts.toSummary(report.sha256, null), emptyList(), listOf(issue), report.bytes)
     }
 
     private fun validationReport(
@@ -227,7 +245,7 @@ class ImportPreviewMaterializer(
         val allocationSha256: String?,
         val previewSha256: String?,
     ) {
-        fun toSummary(reportSha256: String) = CourseImportPreviewSummary(
+        fun toSummary(reportSha256: String, settings: CourseImportPreviewSettings?) = CourseImportPreviewSummary(
             isValid,
             rowCount,
             levelCount,
@@ -239,6 +257,7 @@ class ImportPreviewMaterializer(
             reportSha256,
             allocationSha256,
             previewSha256,
+            settings,
         )
     }
 

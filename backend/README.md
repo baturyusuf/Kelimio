@@ -117,10 +117,10 @@ This local runtime does not authorize production workbook matching conversion.
 That path remains fail-closed until group allocation semantics and a stored
 minimum-client/capability gate are implemented and verified.
 
-## Approval-only secure Excel intake
+## Secure Excel intake and unpublished draft commit
 
-Flyway V9 and the local/test API/worker boundary implement an owner-scoped,
-approval-only intake for the reviewed XLSX format. Creation binds the filename,
+Flyway V9 and the local/test API/worker boundary implement the owner-scoped
+intake and approval lifecycle for the reviewed XLSX format. Creation binds the filename,
 media type, total size, whole-file SHA-256, fixed multipart plan, and per-part
 checksums. The API returns short-lived presigned S3 part requests, verifies the
 exact completed object version, and appends the processing request through the
@@ -133,12 +133,17 @@ content fails closed.
 
 Status, preview, issue, and approval responses are owner-scoped and `no-store`;
 opaque page cursors are HMAC-bound to the owner, import, immutable preview, and
-scope. Approval appends one exact provenance/digest binding. It intentionally
-has no course/revision/release/entitlement/publication side effect, so it cannot
-change an existing course or grant access. Staging and production imports fail
-startup until the outstanding author-eligibility, consent, separate
-least-privilege database/runtime identities, retention/Object Lock/KMS, commit,
-publication, and operational gates are implemented and approved.
+scope. Approval appends one exact provenance/digest binding and still has no
+course side effect. Flyway V10 adds a separate idempotent commit that consumes
+only a versioned `import-content-v1` preview and creates exactly one `DRAFT`
+course, committed initial change set, and immutable `DRAFT` release hierarchy.
+It preserves every row, hierarchy position, translation, authored distractor,
+and matching-group source value, while creating no active release, runtime
+options, enrollment, entitlement, or publication. Staging and production
+imports fail startup until the outstanding author-eligibility, consent,
+separate least-privilege database/runtime identities, retention/Object
+Lock/KMS, Type-D conversion/capability, publication, and operational gates are
+implemented and approved.
 
 Run the focused evidence with:
 
@@ -153,9 +158,10 @@ acceptance journey with:
 .\scripts\local-import-e2e.cmd
 ```
 
-It verifies valid approval, clean-invalid validation, EICAR rejection,
-cross-owner denial, queue drain, immutable evidence, and the absence of any
-course commit without using AWS or Google Play accounts.
+It verifies valid approval and idempotent draft commit, clean-invalid
+validation, EICAR rejection, cross-owner denial, queue drain, immutable
+hierarchy/evidence, and zero active/public/enrollment side effects without using
+AWS or Google Play accounts.
 
 ## Verification
 
@@ -164,12 +170,13 @@ course commit without using AWS or Google Play accounts.
 ```
 
 The current backend checks include V7 content/language and V8 matching migration
-evidence; V9 empty-database and retained V8-to-V9 upgrade rehearsal; approval-only
-import state, lease, retry, transition, ownership, artifact, and security invariants;
+evidence; V10 empty-database and retained upgrade rehearsal; import intake,
+approval, idempotent draft commit, lease, retry, transition, ownership,
+artifact, hierarchy, and security invariants;
 HMAC key-ring and fail-closed configuration tests; matching privacy/order/replay
 tests; real-PostgreSQL authoritative answer flows; support-language pinning; and
 local starter v4 multi-user installation. The complete unskipped backend run passes
-33 suites and 160/160 tests.
+34 suites and 167/167 tests.
 
 The vertical-slice integration test uses Testcontainers and a real PostgreSQL
 image. It is explicitly skipped when Docker is unavailable; a green build with

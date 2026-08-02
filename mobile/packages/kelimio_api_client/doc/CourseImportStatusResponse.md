@@ -21,6 +21,7 @@ Name | Type | Description | Notes
 **preview** | [**CourseImportPreviewSummary**](CourseImportPreviewSummary.md) |  |
 **approvalBindingSha256** | **String** |  |
 **approvedAt** | [**DateTime**](DateTime.md) |  |
+**commit** | [**CourseImportCommitSummary**](CourseImportCommitSummary.md) |  |
 **failureCode** | **String** |  |
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

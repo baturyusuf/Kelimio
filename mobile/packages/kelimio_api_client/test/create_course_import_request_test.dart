@@ -53,6 +53,22 @@ void main() {
           'columnNumber': 1,
           'reference': 'SECRET_REF',
         };
+        final settings = {
+          'courseName': 'SECRET_COURSE',
+          'targetLanguageCode': 'tr',
+          'targetLanguageName': 'SECRET_LANGUAGE',
+          'supportLanguageCodes': ['en', 'ar', 'fr'],
+          'defaultSupportLanguageCode': 'en',
+          'defaultTestMode': 'MIXED',
+          'visibility': 'PRIVATE',
+          'targetTestSize': 20,
+          'minimumLastAutomaticTestSize': 10,
+          'fillFixedTests': true,
+          'completionThresholdPercent': 50,
+          'pricingSource': 'APPLICATION',
+          'maximumTypedAlternativeAnswers': 1,
+          'offlineMode': 'SCORELESS_PRACTICE',
+        };
         final summary = {
           'isValid': true,
           'rowCount': 1,
@@ -65,6 +81,7 @@ void main() {
           'validationReportSha256': reportSha,
           'allocationSha256': sourceSha,
           'previewSha256': approvalSha,
+          'settings': settings,
         };
         final row = {
           'ordinal': 1,
@@ -102,6 +119,7 @@ void main() {
           'preview': summary,
           'approvalBindingSha256': approvalSha,
           'approvedAt': null,
+          'commit': null,
           'failureCode': null,
         };
         final part = {'partNumber': 1, 'sizeBytes': 1, 'sha256': partSha};
@@ -141,6 +159,7 @@ void main() {
             'parts': [completedPart],
           }),
           CourseImportPreviewSummary.fromJson(summary),
+          CourseImportPreviewSettings.fromJson(settings),
           CourseImportSource.fromJson(source),
           CourseImportPreviewRow.fromJson(row),
           CourseImportPreviewPage.fromJson({
@@ -182,6 +201,9 @@ void main() {
             'approvedAt': '2026-08-02T00:01:00Z',
             'created': true,
           }),
+          CommitCourseImportRequest.fromJson({
+            'approvalBindingSha256': approvalSha,
+          }),
         ];
         const secrets = [
           partSha,
@@ -195,6 +217,8 @@ void main() {
           'SECRET_REF',
           'SECRET_TARGET',
           'SECRET_ISSUE',
+          'SECRET_COURSE',
+          'SECRET_LANGUAGE',
         ];
         for (final value in values) {
           final diagnostic = value.toString();

@@ -23,7 +23,9 @@ enum CourseImportStatus {
   @JsonValue(r'EXPIRED')
   EXPIRED(r'EXPIRED'),
   @JsonValue(r'APPROVED')
-  APPROVED(r'APPROVED');
+  APPROVED(r'APPROVED'),
+  @JsonValue(r'COMMITTED')
+  COMMITTED(r'COMMITTED');
 
   const CourseImportStatus(this.value);
 

@@ -31,10 +31,11 @@ class CourseImportBodyLimitFilterTest {
     }
 
     @Test
-    fun `bounds chunked bodies and covers complete and approve paths`() {
+    fun `bounds chunked bodies and covers complete approve and commit paths`() {
         listOf(
             "/v1/courses/imports/${java.util.UUID.randomUUID()}/complete",
             "/v1/courses/imports/${java.util.UUID.randomUUID()}/approve",
+            "/v1/courses/imports/${java.util.UUID.randomUUID()}/commit",
         ).forEach { path ->
             val request = object : MockHttpServletRequest("POST", path) {
                 override fun getContentLengthLong(): Long = -1
@@ -95,6 +96,7 @@ class CourseImportBodyLimitFilterTest {
             "/v1/courses/imports/$importId;foo=bar/complete",
             "/v1/courses/imports/$importId/%63omplete",
             "/v1/courses/imports/$importId/approve;foo=bar",
+            "/v1/courses/imports/$importId/%63ommit",
         ).forEach { path ->
             val request = MockHttpServletRequest("POST", path).apply {
                 setContent("x".repeat(CourseImportBodyLimitFilter.MAX_BODY_BYTES + 1).toByteArray())

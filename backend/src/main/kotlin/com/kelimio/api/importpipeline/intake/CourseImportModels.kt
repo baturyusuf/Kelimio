@@ -41,6 +41,10 @@ data class ApproveCourseImportRequest(
     val approvalBindingSha256: String,
 ) : RedactedImportModel()
 
+data class CommitCourseImportRequest(
+    val approvalBindingSha256: String,
+) : RedactedImportModel()
+
 data class CourseImportUploadSessionResponse(
     val created: Boolean,
     @get:JsonProperty("import")
@@ -79,7 +83,8 @@ data class CourseImportStatusResponse(
     @get:JsonInclude(JsonInclude.Include.ALWAYS) val preview: CourseImportPreviewSummary?,
     @get:JsonInclude(JsonInclude.Include.ALWAYS) val approvalBindingSha256: String?,
     @get:JsonInclude(JsonInclude.Include.ALWAYS) val approvedAt: OffsetDateTime?,
-    @get:JsonInclude(JsonInclude.Include.ALWAYS) val failureCode: String?,
+    @get:JsonInclude(JsonInclude.Include.ALWAYS) val commit: CourseImportCommitSummary? = null,
+    @get:JsonInclude(JsonInclude.Include.ALWAYS) val failureCode: String? = null,
 ) : RedactedImportModel()
 
 enum class CourseImportStatus {
@@ -92,6 +97,7 @@ enum class CourseImportStatus {
     PROCESSING_FAILED,
     EXPIRED,
     APPROVED,
+    COMMITTED,
 }
 
 data class CourseImportPreviewSummary(
@@ -106,6 +112,24 @@ data class CourseImportPreviewSummary(
     val validationReportSha256: String,
     @get:JsonInclude(JsonInclude.Include.ALWAYS) val allocationSha256: String?,
     @get:JsonInclude(JsonInclude.Include.ALWAYS) val previewSha256: String?,
+    @get:JsonInclude(JsonInclude.Include.ALWAYS) val settings: CourseImportPreviewSettings? = null,
+) : RedactedImportModel()
+
+data class CourseImportPreviewSettings(
+    val courseName: String,
+    val targetLanguageCode: String,
+    val targetLanguageName: String,
+    val supportLanguageCodes: List<String>,
+    val defaultSupportLanguageCode: String,
+    val defaultTestMode: String,
+    val visibility: String,
+    val targetTestSize: Int,
+    val minimumLastAutomaticTestSize: Int,
+    val fillFixedTests: Boolean,
+    val completionThresholdPercent: Int,
+    val pricingSource: String,
+    val maximumTypedAlternativeAnswers: Int,
+    val offlineMode: String,
 ) : RedactedImportModel()
 
 data class CourseImportPreviewPage(
@@ -161,6 +185,23 @@ data class CourseImportApprovalResponse(
     val status: CourseImportStatus,
     val approvalBindingSha256: String,
     val approvedAt: OffsetDateTime,
+    val created: Boolean,
+) : RedactedImportModel()
+
+data class CourseImportCommitSummary(
+    val courseId: UUID,
+    val contentChangeSetId: UUID,
+    val draftReleaseId: UUID,
+    val committedAt: OffsetDateTime,
+) : RedactedImportModel()
+
+data class CourseImportCommitResponse(
+    val importId: UUID,
+    val status: CourseImportStatus,
+    val courseId: UUID,
+    val contentChangeSetId: UUID,
+    val draftReleaseId: UUID,
+    val committedAt: OffsetDateTime,
     val created: Boolean,
 ) : RedactedImportModel()
 
@@ -271,14 +312,29 @@ data class StoredPreview(
     val cleanScanId: UUID,
     val rulesVersion: String,
     val parserVersion: String,
+    val contentSchemaVersion: String?,
     val summary: CourseImportPreviewSummary,
     val approvalBindingSha256: String?,
 ) : RedactedImportModel()
 
 data class StoredApproval(
+    val id: UUID,
     val importId: UUID,
+    val sourceSha256: String,
     val approvalBindingSha256: String,
     val approvedAt: OffsetDateTime,
+) : RedactedImportModel()
+
+data class StoredCourseImportCommit(
+    val id: UUID,
+    val importId: UUID,
+    val ownerUserId: UUID,
+    val approvalId: UUID,
+    val approvalBindingSha256: String,
+    val courseId: UUID,
+    val contentChangeSetId: UUID,
+    val draftReleaseId: UUID,
+    val committedAt: OffsetDateTime,
 ) : RedactedImportModel()
 
 internal fun truncateImportText(value: String, maximumCodePoints: Int): String {

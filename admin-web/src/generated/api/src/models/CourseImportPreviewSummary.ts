@@ -13,6 +13,14 @@
  */
 
 import { mapValues } from '../runtime';
+import type { CourseImportPreviewSettings } from './CourseImportPreviewSettings';
+import {
+    CourseImportPreviewSettingsFromJSON,
+    CourseImportPreviewSettingsFromJSONTyped,
+    CourseImportPreviewSettingsToJSON,
+    CourseImportPreviewSettingsToJSONTyped,
+} from './CourseImportPreviewSettings';
+
 /**
  *
  * @export
@@ -85,6 +93,12 @@ export interface CourseImportPreviewSummary {
      * @memberof CourseImportPreviewSummary
      */
     previewSha256: string | null;
+    /**
+     *
+     * @type {CourseImportPreviewSettings}
+     * @memberof CourseImportPreviewSummary
+     */
+    settings: CourseImportPreviewSettings | null;
 }
 
 /**
@@ -102,6 +116,7 @@ export function instanceOfCourseImportPreviewSummary(value: object): value is Co
     if (!('validationReportSha256' in value) || value['validationReportSha256'] === undefined) return false;
     if (!('allocationSha256' in value) || value['allocationSha256'] === undefined) return false;
     if (!('previewSha256' in value) || value['previewSha256'] === undefined) return false;
+    if (!('settings' in value) || value['settings'] === undefined) return false;
     return true;
 }
 
@@ -126,6 +141,7 @@ export function CourseImportPreviewSummaryFromJSONTyped(json: any, ignoreDiscrim
         'validationReportSha256': json['validationReportSha256'],
         'allocationSha256': json['allocationSha256'],
         'previewSha256': json['previewSha256'],
+        'settings': CourseImportPreviewSettingsFromJSON(json['settings']),
     };
 }
 
@@ -151,5 +167,6 @@ export function CourseImportPreviewSummaryToJSONTyped(value?: CourseImportPrevie
         'validationReportSha256': value['validationReportSha256'],
         'allocationSha256': value['allocationSha256'],
         'previewSha256': value['previewSha256'],
+        'settings': CourseImportPreviewSettingsToJSON(value['settings']),
     };
 }

@@ -2,7 +2,7 @@
 
 Kelimio is a multilingual language-learning and course-marketplace product. The intended production system includes a Flutter Android/iOS application, a Kotlin/Spring backend, internal administration and public legal web surfaces, versioned API contracts, and AWS infrastructure.
 
-> Current state: Phase 0 foundations, a local/test-only approval-only secure Excel intake, and a partial auth-to-answer vertical slice are implemented and locally buildable. The product is still **BLOCKED — external owner action required; NOT PUBLISH-READY** because production integrations, staging evidence, complete product flows, signed artifacts, and owner approvals are outstanding. See [status](docs/STATUS.md) and [launch blockers](docs/LAUNCH_BLOCKERS.md).
+> Current state: Phase 0 foundations, a local/test-only secure Excel intake with an idempotent unpublished-draft commit, and a partial auth-to-answer vertical slice are implemented and locally buildable. The product is still **BLOCKED — external owner action required; NOT PUBLISH-READY** because production integrations, staging evidence, complete product flows, signed artifacts, and owner approvals are outstanding. See [status](docs/STATUS.md) and [launch blockers](docs/LAUNCH_BLOCKERS.md).
 
 ## Architecture baseline
 
@@ -73,7 +73,7 @@ close.
 
 Keycloak is available at `http://localhost:8081`, the API at `http://localhost:8080`, Mailpit at `http://localhost:8025`, and LocalStack at `http://localhost:4566`. The realm has no demo user. Register through OIDC, verify the captured message in Mailpit on a fresh realm, and complete the in-app profile setup. When local development tools are enabled, an authenticated and profile-complete user can explicitly install the immutable reviewed mixed Type-A/Type-B/Type-C/Type-D starter course, including when an older local starter is already present. Starter release v4 contains five Type-A questions, one Type-B question, the exact reviewed-workbook Type-C row, and one four-pair Type-D question from the unambiguous `EV` group (`Pencere`/`Window`, `Kapı`/`Door`, `Masa`/`Table`, and `Sandalye`/`Chair`). This is bounded local test content using English as its support language; it creates no learning results and does not enable the still-blocked production workbook-to-Type-D conversion.
 
-The local/test-only course-import intake accepts an owner-scoped, checksum-bound multipart upload through presigned S3 requests, dispatches it through an SQS/DLQ-backed worker, scans it with network-isolated ClamAV, persists immutable source/report provenance, exposes bounded preview and issue pages, and records approval against one exact preview binding. Approval deliberately creates no course, revision, release, entitlement, or publication. Staging and production remain fail closed until author eligibility, consent, least-privilege runtime identities, retention, import commit, and publication gates are implemented.
+The local/test-only course-import intake accepts an owner-scoped, checksum-bound multipart upload through presigned S3 requests, dispatches it through an SQS/DLQ-backed worker, scans it with network-isolated ClamAV, persists immutable source/report provenance, exposes bounded preview and issue pages, and records approval against one exact preview binding. A separate idempotent commit can then create exactly one `DRAFT` course, committed initial change set, and immutable `DRAFT` release hierarchy with no active release, enrollment, entitlement, catalog visibility, or publication. Existing V9 previews without the versioned settings snapshot remain approval-only. Staging and production remain fail closed until author eligibility, consent, least-privilege runtime identities, retention, Type-D conversion/capability gating, authoring, and publication controls are implemented.
 
 Run the backend checks:
 
@@ -94,9 +94,11 @@ Run the isolated real-service Excel intake acceptance flow with:
 
 The guarded runner creates a randomly named Compose project and disposable
 ports, networks, volumes, users, and secrets. It exercises the exact reviewed
-workbook through upload, malware scan, preview, ownership checks, and approval;
-also verifies clean-invalid and EICAR rejection paths, queue drain, immutable
-evidence, and the absence of any course commit. It then removes only its
+workbook through upload, malware scan, preview, ownership checks, approval, and
+an idempotent unpublished-draft commit; also verifies clean-invalid and EICAR
+rejection paths, queue drain, immutable hierarchy/provenance, retained
+translations and authored distractors, and the absence of active/public or
+enrollment side effects. It then removes only its
 validated isolated resources and confirms that the normal Compose containers
 were unchanged. Neither an AWS account nor Google Play Console is needed for
 this local acceptance flow.
@@ -153,7 +155,7 @@ verifies the Mailpit message; exchanges a real Authorization Code + S256 PKCE
 code; and drives the production Flutter repositories, controllers, Drift store,
 and UI through profile setup, enrollment, eight answers, Type-B replay,
 Type-C replay/reconciliation, Type-D matching replay/reconciliation, projection,
-and sign-out. The guarded run boots a fresh Flyway V9 stack with a per-run
+and sign-out. The guarded run boots a fresh Flyway V10 stack with a per-run
 random 32-byte matching-replay key, passes 8/8 with 480/480 projected score at
 projection version 9, rejects a changed matching edge without mutation, purges
 private state, and verifies isolated cleanup. Random credentials and the replay

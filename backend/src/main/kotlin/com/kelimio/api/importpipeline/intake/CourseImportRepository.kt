@@ -1,6 +1,7 @@
 package com.kelimio.api.importpipeline.intake
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.kelimio.api.courseauthoring.InitialCourseDraftResult
 import com.kelimio.api.web.ConflictProblem
 import com.kelimio.api.web.NotFoundProblem
 import com.kelimio.api.web.TooManyRequestsProblem
@@ -255,6 +256,7 @@ class CourseImportRepository(
         """
         select import_id, quarantine_artifact_id, archive_source_artifact_id,
                report_artifact_id, clean_scan_id, rules_version, parser_version,
+               content_schema_version, settings_payload,
                is_valid, row_count, level_count, unit_count, topic_count,
                test_count, warning_count, error_count, validation_report_sha256,
                allocation_sha256, preview_sha256, approval_binding_sha256
@@ -266,16 +268,40 @@ class CourseImportRepository(
 
     fun approval(importId: UUID): StoredApproval? = dsl.fetchOne(
         """
-        select import_id, approval_binding_sha256, approved_at
+        select id, import_id, source_sha256, approval_binding_sha256, approved_at
           from course_import_approval
          where import_id = ?
         """.trimIndent(),
         importId,
     )?.let {
         StoredApproval(
+            id = it.get("id", UUID::class.java)!!,
             importId = it.get("import_id", UUID::class.java)!!,
+            sourceSha256 = it.get("source_sha256", String::class.java)!!,
             approvalBindingSha256 = it.get("approval_binding_sha256", String::class.java)!!,
             approvedAt = it.get("approved_at", OffsetDateTime::class.java)!!,
+        )
+    }
+
+    fun commit(importId: UUID): StoredCourseImportCommit? = dsl.fetchOne(
+        """
+        select id, import_id, owner_user_id, approval_id, approval_binding_sha256,
+               course_id, content_change_set_id, draft_release_id, committed_at
+          from course_import_commit
+         where import_id = ?
+        """.trimIndent(),
+        importId,
+    )?.let {
+        StoredCourseImportCommit(
+            id = it.get("id", UUID::class.java)!!,
+            importId = it.get("import_id", UUID::class.java)!!,
+            ownerUserId = it.get("owner_user_id", UUID::class.java)!!,
+            approvalId = it.get("approval_id", UUID::class.java)!!,
+            approvalBindingSha256 = it.get("approval_binding_sha256", String::class.java)!!,
+            courseId = it.get("course_id", UUID::class.java)!!,
+            contentChangeSetId = it.get("content_change_set_id", UUID::class.java)!!,
+            draftReleaseId = it.get("draft_release_id", UUID::class.java)!!,
+            committedAt = it.get("committed_at", OffsetDateTime::class.java)!!,
         )
     }
 
@@ -377,7 +403,94 @@ class CourseImportRepository(
             correlationId,
             now,
         )
-        return StoredApproval(current.id, checkNotNull(preview.approvalBindingSha256), now)
+        return StoredApproval(
+            id = approvalId,
+            importId = current.id,
+            sourceSha256 = provenance.sourceSha256,
+            approvalBindingSha256 = checkNotNull(preview.approvalBindingSha256),
+            approvedAt = now,
+        )
+    }
+
+    fun appendCommit(
+        current: StoredCourseImport,
+        approval: StoredApproval,
+        preview: StoredPreview,
+        draft: InitialCourseDraftResult,
+        outboxEventId: UUID,
+        correlationId: String,
+        now: OffsetDateTime,
+    ): StoredCourseImportCommit {
+        val commitId = UUID.randomUUID()
+        dsl.execute(
+            """
+            insert into course_import_commit(
+                id, import_id, owner_user_id, approval_id, approval_binding_sha256,
+                content_schema_version, source_sha256, allocation_sha256, preview_sha256,
+                course_id, content_change_set_id, draft_release_id, outbox_event_id,
+                row_count, level_count, unit_count, topic_count, test_count,
+                committed_at, correlation_id
+            ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                cast(? as timestamptz), ?)
+            """.trimIndent(),
+            commitId,
+            current.id,
+            current.ownerUserId,
+            approval.id,
+            approval.approvalBindingSha256,
+            checkNotNull(preview.contentSchemaVersion),
+            approval.sourceSha256,
+            checkNotNull(preview.summary.allocationSha256),
+            checkNotNull(preview.summary.previewSha256),
+            draft.courseId,
+            draft.contentChangeSetId,
+            draft.draftReleaseId,
+            outboxEventId,
+            draft.rowCount,
+            draft.levelCount,
+            draft.unitCount,
+            draft.topicCount,
+            draft.testCount,
+            now,
+            correlationId,
+        )
+        val nextVersion = current.stateVersion + 1
+        check(
+            dsl.execute(
+                """
+                update course_import
+                   set status = 'COMMITTED', state_version = ?, updated_at = cast(? as timestamptz)
+                 where id = ? and owner_user_id = ? and status = 'APPROVED' and state_version = ?
+                """.trimIndent(),
+                nextVersion,
+                now,
+                current.id,
+                current.ownerUserId,
+                current.stateVersion,
+            ) == 1,
+        ) { "Course import commit lost its state lock" }
+        appendEvent(
+            current.id,
+            nextVersion,
+            "import-committed",
+            CourseImportStatus.APPROVED,
+            CourseImportStatus.COMMITTED,
+            current.ownerUserId,
+            null,
+            correlationId,
+            now,
+        )
+        return StoredCourseImportCommit(
+            id = commitId,
+            importId = current.id,
+            ownerUserId = current.ownerUserId,
+            approvalId = approval.id,
+            approvalBindingSha256 = approval.approvalBindingSha256,
+            courseId = draft.courseId,
+            contentChangeSetId = draft.contentChangeSetId,
+            draftReleaseId = draft.draftReleaseId,
+            committedAt = now,
+        )
     }
 
     fun approvalProvenance(importId: UUID): ApprovalProvenance = dsl.fetchOne(
@@ -479,6 +592,7 @@ class CourseImportRepository(
         cleanScanId = row.get("clean_scan_id", UUID::class.java)!!,
         rulesVersion = row.get("rules_version", String::class.java)!!,
         parserVersion = row.get("parser_version", String::class.java)!!,
+        contentSchemaVersion = row.get("content_schema_version", String::class.java),
         summary = CourseImportPreviewSummary(
             isValid = row.get("is_valid", Boolean::class.java)!!,
             rowCount = row.get("row_count", Int::class.java)!!,
@@ -491,6 +605,9 @@ class CourseImportRepository(
             validationReportSha256 = row.get("validation_report_sha256", String::class.java)!!,
             allocationSha256 = row.get("allocation_sha256", String::class.java),
             previewSha256 = row.get("preview_sha256", String::class.java),
+            settings = row.get("settings_payload", JSONB::class.java)?.let {
+                objectMapper.readValue(it.data(), CourseImportPreviewSettings::class.java)
+            },
         ),
         approvalBindingSha256 = row.get("approval_binding_sha256", String::class.java),
     )

@@ -573,6 +573,63 @@ paths:
           $ref: "#/components/responses/Problem"
         default:
           $ref: "#/components/responses/Problem"
+  /v1/courses/imports/{importId}/commit:
+    post:
+      operationId: commitCourseImport
+      x-kelimio-max-request-body-bytes: 8192
+      tags: [Course Import]
+      summary: Commit one approved preview as an unpublished immutable course draft
+      description: >-
+        Commits only the exact approved import provenance and versioned
+        import-content-v1 preview. The transaction creates a DRAFT course with
+        no active release, one committed content change set, and one immutable
+        DRAFT release hierarchy. It does not activate or publish a release,
+        expose the course in the catalog, enroll a learner, or grant an
+        entitlement. Legacy approvals without the versioned settings payload
+        remain approval-only. The JSON command body is rejected before parsing
+        when it exceeds 8192 bytes.
+      parameters:
+        - $ref: "#/components/parameters/ImportId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CommitCourseImportRequest"
+      responses:
+        "201":
+          description: Unpublished immutable draft created
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CourseImportCommitResponse"
+        "200":
+          description: Existing draft result returned for an idempotent retry
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CourseImportCommitResponse"
+        "400":
+          $ref: "#/components/responses/Problem"
+        "401":
+          $ref: "#/components/responses/Problem"
+        "413":
+          $ref: "#/components/responses/Problem"
+        "404":
+          $ref: "#/components/responses/Problem"
+        "409":
+          $ref: "#/components/responses/Problem"
+        "422":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
   /v1/development/starter-course:
     post:
       operationId: installLocalStarterCourse
@@ -1496,6 +1553,7 @@ components:
         - PROCESSING_FAILED
         - EXPIRED
         - APPROVED
+        - COMMITTED
     CourseImportStatusResponse:
       type: object
       additionalProperties: false
@@ -1515,6 +1573,7 @@ components:
         - preview
         - approvalBindingSha256
         - approvedAt
+        - commit
         - failureCode
       properties:
         id:
@@ -1562,6 +1621,13 @@ components:
         approvedAt:
           type: [string, "null"]
           format: date-time
+        commit:
+          oneOf:
+            - $ref: "#/components/schemas/CourseImportCommitSummary"
+            - type: "null"
+          description: >-
+            Present only after the approved preview has been committed as an
+            unpublished draft. This is not publication or entitlement proof.
         failureCode:
           type: [string, "null"]
           pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$"
@@ -1570,7 +1636,7 @@ components:
       type: object
       additionalProperties: false
       x-kelimio-redacted-to-string: true
-      x-kelimio-redacted-field-names: [validationReportSha256, allocationSha256, previewSha256]
+      x-kelimio-redacted-field-names: [validationReportSha256, allocationSha256, previewSha256, settings]
       required:
         - isValid
         - rowCount
@@ -1583,6 +1649,7 @@ components:
         - validationReportSha256
         - allocationSha256
         - previewSha256
+        - settings
       properties:
         isValid:
           type: boolean
@@ -1625,6 +1692,89 @@ components:
           type: [string, "null"]
           x-kelimio-sensitive: true
           pattern: "^[0-9a-f]{64}$"
+        settings:
+          x-kelimio-sensitive: true
+          oneOf:
+            - $ref: "#/components/schemas/CourseImportPreviewSettings"
+            - type: "null"
+          description: >-
+            Present for valid import-content-v1 previews. Null on invalid
+            previews and legacy approval-only previews.
+    CourseImportPreviewSettings:
+      type: object
+      additionalProperties: false
+      x-kelimio-redacted-to-string: true
+      x-kelimio-redacted-field-names:
+        - courseName
+        - targetLanguageName
+        - supportLanguageCodes
+      required:
+        - courseName
+        - targetLanguageCode
+        - targetLanguageName
+        - supportLanguageCodes
+        - defaultSupportLanguageCode
+        - defaultTestMode
+        - visibility
+        - targetTestSize
+        - minimumLastAutomaticTestSize
+        - fillFixedTests
+        - completionThresholdPercent
+        - pricingSource
+        - maximumTypedAlternativeAnswers
+        - offlineMode
+      properties:
+        courseName:
+          type: string
+          x-kelimio-sensitive: true
+          minLength: 1
+          maxLength: 160
+        targetLanguageCode:
+          $ref: "#/components/schemas/LanguageTag"
+        targetLanguageName:
+          type: string
+          x-kelimio-sensitive: true
+          minLength: 1
+          maxLength: 160
+        supportLanguageCodes:
+          type: array
+          x-kelimio-sensitive: true
+          minItems: 1
+          maxItems: 64
+          uniqueItems: true
+          items:
+            $ref: "#/components/schemas/LanguageTag"
+        defaultSupportLanguageCode:
+          $ref: "#/components/schemas/LanguageTag"
+        defaultTestMode:
+          type: string
+          enum: [MIXED, WORD, MATCHING, MULTIPLE_CHOICE_CLOZE, TYPED_CLOZE]
+        visibility:
+          type: string
+          enum: [PUBLIC, PRIVATE]
+        targetTestSize:
+          type: integer
+          minimum: 1
+          maximum: 10000
+        minimumLastAutomaticTestSize:
+          type: integer
+          minimum: 1
+          maximum: 10000
+        fillFixedTests:
+          type: boolean
+        completionThresholdPercent:
+          type: integer
+          minimum: 50
+          maximum: 100
+        pricingSource:
+          type: string
+          const: APPLICATION
+        maximumTypedAlternativeAnswers:
+          type: integer
+          const: 1
+        offlineMode:
+          type: string
+          const: SCORELESS_PRACTICE
     CourseImportPreviewPage:
       type: object
       additionalProperties: false
@@ -1865,6 +2015,58 @@ components:
           $ref: "#/components/schemas/Sha256Hex"
           x-kelimio-sensitive: true
         approvedAt:
+          type: string
+          format: date-time
+        created:
+          type: boolean
+    CommitCourseImportRequest:
+      type: object
+      additionalProperties: false
+      x-kelimio-redacted-to-string: true
+      x-kelimio-redacted-field-names: [approvalBindingSha256]
+      required: [approvalBindingSha256]
+      properties:
+        approvalBindingSha256:
+          $ref: "#/components/schemas/Sha256Hex"
+          x-kelimio-sensitive: true
+    CourseImportCommitSummary:
+      type: object
+      additionalProperties: false
+      required: [courseId, contentChangeSetId, draftReleaseId, committedAt]
+      properties:
+        courseId:
+          $ref: "#/components/schemas/Id"
+        contentChangeSetId:
+          $ref: "#/components/schemas/Id"
+        draftReleaseId:
+          $ref: "#/components/schemas/Id"
+        committedAt:
+          type: string
+          format: date-time
+    CourseImportCommitResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - importId
+        - status
+        - courseId
+        - contentChangeSetId
+        - draftReleaseId
+        - committedAt
+        - created
+      properties:
+        importId:
+          $ref: "#/components/schemas/Id"
+        status:
+          type: string
+          const: COMMITTED
+        courseId:
+          $ref: "#/components/schemas/Id"
+        contentChangeSetId:
+          $ref: "#/components/schemas/Id"
+        draftReleaseId:
+          $ref: "#/components/schemas/Id"
+        committedAt:
           type: string
           format: date-time
         created:

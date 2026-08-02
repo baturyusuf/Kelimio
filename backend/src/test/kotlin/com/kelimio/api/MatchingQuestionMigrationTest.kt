@@ -264,9 +264,9 @@ class MatchingQuestionMigrationTest {
     @Test
     fun `V7 serializes language insertion against matching activation and leaves no incomplete active revision`() {
         val database = isolatedDatabase("matching_concurrency")
-        migrate(database)
+        migrate(database, "7")
         val fixture = connection(database).use { connection ->
-            val base = createBaseCourse(connection, listOf("en"))
+            val base = createBaseCourse(connection, listOf("en"), publish = false)
             base to insertMatchingDraft(connection, base.courseId, listOf("en"), pairCount = 2)
         }
 
@@ -325,7 +325,7 @@ class MatchingQuestionMigrationTest {
         }
 
         val reverseFixture = connection(database).use { connection ->
-            val base = createBaseCourse(connection, listOf("en"))
+            val base = createBaseCourse(connection, listOf("en"), publish = false)
             base to insertMatchingDraft(connection, base.courseId, listOf("en"), pairCount = 2)
         }
         connection(database).use { languageConnection ->
@@ -638,7 +638,11 @@ class MatchingQuestionMigrationTest {
         )
     }
 
-    private fun createBaseCourse(connection: Connection, supportLanguages: List<String>): BaseCourse {
+    private fun createBaseCourse(
+        connection: Connection,
+        supportLanguages: List<String>,
+        publish: Boolean = true,
+    ): BaseCourse {
         val ownerId = createUser(connection, "course-owner")
         val courseId = UUID.randomUUID()
         val releaseId = UUID.randomUUID()
@@ -750,6 +754,9 @@ class MatchingQuestionMigrationTest {
                 courseId,
             )
             execute(connection, "update course_release set status = 'ACTIVE' where id = ?", releaseId)
+            if (publish) {
+                execute(connection, "update course set publication_status = 'PUBLISHED' where id = ?", courseId)
+            }
             connection.commit()
         } catch (exception: Throwable) {
             connection.rollback()

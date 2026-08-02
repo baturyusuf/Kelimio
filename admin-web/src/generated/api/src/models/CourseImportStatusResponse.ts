@@ -27,6 +27,13 @@ import {
     CourseImportStatusToJSON,
     CourseImportStatusToJSONTyped,
 } from './CourseImportStatus';
+import type { CourseImportCommitSummary } from './CourseImportCommitSummary';
+import {
+    CourseImportCommitSummaryFromJSON,
+    CourseImportCommitSummaryFromJSONTyped,
+    CourseImportCommitSummaryToJSON,
+    CourseImportCommitSummaryToJSONTyped,
+} from './CourseImportCommitSummary';
 
 /**
  *
@@ -114,6 +121,12 @@ export interface CourseImportStatusResponse {
     approvedAt: Date | null;
     /**
      *
+     * @type {CourseImportCommitSummary}
+     * @memberof CourseImportStatusResponse
+     */
+    commit: CourseImportCommitSummary | null;
+    /**
+     *
      * @type {string}
      * @memberof CourseImportStatusResponse
      */
@@ -155,6 +168,7 @@ export function instanceOfCourseImportStatusResponse(value: object): value is Co
     if (!('preview' in value) || value['preview'] === undefined) return false;
     if (!('approvalBindingSha256' in value) || value['approvalBindingSha256'] === undefined) return false;
     if (!('approvedAt' in value) || value['approvedAt'] === undefined) return false;
+    if (!('commit' in value) || value['commit'] === undefined) return false;
     if (!('failureCode' in value) || value['failureCode'] === undefined) return false;
     return true;
 }
@@ -182,6 +196,7 @@ export function CourseImportStatusResponseFromJSONTyped(json: any, ignoreDiscrim
         'preview': CourseImportPreviewSummaryFromJSON(json['preview']),
         'approvalBindingSha256': json['approvalBindingSha256'],
         'approvedAt': (json['approvedAt'] == null ? null : new Date(json['approvedAt'])),
+        'commit': CourseImportCommitSummaryFromJSON(json['commit']),
         'failureCode': json['failureCode'],
     };
 }
@@ -210,6 +225,7 @@ export function CourseImportStatusResponseToJSONTyped(value?: CourseImportStatus
         'preview': CourseImportPreviewSummaryToJSON(value['preview']),
         'approvalBindingSha256': value['approvalBindingSha256'],
         'approvedAt': value['approvedAt'] == null ? null : ((value['approvedAt'] as any).toISOString()),
+        'commit': CourseImportCommitSummaryToJSON(value['commit']),
         'failureCode': value['failureCode'],
     };
 }

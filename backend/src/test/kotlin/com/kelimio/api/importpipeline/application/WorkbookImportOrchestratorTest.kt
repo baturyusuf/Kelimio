@@ -134,6 +134,22 @@ class WorkbookImportOrchestratorTest {
     }
 
     @Test
+    fun `rejects settings that cannot fit the immutable draft schema`() {
+        val courseName = orchestrator.preview(
+            workbook(settingsOverrides = mapOf("Kurs Adı" to "k".repeat(161))),
+        )
+        val targetLanguageName = orchestrator.preview(
+            workbook(settingsOverrides = mapOf("Hedef Dil Adı" to "d".repeat(161))),
+        )
+
+        listOf(courseName, targetLanguageName).forEach { preview ->
+            assertThat(preview.issueCodes()).contains(WorkbookImportIssueCode.INVALID_STRUCTURAL_TEXT)
+            assertThat(preview.settings).isNull()
+            assertThat(preview.plan).isNull()
+        }
+    }
+
+    @Test
     fun `full preview digest binds settings that do not affect allocation`() {
         val base = orchestrator.preview(workbook())
         val renamed = orchestrator.preview(
@@ -445,6 +461,31 @@ class WorkbookImportOrchestratorTest {
         val expandingContent = wordRow(2, target = "\u0344".repeat(1_001))
         assertThat(orchestrator.preview(workbook(contentRows = listOf(expandingContent))).issueCodes())
             .contains(WorkbookImportIssueCode.INVALID_TEXT)
+    }
+
+    @Test
+    fun `rejects authored fields that cannot fit immutable question revisions`() {
+        val word = wordRow(2, target = "w".repeat(1_001)).copy(
+            cells = wordRow(2, target = "w".repeat(1_001)).cells.map { cell ->
+                if (cell.columnNumber == 7) cell.copy(value = "t".repeat(501)) else cell
+            } + cell(2, 13, "d".repeat(501)),
+        )
+        val cloze = multipleChoiceRow(2).copy(
+            cells = multipleChoiceRow(2).cells.map { cell ->
+                when (cell.columnNumber) {
+                    10 -> cell.copy(value = "s".repeat(1_000) + "---")
+                    11 -> cell.copy(value = "a".repeat(501))
+                    else -> cell
+                }
+            },
+        )
+
+        listOf(word, cloze).forEach { row ->
+            val preview = orchestrator.preview(workbook(contentRows = listOf(row)))
+            assertThat(preview.issueCodes()).contains(WorkbookImportIssueCode.INVALID_TEXT)
+            assertThat(preview.rows).isEmpty()
+            assertThat(preview.plan).isNull()
+        }
     }
 
     private fun WorkbookImportPreview.issueCodes(): List<WorkbookImportIssueCode> = issues.map { it.code }

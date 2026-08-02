@@ -62,5 +62,10 @@ void main() {
     test('to test the property `previewSha256`', () async {
       // TODO
     });
+
+    // CourseImportPreviewSettings settings
+    test('to test the property `settings`', () async {
+      // TODO
+    });
   });
 }

@@ -544,6 +544,10 @@ class WorkbookImportOrchestrator {
         val translationColumns = header.supportLanguageColumns
         when (recordType) {
             WorkbookRecordType.WORD -> {
+                validateMaximumContentLength(
+                    sheet, row, TARGET_TEXT_COLUMN, cells, targetText,
+                    MAX_QUESTION_PROMPT_CODE_POINTS, "A word target exceeds the supported prompt length", issues,
+                )
                 translationColumns.forEach { (language, column) ->
                     if (language !in translations) {
                         issues.error(
@@ -552,6 +556,16 @@ class WorkbookImportOrchestrator {
                             "A word row requires every declared support-language translation",
                         )
                     }
+                    validateMaximumContentLength(
+                        sheet, row, column, cells, translations[language],
+                        MAX_ANSWER_CODE_POINTS, "A word translation exceeds the supported answer length", issues,
+                    )
+                }
+                wrongAnswersByColumn.forEachIndexed { index, answer ->
+                    validateMaximumContentLength(
+                        sheet, row, header.sentenceColumn + 3 + index, cells, answer,
+                        MAX_ANSWER_CODE_POINTS, "A word distractor exceeds the supported answer length", issues,
+                    )
                 }
                 requireAbsent(
                     sheet,
@@ -570,6 +584,20 @@ class WorkbookImportOrchestrator {
             WorkbookRecordType.MULTIPLE_CHOICE_CLOZE -> {
                 requireNoTranslations(sheet, row, cells, translationColumns, translations, issues)
                 validateClozeSentence(sheet, row, header.sentenceColumn, cells, sentence, issues)
+                validateMaximumContentLength(
+                    sheet, row, header.sentenceColumn, cells, sentence,
+                    MAX_QUESTION_PROMPT_CODE_POINTS, "A cloze sentence exceeds the supported prompt length", issues,
+                )
+                validateMaximumContentLength(
+                    sheet, row, header.sentenceColumn + 1, cells, correctAnswer,
+                    MAX_ANSWER_CODE_POINTS, "A correct answer exceeds the supported answer length", issues,
+                )
+                wrongAnswersByColumn.forEachIndexed { index, answer ->
+                    validateMaximumContentLength(
+                        sheet, row, header.sentenceColumn + 3 + index, cells, answer,
+                        MAX_ANSWER_CODE_POINTS, "A distractor exceeds the supported answer length", issues,
+                    )
+                }
                 if (correctAnswer == null) {
                     issues.error(
                         WorkbookImportIssueCode.REQUIRED_FIELD_MISSING,
@@ -600,6 +628,10 @@ class WorkbookImportOrchestrator {
             WorkbookRecordType.TYPED_CLOZE -> {
                 requireNoTranslations(sheet, row, cells, translationColumns, translations, issues)
                 validateClozeSentence(sheet, row, header.sentenceColumn, cells, sentence, issues)
+                validateMaximumContentLength(
+                    sheet, row, header.sentenceColumn, cells, sentence,
+                    MAX_QUESTION_PROMPT_CODE_POINTS, "A cloze sentence exceeds the supported prompt length", issues,
+                )
                 if (correctAnswer == null) {
                     issues.error(
                         WorkbookImportIssueCode.REQUIRED_FIELD_MISSING,
@@ -646,6 +678,25 @@ class WorkbookImportOrchestrator {
             wrongAnswers = wrongAnswersByColumn,
             issues = issues,
         )
+    }
+
+    private fun validateMaximumContentLength(
+        sheet: RawXlsxSheet,
+        row: RawXlsxRow,
+        column: Int,
+        cells: Map<Int, RawXlsxCell>,
+        value: String?,
+        maximumCodePoints: Int,
+        message: String,
+        issues: MutableList<WorkbookImportIssue>,
+    ) {
+        if (value != null && value.codePointCount(0, value.length) > maximumCodePoints) {
+            issues.error(
+                WorkbookImportIssueCode.INVALID_TEXT,
+                sheet.source(row.rowNumber, column, cells[column]),
+                message,
+            )
+        }
     }
 
     private fun validateAnswerUniqueness(
@@ -1185,6 +1236,8 @@ class WorkbookImportOrchestrator {
         const val MAX_COLLECTED_ISSUES = 2_001
         const val MAX_STRUCTURAL_TEXT_CODE_POINTS = 160
         const val MAX_CONTENT_TEXT_CODE_POINTS = 2_000
+        const val MAX_QUESTION_PROMPT_CODE_POINTS = 1_000
+        const val MAX_ANSWER_CODE_POINTS = 500
         const val SUPPORTED_RULES_VERSION = "xlsx-v1"
         const val SETTINGS_SHEET_NAME = "BILGI_AYARLAR"
         const val HEADER_ROW = 1

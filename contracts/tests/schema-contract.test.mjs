@@ -760,6 +760,7 @@ const importPaths = [
   "/v1/courses/imports/{importId}/preview",
   "/v1/courses/imports/{importId}/issues",
   "/v1/courses/imports/{importId}/approve",
+  "/v1/courses/imports/{importId}/commit",
 ];
 for (const importPath of importPaths) {
   assert.ok(contract.paths[importPath], `course-import contract path must exist: ${importPath}`);
@@ -786,6 +787,8 @@ for (const [path, method, statuses] of [
   ["/v1/courses/imports/{importId}/issues", "get", ["200", "400", "401", "404", "409", "default"]],
   ["/v1/courses/imports/{importId}/approve", "post",
     ["200", "201", "400", "401", "404", "409", "413", "422", "default"]],
+  ["/v1/courses/imports/{importId}/commit", "post",
+    ["200", "201", "400", "401", "404", "409", "413", "422", "default"]],
 ]) {
   assert.deepEqual(
     Object.keys(contract.paths[path][method].responses).sort(),
@@ -797,6 +800,7 @@ for (const [path, method] of [
   ["/v1/courses/imports", "post"],
   ["/v1/courses/imports/{importId}/complete", "post"],
   ["/v1/courses/imports/{importId}/approve", "post"],
+  ["/v1/courses/imports/{importId}/commit", "post"],
 ]) {
   assert.equal(
     contract.paths[path][method]["x-kelimio-max-request-body-bytes"],
@@ -804,10 +808,10 @@ for (const [path, method] of [
     `${contract.paths[path][method].operationId} must keep a pre-parser JSON body limit`,
   );
 }
-assert.equal(
-  contract.paths["/v1/courses/imports/{importId}/commit"],
-  undefined,
-  "approval-only intake must not expose course import commit",
+assert.match(
+  contract.paths["/v1/courses/imports/{importId}/commit"].post.description,
+  /DRAFT course with\s+no active release.*does not activate or publish/s,
+  "import commit must remain an unpublished-draft operation",
 );
 
 const validPartSha256 = `${"A".repeat(43)}=`;
@@ -968,7 +972,8 @@ for (const [schemaName, sensitiveFields] of Object.entries({
   CompleteCourseImportUploadRequest: ["sourceSha256", "parts"],
   CompletedCourseImportPart: ["eTag", "sha256"],
   CourseImportStatusResponse: ["originalFileName", "preview", "approvalBindingSha256"],
-  CourseImportPreviewSummary: ["validationReportSha256", "allocationSha256", "previewSha256"],
+  CourseImportPreviewSummary: ["validationReportSha256", "allocationSha256", "previewSha256", "settings"],
+  CourseImportPreviewSettings: ["courseName", "targetLanguageName", "supportLanguageCodes"],
   CourseImportPreviewPage: ["items", "nextCursor"],
   CourseImportPreviewRow: ["source", "level", "unit", "topic", "targetText", "translations",
     "sentence", "correctAnswer", "alternativeCorrectAnswer", "wrongAnswers", "matchingGroup", "note"],
@@ -977,6 +982,7 @@ for (const [schemaName, sensitiveFields] of Object.entries({
   CourseImportValidationIssue: ["source", "message"],
   ApproveCourseImportRequest: ["approvalBindingSha256"],
   CourseImportApprovalResponse: ["approvalBindingSha256"],
+  CommitCourseImportRequest: ["approvalBindingSha256"],
 })) {
   const schema = contract.components.schemas[schemaName];
   assert.equal(schema["x-kelimio-redacted-to-string"], true, `${schemaName} must redact toString`);
@@ -1098,6 +1104,7 @@ const validImportStatus = {
   preview: null,
   approvalBindingSha256: null,
   approvedAt: null,
+  commit: null,
   failureCode: null,
 };
 assert.equal(
@@ -1116,4 +1123,76 @@ assert.equal(
   "status must not expose raw scanner responses",
 );
 
-console.log("Course, profile, A/B/C/D answer, and approval-only import schemas reject unsafe drift.");
+const validatePreviewSettings = compileSchema("CourseImportPreviewSettings");
+const validPreviewSettings = {
+  courseName: "Türkçe Temelleri",
+  targetLanguageCode: "tr",
+  targetLanguageName: "Türkçe",
+  supportLanguageCodes: ["en", "ar", "fr"],
+  defaultSupportLanguageCode: "en",
+  defaultTestMode: "MIXED",
+  visibility: "PUBLIC",
+  targetTestSize: 20,
+  minimumLastAutomaticTestSize: 10,
+  fillFixedTests: true,
+  completionThresholdPercent: 50,
+  pricingSource: "APPLICATION",
+  maximumTypedAlternativeAnswers: 1,
+  offlineMode: "SCORELESS_PRACTICE",
+};
+assert.equal(
+  validatePreviewSettings(validPreviewSettings),
+  true,
+  `commit-ready settings must satisfy the closed schema: ${ajv.errorsText(validatePreviewSettings.errors)}`,
+);
+assert.equal(
+  validatePreviewSettings({ ...validPreviewSettings, supportLanguageCodes: ["en", "en"] }),
+  false,
+  "commit-ready settings must reject duplicate support languages",
+);
+
+const validateCommitRequest = compileSchema("CommitCourseImportRequest");
+assert.equal(validateCommitRequest({ approvalBindingSha256: validSourceSha256 }), true);
+assert.equal(
+  validateCommitRequest({ approvalBindingSha256: validSourceSha256, publish: true }),
+  false,
+  "commit must reject client-asserted publication",
+);
+
+const validateCommitResponse = compileSchema("CourseImportCommitResponse");
+const committedImport = {
+  importId: validImportStatus.id,
+  status: "COMMITTED",
+  courseId: "00000000-0000-4000-8000-000000000991",
+  contentChangeSetId: "00000000-0000-4000-8000-000000000992",
+  draftReleaseId: "00000000-0000-4000-8000-000000000993",
+  committedAt: "2026-08-02T08:05:00Z",
+  created: true,
+};
+assert.equal(
+  validateCommitResponse(committedImport),
+  true,
+  `draft commit response must satisfy the closed schema: ${ajv.errorsText(validateCommitResponse.errors)}`,
+);
+assert.equal(
+  validateCommitResponse({ ...committedImport, published: true }),
+  false,
+  "commit response must not imply publication",
+);
+
+assert.equal(
+  validateCourseImportStatus({
+    ...validImportStatus,
+    status: "COMMITTED",
+    commit: {
+      courseId: committedImport.courseId,
+      contentChangeSetId: committedImport.contentChangeSetId,
+      draftReleaseId: committedImport.draftReleaseId,
+      committedAt: committedImport.committedAt,
+    },
+  }),
+  true,
+  `committed status must expose only draft identifiers: ${ajv.errorsText(validateCourseImportStatus.errors)}`,
+);
+
+console.log("Course, profile, A/B/C/D answer, and draft-only import schemas reject unsafe drift.");

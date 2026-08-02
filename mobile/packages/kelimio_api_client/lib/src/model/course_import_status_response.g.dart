@@ -25,6 +25,7 @@ CourseImportStatusResponse _$CourseImportStatusResponseFromJson(
       'preview',
       'approvalBindingSha256',
       'approvedAt',
+      'commit',
       'failureCode',
     ],
   );
@@ -72,6 +73,12 @@ CourseImportStatusResponse _$CourseImportStatusResponseFromJson(
       'approvedAt',
       (v) => v == null ? null : DateTime.parse(v as String),
     ),
+    commit: $checkedConvert(
+      'commit',
+      (v) => v == null
+          ? null
+          : CourseImportCommitSummary.fromJson(v as Map<String, dynamic>),
+    ),
     failureCode: $checkedConvert('failureCode', (v) => v as String?),
   );
   return val;
@@ -97,6 +104,7 @@ Map<String, dynamic> _$CourseImportStatusResponseToJson(
   'preview': instance.preview?.toJson(),
   'approvalBindingSha256': instance.approvalBindingSha256,
   'approvedAt': instance.approvedAt?.toIso8601String(),
+  'commit': instance.commit?.toJson(),
   'failureCode': instance.failureCode,
 };
 
@@ -110,6 +118,7 @@ const _$CourseImportStatusEnumMap = {
   CourseImportStatus.PROCESSING_FAILED: 'PROCESSING_FAILED',
   CourseImportStatus.EXPIRED: 'EXPIRED',
   CourseImportStatus.APPROVED: 'APPROVED',
+  CourseImportStatus.COMMITTED: 'COMMITTED',
 };
 
 const _$CourseImportStatusResponseDeclaredMediaTypeEnumEnumMap = {
