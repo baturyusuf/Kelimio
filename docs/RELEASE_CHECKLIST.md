@@ -54,7 +54,8 @@ ADRs 010 through 017, including owner-scoped state-loss discovery/resume,
 prior-activation suppression, and a non-empty later-publication/rollback
 reprojection proof that preserves lifetime score. The narrow local editor also
 proves strong ETag/If-Match, secure unsaved recovery, and explicit
-old/mine/latest conflict handling. Every item below remains unchecked until
+old/mine/latest conflict handling, including a guarded real-service Android
+run through competing and rebased subsequent publications. Every item below remains unchecked until
 production-equivalent staging and the complete authoring/release path pass.
 
 - [ ] Only `.xlsx` is accepted; file type, size, checksum, malware, zip bomb, XML/path, formula, external-link, Unicode, and resource limits are enforced in an isolated worker.

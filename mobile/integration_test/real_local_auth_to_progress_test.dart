@@ -9,6 +9,7 @@ import 'package:kelimio_mobile/app.dart';
 import 'package:kelimio_mobile/application/attempt_controller.dart';
 import 'package:kelimio_mobile/application/catalog_controller.dart';
 import 'package:kelimio_mobile/application/course_authoring_controller.dart';
+import 'package:kelimio_mobile/application/course_editor_controller.dart';
 import 'package:kelimio_mobile/application/profile_controller.dart';
 import 'package:kelimio_mobile/application/providers.dart';
 import 'package:kelimio_mobile/core/config/app_config.dart';
@@ -895,6 +896,234 @@ void main() {
         find.byKey(const Key('teacher-publication-success')),
         label: 'published reviewed workbook confirmation',
       );
+
+      await _tapVisible(
+        tester,
+        find.byKey(const Key('teacher-open-course-editor')),
+        label: 'open published course editor',
+      );
+      await _pumpUntil(
+        tester,
+        () {
+          final editor = container.read(courseEditorControllerProvider);
+          return editor.error != null || editor.document != null;
+        },
+        label: 'answer-free published question editor',
+        timeout: const Duration(seconds: 30),
+        diagnostic: () => _describeEditorState(
+          container.read(courseEditorControllerProvider),
+        ),
+      );
+      var editorState = container.read(courseEditorControllerProvider);
+      expect(
+        editorState.error,
+        isNull,
+        reason:
+            'Course editor failed as ${_safeFailureKind(editorState.error)}',
+      );
+      final staleDocument = editorState.document!;
+      expect(staleDocument.releaseRevision, 1);
+      expect(
+        RegExp('---').allMatches(staleDocument.prompt),
+        hasLength(1),
+        reason: 'The editor must expose one valid typed-cloze marker.',
+      );
+      final promptField = find.byKey(
+        ValueKey('teacher-editor-prompt-${staleDocument.entityTag}'),
+      );
+      await _bringTeacherControlIntoView(
+        tester,
+        promptField,
+        label: 'editable Type-C prompt',
+      );
+      await tester.enterText(promptField, 'Ben her sabah ---.');
+      await _pumpUntil(
+        tester,
+        () =>
+            container.read(courseEditorControllerProvider).editedPrompt ==
+            'Ben her sabah ---.',
+        label: 'local editor change',
+      );
+      final editorRecovery = container.read(courseEditorRecoveryStoreProvider);
+      final storedEditorDraft = await _waitForEditorRecovery(
+        tester,
+        editorRecovery,
+      );
+      expect(storedEditorDraft.courseId, staleDocument.courseId);
+      expect(storedEditorDraft.entityTag, staleDocument.entityTag);
+      expect(storedEditorDraft.originalPrompt, staleDocument.prompt);
+      expect(storedEditorDraft.editedPrompt, 'Ben her sabah ---.');
+
+      container.invalidate(courseEditorControllerProvider);
+      await tester.pumpAndSettle();
+      expect(
+        container.read(courseEditorControllerProvider).document,
+        isNull,
+        reason: 'The in-memory editor state must be discarded for recovery.',
+      );
+      await _bringTeacherControlIntoView(
+        tester,
+        find.byKey(const Key('teacher-open-course-editor')),
+        label: 'reopen editor after process-state loss',
+      );
+      await _tapVisible(
+        tester,
+        find.byKey(const Key('teacher-open-course-editor')),
+        label: 'restore secure editor draft',
+      );
+      await _pumpUntil(
+        tester,
+        () {
+          final editor = container.read(courseEditorControllerProvider);
+          return editor.error != null || editor.recoveryRestored;
+        },
+        label: 'secure editor process-loss recovery',
+        timeout: const Duration(seconds: 30),
+        diagnostic: () => _describeEditorState(
+          container.read(courseEditorControllerProvider),
+        ),
+      );
+      editorState = container.read(courseEditorControllerProvider);
+      expect(editorState.error, isNull);
+      expect(editorState.editedPrompt, 'Ben her sabah ---.');
+      expect(find.byKey(const Key('teacher-course-editor')), findsOneWidget);
+
+      final authoringRepository = container.read(
+        courseAuthoringRepositoryProvider,
+      );
+      final competingDraft = await _runIo(
+        tester,
+        () => authoringRepository.createEditorDraft(
+          document: staleDocument,
+          editedPrompt: 'Ben her aksam ---.',
+          commandId: '00000000-0000-4000-8000-00000000e201',
+        ),
+      );
+      expect(competingDraft.releaseRevision, 2);
+      final competingImpact = await _runIo(
+        tester,
+        () => authoringRepository.getReleaseImpact(
+          courseId: competingDraft.courseId,
+          releaseId: competingDraft.draftReleaseId,
+        ),
+      );
+      expect(
+        competingImpact.expectedActiveReleaseId,
+        staleDocument.activeReleaseId,
+      );
+      expect(competingImpact.changedQuestionCount, 1);
+      final competingActivation = await _runIo(
+        tester,
+        () => authoringRepository.activateRelease(
+          impact: competingImpact,
+          commandId: '00000000-0000-4000-8000-00000000e202',
+        ),
+      );
+      expect(competingActivation.releaseRevision, 2);
+
+      await _tapVisible(
+        tester,
+        find.byKey(const Key('teacher-editor-save')),
+        label: 'save stale editor version',
+      );
+      await _pumpUntil(
+        tester,
+        () {
+          final editor = container.read(courseEditorControllerProvider);
+          return editor.conflict != null ||
+              (editor.error != null && !editor.busy);
+        },
+        label: 'strong ETag conflict and latest version reload',
+        timeout: const Duration(seconds: 30),
+        diagnostic: () => _describeEditorState(
+          container.read(courseEditorControllerProvider),
+        ),
+      );
+      editorState = container.read(courseEditorControllerProvider);
+      final conflict = editorState.conflict;
+      expect(conflict, isNotNull);
+      expect(conflict!.originalPrompt, staleDocument.prompt);
+      expect(conflict.editedPrompt, 'Ben her sabah ---.');
+      expect(conflict.latestDocument.prompt, 'Ben her aksam ---.');
+      expect(conflict.latestDocument.releaseRevision, 2);
+      expect(find.byKey(const Key('teacher-editor-reapply')), findsOneWidget);
+      await _tapVisible(
+        tester,
+        find.byKey(const Key('teacher-editor-reapply')),
+        label: 'explicitly reapply personal edit to latest release',
+      );
+      await _pumpUntil(tester, () {
+        final editor = container.read(courseEditorControllerProvider);
+        return editor.conflict == null &&
+            editor.document?.releaseRevision == 2 &&
+            editor.editedPrompt == 'Ben her sabah ---.';
+      }, label: 'personal edit rebound to latest ETag');
+      await _tapVisible(
+        tester,
+        find.byKey(const Key('teacher-editor-save')),
+        label: 'create immutable rebased editor draft',
+      );
+      await _pumpUntil(
+        tester,
+        () {
+          final editor = container.read(courseEditorControllerProvider);
+          return editor.error != null || editor.impact != null;
+        },
+        label: 'rebased editor publication impact',
+        timeout: const Duration(seconds: 30),
+        diagnostic: () => _describeEditorState(
+          container.read(courseEditorControllerProvider),
+        ),
+      );
+      editorState = container.read(courseEditorControllerProvider);
+      expect(
+        editorState.error,
+        isNull,
+        reason:
+            'Rebased editor draft failed as '
+            '${_safeFailureKind(editorState.error)}',
+      );
+      expect(editorState.draft?.releaseRevision, 3);
+      expect(editorState.impact?.changedQuestionCount, 1);
+      expect(
+        editorState.impact?.expectedActiveReleaseId,
+        competingActivation.releaseId,
+      );
+      await _acknowledgeEditorImpact(
+        tester,
+        readState: () => container.read(courseEditorControllerProvider),
+      );
+      await _tapVisible(
+        tester,
+        find.byKey(const Key('teacher-editor-publish')),
+        label: 'publish rebased immutable editor release',
+      );
+      await _pumpUntil(
+        tester,
+        () {
+          final editor = container.read(courseEditorControllerProvider);
+          return editor.error != null || editor.activation != null;
+        },
+        label: 'published rebased editor release',
+        timeout: const Duration(seconds: 30),
+        diagnostic: () => _describeEditorState(
+          container.read(courseEditorControllerProvider),
+        ),
+      );
+      editorState = container.read(courseEditorControllerProvider);
+      expect(editorState.error, isNull);
+      expect(editorState.activation?.releaseRevision, 3);
+      expect(
+        editorState.activation?.operation,
+        CourseReleaseOperation.publication,
+      );
+      expect(await _runIo(tester, editorRecovery.read), isNull);
+      await _bringTeacherControlIntoView(
+        tester,
+        find.byKey(const Key('teacher-editor-publication-success')),
+        label: 'edited release publication confirmation',
+      );
+
       container.read(courseAuthoringControllerProvider.notifier).reset();
       await tester.pumpAndSettle();
       await _pumpUntil(
@@ -978,7 +1207,7 @@ void main() {
       );
     },
     skip: !_realStackEnabled,
-    timeout: const Timeout(Duration(minutes: 8)),
+    timeout: const Timeout(Duration(minutes: 10)),
   );
 }
 
@@ -1014,6 +1243,16 @@ String _describeAuthoringState(CourseAuthoringState state) =>
     'commit=${state.commit != null}, '
     'impact=${state.impact != null}, '
     'activation=${state.activation != null}';
+
+String _describeEditorState(CourseEditorState state) =>
+    'activity=${state.activity.name}, '
+    'failure=${_safeFailureKind(state.error)}, '
+    'document=${state.document?.releaseRevision}, '
+    'restored=${state.recoveryRestored}, '
+    'conflict=${state.conflict != null}, '
+    'draft=${state.draft?.releaseRevision}, '
+    'impact=${state.impact != null}, '
+    'activation=${state.activation?.releaseRevision}';
 
 _GuardedRealStackConfiguration _guardedRealStackConfiguration() {
   final api = Uri.tryParse(_apiBaseUrl);
@@ -1084,6 +1323,19 @@ final class _AsyncResult<T> {
 
   final T value;
 }
+
+Future<LocalCourseEditorRecoveryDraft> _waitForEditorRecovery(
+  WidgetTester tester,
+  CourseEditorRecoveryStore store,
+) => _runIo(tester, () async {
+  final deadline = DateTime.now().add(const Duration(seconds: 10));
+  do {
+    final recovery = await store.read();
+    if (recovery != null) return recovery;
+    await Future<void>.delayed(const Duration(milliseconds: 100));
+  } while (DateTime.now().isBefore(deadline));
+  throw StateError('The secure course editor recovery was not persisted.');
+});
 
 Future<void> _expectIoFailure<T extends Object>(
   WidgetTester tester,
@@ -1411,6 +1663,42 @@ Future<void> _acknowledgeConfirmation(
     isTrue,
     reason: '$label must change the explicit confirmation state.',
   );
+}
+
+Future<void> _acknowledgeEditorImpact(
+  WidgetTester tester, {
+  required CourseEditorState Function() readState,
+}) async {
+  final tile = find.byKey(const Key('teacher-editor-impact-confirmation'));
+  final checkbox = find.descendant(of: tile, matching: find.byType(Checkbox));
+  await _pumpUntil(
+    tester,
+    () => !readState().busy || readState().error != null,
+    label: 'editor impact acknowledgement enabled',
+    timeout: const Duration(seconds: 35),
+    diagnostic: () => _describeEditorState(readState()),
+  );
+  expect(
+    readState().error,
+    isNull,
+    reason:
+        'Editor impact acknowledgement failed as '
+        '${_safeFailureKind(readState().error)}',
+  );
+  await _bringTeacherControlIntoView(
+    tester,
+    tile,
+    label: 'editor impact acknowledgement',
+  );
+  await _pumpUntil(
+    tester,
+    () => tester.widget<Checkbox>(checkbox).onChanged != null,
+    label: 'editor impact acknowledgement visible and enabled',
+    diagnostic: () => _describeEditorState(readState()),
+  );
+  await tester.tapAt(tester.getCenter(checkbox));
+  await tester.pump();
+  expect(tester.widget<Checkbox>(checkbox).value, isTrue);
 }
 
 Future<void> _bringTeacherControlIntoView(

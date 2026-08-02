@@ -415,8 +415,14 @@ function Remove-IsolatedImages {
     if ($Project -notmatch $projectPattern) {
         throw "Image cleanup refused an invalid isolated project name."
     }
-    foreach ($image in @("${Project}-api:latest", "${Project}-localstack:4.4.0")) {
-        $expectedImage = $image -eq "${Project}-api:latest" -or $image -eq "${Project}-localstack:4.4.0"
+    foreach ($image in @(
+        "${Project}-api:latest",
+        "${Project}-import-worker:latest",
+        "${Project}-localstack:4.4.0"
+    )) {
+        $expectedImage = $image -eq "${Project}-api:latest" -or
+            $image -eq "${Project}-import-worker:latest" -or
+            $image -eq "${Project}-localstack:4.4.0"
         if (-not $expectedImage) {
             throw "Cleanup refused an invalid isolated image name."
         }
@@ -477,7 +483,10 @@ function Get-StaleIsolatedProjectNames {
         throw "Unable to inspect stale isolated Docker images."
     }
     foreach ($image in $images) {
-        $match = [Regex]::Match($image, '^(kelimio-e2e-[0-9a-f]{12})-(?:api:latest|localstack:4\.4\.0)$')
+        $match = [Regex]::Match(
+            $image,
+            '^(kelimio-e2e-[0-9a-f]{12})-(?:api:latest|import-worker:latest|localstack:4\.4\.0)$'
+        )
         if ($match.Success) {
             [void] $projects.Add($match.Groups[1].Value)
         }
@@ -748,7 +757,7 @@ try {
         -Flutter $flutterCommand.Source `
         -Workbook $workbookPath
 
-    $stage = "real Android registration-to-progress-and-publication test"
+    $stage = "real Android registration-to-progress-authoring-and-publication test"
     Write-Host "Running real Keycloak, Mailpit, backend, import worker, Drift, and Flutter UI acceptance flow..."
     Push-Location $mobilePath
     try {
@@ -845,4 +854,4 @@ if ($failure) {
     throw $failure
 }
 
-Write-Host "Real local Android registration-to-progress acceptance passed."
+Write-Host "Real local Android registration-to-progress-and-authoring acceptance passed."

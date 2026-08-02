@@ -50,6 +50,9 @@ or production enablement. The existing production launch blocker remains open.
 
 - Local acceptance can exercise a human-authored subsequent release without
   sending answer material to the device or permitting a silent overwrite.
+- The guarded Android real-service journey now proves secure-storage recovery
+  after controller-state loss, a competing revision-2 publication, stale-ETag
+  rejection, explicit three-version reapply, and revision-3 publication.
 - Process loss preserves bounded unsaved work, while session changes purge it
   with other user-scoped private state.
 - Expanding beyond the single eligible prompt requires a later contract and
