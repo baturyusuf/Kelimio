@@ -11,7 +11,9 @@ import org.jooq.Record
 import org.springframework.stereotype.Repository
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
+import java.time.Instant
 import java.time.OffsetDateTime
+import java.time.ZoneOffset
 import java.util.Base64
 import java.util.UUID
 import javax.crypto.Mac
@@ -108,6 +110,46 @@ class CourseImportRepository(
 
     fun lockOwned(ownerUserId: UUID, importId: UUID): StoredCourseImport =
         find(ownerUserId, importId, lock = true)
+
+    fun listOwned(
+        ownerUserId: UUID,
+        before: CourseImportListPosition?,
+        limit: Int,
+    ): List<StoredCourseImport> {
+        val base = """
+            select id, owner_user_id, status, state_version, rules_version,
+                   original_file_name, declared_media_type, file_size_bytes,
+                   asserted_source_sha256, quarantine_bucket, quarantine_object_key,
+                   multipart_upload_id, upload_expires_at, accepted_version_id,
+                   accepted_etag, processing_attempts, processing_lease_token,
+                   processing_lease_expires_at, failure_code, created_at, updated_at
+              from course_import
+             where owner_user_id = ?
+        """.trimIndent()
+        val rows = if (before == null) {
+            dsl.fetch(
+                "$base order by created_at desc, id desc limit ?",
+                ownerUserId,
+                limit,
+            )
+        } else {
+            dsl.fetch(
+                """
+                $base
+                   and (created_at < cast(? as timestamptz)
+                        or (created_at = cast(? as timestamptz) and id < ?))
+                 order by created_at desc, id desc
+                 limit ?
+                """.trimIndent(),
+                ownerUserId,
+                before.createdAt,
+                before.createdAt,
+                before.importId,
+                limit,
+            )
+        }
+        return rows.map(::toImport)
+    }
 
     fun expiredUploadingIds(now: OffsetDateTime, limit: Int): List<UUID> = dsl.fetch(
         """
@@ -704,6 +746,50 @@ class CourseImportCursorCodec(settings: ImportRuntimeSettings) {
         return ordinal
     }
 
+    fun encodeList(ownerId: UUID, position: CourseImportListPosition): String {
+        val instant = position.createdAt.toInstant()
+        val seconds = instant.epochSecond
+        val nanos = instant.nano
+        val payload = Base64.getUrlEncoder().withoutPadding().encodeToString(
+            "$seconds:$nanos:${position.importId}".toByteArray(StandardCharsets.US_ASCII),
+        )
+        return "v1.$payload.${sign(listBinding(ownerId, seconds, nanos, position.importId))}"
+    }
+
+    fun decodeList(ownerId: UUID, cursor: String?): CourseImportListPosition? {
+        if (cursor == null) return null
+        val parts = cursor.split('.')
+        val payloadParts = parts.getOrNull(1)?.let { encoded ->
+            runCatching {
+                String(Base64.getUrlDecoder().decode(encoded), StandardCharsets.US_ASCII).split(':')
+            }.getOrNull()
+        }
+        val seconds = payloadParts?.getOrNull(0)?.toLongOrNull()
+        val nanos = payloadParts?.getOrNull(1)?.toIntOrNull()?.takeIf { it in 0..999_999_999 }
+        val importId = payloadParts?.getOrNull(2)?.let { value ->
+            runCatching { UUID.fromString(value) }.getOrNull()
+        }
+        val supplied = parts.getOrNull(2)
+        val expected = if (seconds != null && nanos != null && importId != null) {
+            sign(listBinding(ownerId, seconds, nanos, importId))
+        } else {
+            null
+        }
+        if (parts.size != 3 || payloadParts?.size != 3 || seconds == null || nanos == null ||
+            importId == null || supplied == null || expected == null ||
+            !MessageDigest.isEqual(
+                expected.toByteArray(StandardCharsets.US_ASCII),
+                supplied.toByteArray(StandardCharsets.US_ASCII),
+            )
+        ) {
+            throw NotFoundProblem("Course import was not found.")
+        }
+        return CourseImportListPosition(
+            createdAt = OffsetDateTime.ofInstant(Instant.ofEpochSecond(seconds, nanos.toLong()), ZoneOffset.UTC),
+            importId = importId,
+        )
+    }
+
     private fun binding(
         ownerId: UUID,
         importId: UUID,
@@ -713,6 +799,16 @@ class CourseImportCursorCodec(settings: ImportRuntimeSettings) {
     ): String = listOf("course-import-cursor-v1", scope, ownerId.toString(), importId.toString(), identity, ordinal.toString())
         .joinToString(separator = "") { value -> "${value.toByteArray(StandardCharsets.UTF_8).size}:$value" }
 
+    private fun listBinding(ownerId: UUID, seconds: Long, nanos: Int, importId: UUID): String =
+        listOf(
+            "course-import-cursor-v1",
+            "list",
+            ownerId.toString(),
+            seconds.toString(),
+            nanos.toString(),
+            importId.toString(),
+        ).joinToString(separator = "") { value -> "${value.toByteArray(StandardCharsets.UTF_8).size}:$value" }
+
     private fun sign(payload: String): String = Base64.getUrlEncoder().withoutPadding().encodeToString(
         Mac.getInstance("HmacSHA256").run {
             init(SecretKeySpec(key, "HmacSHA256"))
@@ -720,3 +816,8 @@ class CourseImportCursorCodec(settings: ImportRuntimeSettings) {
         },
     )
 }
+
+data class CourseImportListPosition(
+    val createdAt: OffsetDateTime,
+    val importId: UUID,
+) : RedactedImportModel()

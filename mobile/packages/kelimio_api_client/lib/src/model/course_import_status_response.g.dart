@@ -26,6 +26,7 @@ CourseImportStatusResponse _$CourseImportStatusResponseFromJson(
       'approvalBindingSha256',
       'approvedAt',
       'commit',
+      'activation',
       'failureCode',
     ],
   );
@@ -79,6 +80,12 @@ CourseImportStatusResponse _$CourseImportStatusResponseFromJson(
           ? null
           : CourseImportCommitSummary.fromJson(v as Map<String, dynamic>),
     ),
+    activation: $checkedConvert(
+      'activation',
+      (v) => v == null
+          ? null
+          : CourseImportActivationSummary.fromJson(v as Map<String, dynamic>),
+    ),
     failureCode: $checkedConvert('failureCode', (v) => v as String?),
   );
   return val;
@@ -105,6 +112,7 @@ Map<String, dynamic> _$CourseImportStatusResponseToJson(
   'approvalBindingSha256': instance.approvalBindingSha256,
   'approvedAt': instance.approvedAt?.toIso8601String(),
   'commit': instance.commit?.toJson(),
+  'activation': instance.activation?.toJson(),
   'failureCode': instance.failureCode,
 };
 

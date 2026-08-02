@@ -188,6 +188,51 @@ void main() {
       expect(cause.toString(), isNot(contains('private-course-name')));
     },
   );
+
+  test(
+    'discovers owner imports through the authenticated API contract',
+    () async {
+      final apiAdapter = _QueueAdapter([
+        _ResponseSpec(
+          200,
+          jsonEncode({
+            'items': [
+              _statusJson(128, status: 'COMMITTED')
+                ..['commit'] = {
+                  'courseId': '00000000-0000-4000-8000-000000000200',
+                  'contentChangeSetId': '00000000-0000-4000-8000-000000000250',
+                  'draftReleaseId': '00000000-0000-4000-8000-000000000300',
+                  'sourceRowCount': 23,
+                  'questionCount': 14,
+                  'matchingQuestionCount': 3,
+                  'requiredClientCapabilities': ['question.matching.v1'],
+                  'committedAt': '2026-08-02T09:00:00.000Z',
+                }
+                ..['activation'] = {
+                  'releaseId': '00000000-0000-4000-8000-000000000300',
+                  'operation': 'INITIAL_PUBLICATION',
+                  'activatedAt': '2026-08-02T09:01:00.000Z',
+                  'reprojectionStatus': 'PENDING',
+                },
+            ],
+            'nextCursor': 'opaque-owner-bound-cursor',
+          }),
+        ),
+      ]);
+      final repository = _repository(apiAdapter, _UploadAdapter());
+
+      final page = await repository.listImports();
+
+      expect(page.items, hasLength(1));
+      expect(
+        page.items.single.activation?.releaseId,
+        '00000000-0000-4000-8000-000000000300',
+      );
+      expect(page.nextCursor, 'opaque-owner-bound-cursor');
+      expect(apiAdapter.requests.single.path, '/v1/courses/imports');
+      expect(apiAdapter.requests.single.queryParameters['limit'], 20);
+    },
+  );
 }
 
 GeneratedCourseAuthoringRepository _repository(
@@ -229,6 +274,7 @@ Map<String, Object?> _statusJson(int size, {required String status}) => {
   'approvalBindingSha256': null,
   'approvedAt': null,
   'commit': null,
+  'activation': null,
   'failureCode': null,
 };
 
@@ -246,6 +292,7 @@ final class _QueueAdapter implements HttpClientAdapter {
   final List<_ResponseSpec> _responses;
   final bool failConnection;
   final List<String> sentBodies = [];
+  final List<RequestOptions> requests = [];
 
   @override
   Future<ResponseBody> fetch(
@@ -253,6 +300,7 @@ final class _QueueAdapter implements HttpClientAdapter {
     Stream<Uint8List>? requestStream,
     Future<void>? cancelFuture,
   ) async {
+    requests.add(options);
     if (options.data case final String body) {
       sentBodies.add(body);
     }

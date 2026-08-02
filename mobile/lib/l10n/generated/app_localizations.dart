@@ -100,6 +100,102 @@ abstract class AppLocalizations {
     Locale('tr'),
   ];
 
+  /// No description provided for @findPreviousImports.
+  ///
+  /// In en, this message translates to:
+  /// **'Find previous imports'**
+  String get findPreviousImports;
+
+  /// No description provided for @findingPreviousImports.
+  ///
+  /// In en, this message translates to:
+  /// **'Finding your previous imports'**
+  String get findingPreviousImports;
+
+  /// No description provided for @previousImportsHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous imports'**
+  String get previousImportsHeading;
+
+  /// No description provided for @noPreviousImports.
+  ///
+  /// In en, this message translates to:
+  /// **'No previous imports were found for this account.'**
+  String get noPreviousImports;
+
+  /// No description provided for @resumeImport.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get resumeImport;
+
+  /// No description provided for @loadMoreImports.
+  ///
+  /// In en, this message translates to:
+  /// **'Load more imports'**
+  String get loadMoreImports;
+
+  /// No description provided for @importUploadIncomplete.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload incomplete — select the file again'**
+  String get importUploadIncomplete;
+
+  /// No description provided for @importProcessing.
+  ///
+  /// In en, this message translates to:
+  /// **'Scanning and preparing the preview'**
+  String get importProcessing;
+
+  /// No description provided for @importReadyForReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Ready for review'**
+  String get importReadyForReview;
+
+  /// No description provided for @importValidationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Review the workbook errors'**
+  String get importValidationFailed;
+
+  /// No description provided for @importRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Import rejected safely'**
+  String get importRejected;
+
+  /// No description provided for @importExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload session expired'**
+  String get importExpired;
+
+  /// No description provided for @importApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'Approved — draft creation pending'**
+  String get importApproved;
+
+  /// No description provided for @importReadyToPublish.
+  ///
+  /// In en, this message translates to:
+  /// **'Draft ready — publication pending'**
+  String get importReadyToPublish;
+
+  /// No description provided for @importAlreadyPublished.
+  ///
+  /// In en, this message translates to:
+  /// **'Published'**
+  String get importAlreadyPublished;
+
+  /// No description provided for @workbookUploadIncomplete.
+  ///
+  /// In en, this message translates to:
+  /// **'The app no longer has the selected file after restart. Select the workbook again to start a safe new upload.'**
+  String get workbookUploadIncomplete;
+
   /// No description provided for @appName.
   ///
   /// In en, this message translates to:

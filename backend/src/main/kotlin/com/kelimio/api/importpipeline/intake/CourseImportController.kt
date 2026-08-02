@@ -30,6 +30,16 @@ class CourseImportController(
     private val currentUserService: CurrentUserService,
     private val service: CourseImportService,
 ) {
+    @GetMapping
+    fun list(
+        @AuthenticationPrincipal jwt: Jwt,
+        @RequestParam(required = false) @Size(max = 512) cursor: String?,
+        @RequestParam(defaultValue = "20") @Min(1) @Max(50) limit: Int,
+    ): ResponseEntity<CourseImportStatusPage> = noStore(
+        HttpStatus.OK,
+        service.list(currentUserService.requireCompleted(jwt), cursor, limit),
+    )
+
     @PostMapping
     fun create(
         @AuthenticationPrincipal jwt: Jwt,

@@ -8,7 +8,7 @@ import java.util.UUID
 @Repository
 class CourseReleaseRepository(
     private val dsl: DSLContext,
-) {
+) : CourseReleaseActivationLookup {
     fun course(courseId: UUID, lock: Boolean): CourseReleaseCourseState? {
         val lockClause = if (lock) " for update of course_row" else ""
         return dsl.fetchOne(
@@ -262,6 +262,35 @@ class CourseReleaseRepository(
             coursePublicationStatus = it.get("publication_status", String::class.java)!!,
             reprojectionStatus = it.get("reprojection_status", String::class.java)!!,
             activatedAt = it.get("occurred_at", OffsetDateTime::class.java)!!,
+        )
+    }
+
+    override fun findLatestOwned(
+        ownerUserId: UUID,
+        courseId: UUID,
+        releaseId: UUID,
+    ): CourseReleaseActivationSnapshot? = dsl.fetchOne(
+        """
+        select activation.target_release_id, activation.operation_kind,
+               activation.occurred_at, job.status as reprojection_status
+          from course_release_activation activation
+          join course on course.id = activation.course_id
+          join course_release_reprojection_job job on job.activation_id = activation.id
+         where activation.course_id = ?
+           and activation.target_release_id = ?
+           and course.owner_user_id = ?
+         order by activation.occurred_at desc, activation.id desc
+         limit 1
+        """.trimIndent(),
+        courseId,
+        releaseId,
+        ownerUserId,
+    )?.let {
+        CourseReleaseActivationSnapshot(
+            releaseId = it.get("target_release_id", UUID::class.java)!!,
+            operation = CourseReleaseOperation.valueOf(it.get("operation_kind", String::class.java)!!),
+            activatedAt = it.get("occurred_at", OffsetDateTime::class.java)!!,
+            reprojectionStatus = it.get("reprojection_status", String::class.java)!!,
         )
     }
 }

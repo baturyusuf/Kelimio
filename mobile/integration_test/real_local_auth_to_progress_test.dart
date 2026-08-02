@@ -734,6 +734,84 @@ void main() {
         reason:
             'Real workbook upload failed as ${_safeFailureKind(authoringFailure)}',
       );
+      await _pumpUntil(
+        tester,
+        () {
+          final authoring = container.read(courseAuthoringControllerProvider);
+          return !authoring.busy || authoring.error != null;
+        },
+        label: 'fully loaded workbook review before state loss',
+        timeout: const Duration(seconds: 30),
+        diagnostic: () => _describeAuthoringState(
+          container.read(courseAuthoringControllerProvider),
+        ),
+      );
+      expect(
+        container.read(courseAuthoringControllerProvider).error,
+        isNull,
+        reason: 'Workbook review must finish before state is discarded',
+      );
+      final resumableImportId = container
+          .read(courseAuthoringControllerProvider)
+          .importSummary!
+          .id;
+      container.read(courseAuthoringControllerProvider.notifier).reset();
+      await tester.pumpAndSettle();
+      await _pumpUntil(
+        tester,
+        () => find
+            .byKey(const Key('teacher-discover-imports'))
+            .evaluate()
+            .isNotEmpty,
+        label: 'teacher controller process-state loss',
+      );
+      await _bringTeacherControlIntoView(
+        tester,
+        find.byKey(const Key('teacher-discover-imports')),
+        label: 'owner import discovery control after state loss',
+      );
+      await _tapVisible(
+        tester,
+        find.byKey(const Key('teacher-discover-imports')),
+        label: 'owner import discovery after state loss',
+      );
+      await _pumpUntil(
+        tester,
+        () {
+          final authoring = container.read(courseAuthoringControllerProvider);
+          return authoring.error != null ||
+              find
+                  .byKey(Key('teacher-resume-import-$resumableImportId'))
+                  .evaluate()
+                  .isNotEmpty;
+        },
+        label: 'resumable owner import',
+        timeout: const Duration(seconds: 30),
+      );
+      expect(
+        container.read(courseAuthoringControllerProvider).error,
+        isNull,
+        reason:
+            'Owner import discovery must recover without local workbook data',
+      );
+      await _tapVisible(
+        tester,
+        find.byKey(Key('teacher-resume-import-$resumableImportId')),
+        label: 'resume server-owned import',
+      );
+      await _pumpUntil(
+        tester,
+        () {
+          final authoring = container.read(courseAuthoringControllerProvider);
+          return authoring.error != null ||
+              find
+                  .byKey(const Key('teacher-preview-confirmation'))
+                  .evaluate()
+                  .isNotEmpty;
+        },
+        label: 'review restored after state loss',
+        timeout: const Duration(seconds: 30),
+      );
       await _acknowledgeConfirmation(
         tester,
         'teacher-preview-confirmation',
@@ -816,6 +894,44 @@ void main() {
         tester,
         find.byKey(const Key('teacher-publication-success')),
         label: 'published reviewed workbook confirmation',
+      );
+      container.read(courseAuthoringControllerProvider.notifier).reset();
+      await tester.pumpAndSettle();
+      await _pumpUntil(
+        tester,
+        () => find
+            .byKey(const Key('teacher-discover-imports'))
+            .evaluate()
+            .isNotEmpty,
+        label: 'teacher state loss after publication',
+      );
+      await _bringTeacherControlIntoView(
+        tester,
+        find.byKey(const Key('teacher-discover-imports')),
+        label: 'published import discovery control',
+      );
+      await _tapVisible(
+        tester,
+        find.byKey(const Key('teacher-discover-imports')),
+        label: 'published import rediscovery',
+      );
+      await _pumpUntil(
+        tester,
+        () => find
+            .text(localizations.importAlreadyPublished)
+            .evaluate()
+            .isNotEmpty,
+        label: 'server-confirmed prior publication',
+        timeout: const Duration(seconds: 30),
+      );
+      final publishedResume = tester.widget<TextButton>(
+        find.byKey(Key('teacher-resume-import-$resumableImportId')),
+      );
+      expect(
+        publishedResume.onPressed,
+        isNull,
+        reason:
+            'An activated release must not expose a second publication path',
       );
       await _tapVisible(
         tester,

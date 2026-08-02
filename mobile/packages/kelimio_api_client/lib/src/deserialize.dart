@@ -7,6 +7,7 @@ import 'package:kelimio_api_client/src/model/commit_course_import_request.dart';
 import 'package:kelimio_api_client/src/model/complete_course_import_upload_request.dart';
 import 'package:kelimio_api_client/src/model/completed_course_import_part.dart';
 import 'package:kelimio_api_client/src/model/course_detail.dart';
+import 'package:kelimio_api_client/src/model/course_import_activation_summary.dart';
 import 'package:kelimio_api_client/src/model/course_import_approval_response.dart';
 import 'package:kelimio_api_client/src/model/course_import_commit_response.dart';
 import 'package:kelimio_api_client/src/model/course_import_commit_summary.dart';
@@ -19,6 +20,7 @@ import 'package:kelimio_api_client/src/model/course_import_preview_row.dart';
 import 'package:kelimio_api_client/src/model/course_import_preview_settings.dart';
 import 'package:kelimio_api_client/src/model/course_import_preview_summary.dart';
 import 'package:kelimio_api_client/src/model/course_import_source.dart';
+import 'package:kelimio_api_client/src/model/course_import_status_page.dart';
 import 'package:kelimio_api_client/src/model/course_import_status_response.dart';
 import 'package:kelimio_api_client/src/model/course_import_upload_instructions.dart';
 import 'package:kelimio_api_client/src/model/course_import_upload_session_response.dart';
@@ -95,6 +97,11 @@ ReturnType deserialize<ReturnType, BaseType>(
           as ReturnType;
     case 'CourseDetail':
       return CourseDetail.fromJson(value as Map<String, dynamic>) as ReturnType;
+    case 'CourseImportActivationSummary':
+      return CourseImportActivationSummary.fromJson(
+            value as Map<String, dynamic>,
+          )
+          as ReturnType;
     case 'CourseImportApprovalResponse':
       return CourseImportApprovalResponse.fromJson(
             value as Map<String, dynamic>,
@@ -134,6 +141,9 @@ ReturnType deserialize<ReturnType, BaseType>(
       return CourseImportSource.fromJson(value as Map<String, dynamic>)
           as ReturnType;
     case 'CourseImportStatus':
+    case 'CourseImportStatusPage':
+      return CourseImportStatusPage.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
     case 'CourseImportStatusResponse':
       return CourseImportStatusResponse.fromJson(value as Map<String, dynamic>)
           as ReturnType;

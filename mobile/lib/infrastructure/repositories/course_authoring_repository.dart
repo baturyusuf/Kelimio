@@ -132,6 +132,25 @@ final class GeneratedCourseAuthoringRepository
   });
 
   @override
+  Future<CourseImportPage> listImports({String? cursor, int limit = 20}) =>
+      _guard(() async {
+        final response = await _imports.listCourseImports(
+          cursor: cursor,
+          limit: limit,
+        );
+        final data = response.data;
+        if (data == null) {
+          throw const ProtocolFailure(
+            'Import discovery response body was empty',
+          );
+        }
+        return CourseImportPage(
+          items: data.items.map(_mapSummary).toList(growable: false),
+          nextCursor: data.nextCursor,
+        );
+      });
+
+  @override
   Future<CourseImportPreviewPage> getPreview({
     required String importId,
     String? cursor,
@@ -407,6 +426,7 @@ final class GeneratedCourseAuthoringRepository
     final preview = value.preview;
     final settings = preview?.settings;
     final commit = value.commit;
+    final activation = value.activation;
     return CourseImportSummary(
       id: value.id,
       status: _mapStatus(value.status),
@@ -446,6 +466,14 @@ final class GeneratedCourseAuthoringRepository
               requiredClientCapabilities:
                   commit.requiredClientCapabilities.toList(growable: false)
                     ..sort(),
+            ),
+      activation: activation == null
+          ? null
+          : CourseImportActivationSummary(
+              releaseId: activation.releaseId,
+              operation: _mapOperation(activation.operation),
+              activatedAt: activation.activatedAt,
+              reprojectionStatus: activation.reprojectionStatus.value,
             ),
       failureCode: value.failureCode,
     );

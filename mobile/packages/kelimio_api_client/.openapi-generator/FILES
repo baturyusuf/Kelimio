@@ -14,6 +14,7 @@ doc/CommitCourseImportRequest.md
 doc/CompleteCourseImportUploadRequest.md
 doc/CompletedCourseImportPart.md
 doc/CourseDetail.md
+doc/CourseImportActivationSummary.md
 doc/CourseImportApi.md
 doc/CourseImportApprovalResponse.md
 doc/CourseImportCommitResponse.md
@@ -28,6 +29,7 @@ doc/CourseImportPreviewSettings.md
 doc/CourseImportPreviewSummary.md
 doc/CourseImportSource.md
 doc/CourseImportStatus.md
+doc/CourseImportStatusPage.md
 doc/CourseImportStatusResponse.md
 doc/CourseImportUploadInstructions.md
 doc/CourseImportUploadSessionResponse.md
@@ -84,6 +86,7 @@ lib/src/model/commit_course_import_request.dart
 lib/src/model/complete_course_import_upload_request.dart
 lib/src/model/completed_course_import_part.dart
 lib/src/model/course_detail.dart
+lib/src/model/course_import_activation_summary.dart
 lib/src/model/course_import_approval_response.dart
 lib/src/model/course_import_commit_response.dart
 lib/src/model/course_import_commit_summary.dart
@@ -97,6 +100,7 @@ lib/src/model/course_import_preview_settings.dart
 lib/src/model/course_import_preview_summary.dart
 lib/src/model/course_import_source.dart
 lib/src/model/course_import_status.dart
+lib/src/model/course_import_status_page.dart
 lib/src/model/course_import_status_response.dart
 lib/src/model/course_import_upload_instructions.dart
 lib/src/model/course_import_upload_session_response.dart
@@ -133,6 +137,7 @@ test/commit_course_import_request_test.dart
 test/complete_course_import_upload_request_test.dart
 test/completed_course_import_part_test.dart
 test/course_detail_test.dart
+test/course_import_activation_summary_test.dart
 test/course_import_api_test.dart
 test/course_import_approval_response_test.dart
 test/course_import_commit_response_test.dart
@@ -146,6 +151,7 @@ test/course_import_preview_row_test.dart
 test/course_import_preview_settings_test.dart
 test/course_import_preview_summary_test.dart
 test/course_import_source_test.dart
+test/course_import_status_page_test.dart
 test/course_import_status_response_test.dart
 test/course_import_status_test.dart
 test/course_import_upload_instructions_test.dart

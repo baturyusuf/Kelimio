@@ -20,10 +20,17 @@ final class StubWorkbookPicker implements WorkbookPicker {
 
 final class RecordingCourseAuthoringRepository
     implements CourseAuthoringRepository {
-  RecordingCourseAuthoringRepository({this.failFirstUpload = false});
+  RecordingCourseAuthoringRepository({
+    this.failFirstUpload = false,
+    this.importToGet,
+    this.importsToDiscover = const [],
+  });
 
   final bool failFirstUpload;
+  final CourseImportSummary? importToGet;
+  final List<CourseImportSummary> importsToDiscover;
   int uploadCalls = 0;
+  int listCalls = 0;
   final List<(String, String)> uploadCommands = [];
   final List<String> approvalCommands = [];
   final List<String> commitCommands = [];
@@ -47,7 +54,13 @@ final class RecordingCourseAuthoringRepository
 
   @override
   Future<CourseImportSummary> getImport(String importId) async =>
-      courseImportSummary(CourseImportStatus.previewReady);
+      importToGet ?? courseImportSummary(CourseImportStatus.previewReady);
+
+  @override
+  Future<CourseImportPage> listImports({String? cursor, int limit = 20}) async {
+    listCalls += 1;
+    return CourseImportPage(items: importsToDiscover);
+  }
 
   @override
   Future<CourseImportPreviewPage> getPreview({
@@ -128,28 +141,31 @@ final class RecordingCourseAuthoringRepository
   }
 }
 
-CourseImportSummary courseImportSummary(CourseImportStatus status) =>
-    CourseImportSummary(
-      id: courseImportId,
-      status: status,
-      fileName: 'course.xlsx',
-      fileSizeBytes: 128,
-      preview: const CourseImportPreviewSummary(
-        valid: true,
-        sourceRowCount: 23,
-        questionCount: 14,
-        matchingQuestionCount: 3,
-        warningCount: 0,
-        errorCount: 0,
-        courseName: 'Kelimio test course',
-        targetLanguage: 'tr',
-        supportLanguages: ['en'],
-        requiredClientCapabilities: ['question.matching.v1'],
-      ),
-      approvalBindingSha256: approvalBinding,
-      commit: status == CourseImportStatus.committed ? authoredCommit : null,
-      failureCode: null,
-    );
+CourseImportSummary courseImportSummary(
+  CourseImportStatus status, {
+  CourseImportActivationSummary? activation,
+}) => CourseImportSummary(
+  id: courseImportId,
+  status: status,
+  fileName: 'course.xlsx',
+  fileSizeBytes: 128,
+  preview: const CourseImportPreviewSummary(
+    valid: true,
+    sourceRowCount: 23,
+    questionCount: 14,
+    matchingQuestionCount: 3,
+    warningCount: 0,
+    errorCount: 0,
+    courseName: 'Kelimio test course',
+    targetLanguage: 'tr',
+    supportLanguages: ['en'],
+    requiredClientCapabilities: ['question.matching.v1'],
+  ),
+  approvalBindingSha256: approvalBinding,
+  commit: status == CourseImportStatus.committed ? authoredCommit : null,
+  activation: activation,
+  failureCode: null,
+);
 
 const authoredCommit = CourseImportCommit(
   courseId: authoredCourseId,

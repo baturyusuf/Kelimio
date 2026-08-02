@@ -16,6 +16,7 @@ Method | HTTP request | Description
 [**getCourseImport**](CourseImportApi.md#getcourseimport) | **GET** /v1/courses/imports/{importId} | Return the current owner-scoped import state
 [**listCourseImportPreviewRows**](CourseImportApi.md#listcourseimportpreviewrows) | **GET** /v1/courses/imports/{importId}/preview | Page through the immutable normalized owner preview
 [**listCourseImportValidationIssues**](CourseImportApi.md#listcourseimportvalidationissues) | **GET** /v1/courses/imports/{importId}/issues | Page through the immutable owner-scoped validation report
+[**listCourseImports**](CourseImportApi.md#listcourseimports) | **GET** /v1/courses/imports | Page through the current user&#39;s import sessions
 
 
 # **approveCourseImport**
@@ -325,6 +326,51 @@ Name | Type | Description  | Notes
 ### Return type
 
 [**CourseImportIssuePage**](CourseImportIssuePage.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json, application/problem+json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **listCourseImports**
+> CourseImportStatusPage listCourseImports(cursor, limit)
+
+Page through the current user's import sessions
+
+Returns newest-first owner-scoped import states for process-death discovery. The HMAC-bound cursor contains no workbook content or storage identity. Missing and non-owned imports remain undisclosed.
+
+### Example
+```dart
+import 'package:kelimio_api_client/api.dart';
+
+final api = KelimioApiClient().getCourseImportApi();
+final String cursor = cursor_example; // String | Opaque tamper-evident cursor bound to the authenticated owner, import, immutable preview/report identity, and position. It contains no workbook text or storage coordinates.
+final int limit = 56; // int |
+
+try {
+    final response = api.listCourseImports(cursor, limit);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling CourseImportApi->listCourseImports: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **cursor** | **String**| Opaque tamper-evident cursor bound to the authenticated owner, import, immutable preview/report identity, and position. It contains no workbook text or storage coordinates. | [optional]
+ **limit** | **int**|  | [optional] [default to 20]
+
+### Return type
+
+[**CourseImportStatusPage**](CourseImportStatusPage.md)
 
 ### Authorization
 

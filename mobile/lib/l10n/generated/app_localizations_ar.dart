@@ -9,6 +9,57 @@ class AppLocalizationsAr extends AppLocalizations {
   AppLocalizationsAr([String locale = 'ar']) : super(locale);
 
   @override
+  String get findPreviousImports => 'العثور على عمليات الاستيراد السابقة';
+
+  @override
+  String get findingPreviousImports =>
+      'جارٍ العثور على عمليات الاستيراد السابقة';
+
+  @override
+  String get previousImportsHeading => 'عمليات الاستيراد السابقة';
+
+  @override
+  String get noPreviousImports =>
+      'لم يُعثر على عمليات استيراد سابقة لهذا الحساب.';
+
+  @override
+  String get resumeImport => 'متابعة';
+
+  @override
+  String get loadMoreImports => 'تحميل المزيد من عمليات الاستيراد';
+
+  @override
+  String get importUploadIncomplete => 'لم يكتمل الرفع — اختر الملف مجددًا';
+
+  @override
+  String get importProcessing => 'جارٍ الفحص وإعداد المعاينة';
+
+  @override
+  String get importReadyForReview => 'جاهز للمراجعة';
+
+  @override
+  String get importValidationFailed => 'راجع أخطاء ملف Excel';
+
+  @override
+  String get importRejected => 'رُفض الاستيراد بأمان';
+
+  @override
+  String get importExpired => 'انتهت صلاحية جلسة الرفع';
+
+  @override
+  String get importApproved => 'تمت الموافقة — إنشاء المسودة معلّق';
+
+  @override
+  String get importReadyToPublish => 'المسودة جاهزة — النشر معلّق';
+
+  @override
+  String get importAlreadyPublished => 'منشور';
+
+  @override
+  String get workbookUploadIncomplete =>
+      'لم يعد الملف المحدد موجودًا في التطبيق بعد إعادة التشغيل. اختر ملف Excel مجددًا لبدء رفع جديد وآمن.';
+
+  @override
   String get appName => 'Kelimio';
 
   @override

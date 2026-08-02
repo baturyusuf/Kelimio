@@ -22,6 +22,7 @@ import type {
   CourseImportCommitResponse,
   CourseImportIssuePage,
   CourseImportPreviewPage,
+  CourseImportStatusPage,
   CourseImportStatusResponse,
   CourseImportUploadSessionResponse,
   CreateCourseImportRequest,
@@ -42,6 +43,8 @@ import {
     CourseImportIssuePageToJSON,
     CourseImportPreviewPageFromJSON,
     CourseImportPreviewPageToJSON,
+    CourseImportStatusPageFromJSON,
+    CourseImportStatusPageToJSON,
     CourseImportStatusResponseFromJSON,
     CourseImportStatusResponseToJSON,
     CourseImportUploadSessionResponseFromJSON,
@@ -87,6 +90,11 @@ export interface ListCourseImportPreviewRowsRequest {
 
 export interface ListCourseImportValidationIssuesRequest {
     importId: string;
+    cursor?: string;
+    limit?: number;
+}
+
+export interface ListCourseImportsRequest {
     cursor?: string;
     limit?: number;
 }
@@ -218,6 +226,23 @@ export interface CourseImportApiInterface {
      * Page through the immutable owner-scoped validation report
      */
     listCourseImportValidationIssues(requestParameters: ListCourseImportValidationIssuesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<CourseImportIssuePage>;
+
+    /**
+     * Returns newest-first owner-scoped import states for process-death discovery. The HMAC-bound cursor contains no workbook content or storage identity. Missing and non-owned imports remain undisclosed.
+     * @summary Page through the current user\'s import sessions
+     * @param {string} [cursor] Opaque tamper-evident cursor bound to the authenticated owner, import, immutable preview/report identity, and position. It contains no workbook text or storage coordinates.
+     * @param {number} [limit]
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof CourseImportApiInterface
+     */
+    listCourseImportsRaw(requestParameters: ListCourseImportsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<CourseImportStatusPage>>;
+
+    /**
+     * Returns newest-first owner-scoped import states for process-death discovery. The HMAC-bound cursor contains no workbook content or storage identity. Missing and non-owned imports remain undisclosed.
+     * Page through the current user\'s import sessions
+     */
+    listCourseImports(requestParameters: ListCourseImportsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<CourseImportStatusPage>;
 
 }
 
@@ -640,6 +665,53 @@ export class CourseImportApi extends runtime.BaseAPI implements CourseImportApiI
      */
     async listCourseImportValidationIssues(requestParameters: ListCourseImportValidationIssuesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<CourseImportIssuePage> {
         const response = await this.listCourseImportValidationIssuesRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Returns newest-first owner-scoped import states for process-death discovery. The HMAC-bound cursor contains no workbook content or storage identity. Missing and non-owned imports remain undisclosed.
+     * Page through the current user\'s import sessions
+     */
+    async listCourseImportsRaw(requestParameters: ListCourseImportsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<CourseImportStatusPage>> {
+        const queryParameters: any = {};
+
+        if (requestParameters['cursor'] != null) {
+            queryParameters['cursor'] = requestParameters['cursor'];
+        }
+
+        if (requestParameters['limit'] != null) {
+            queryParameters['limit'] = requestParameters['limit'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("bearerAuth", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/v1/courses/imports`;
+
+        const response = await this.request({
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => CourseImportStatusPageFromJSON(jsonValue));
+    }
+
+    /**
+     * Returns newest-first owner-scoped import states for process-death discovery. The HMAC-bound cursor contains no workbook content or storage identity. Missing and non-owned imports remain undisclosed.
+     * Page through the current user\'s import sessions
+     */
+    async listCourseImports(requestParameters: ListCourseImportsRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<CourseImportStatusPage> {
+        const response = await this.listCourseImportsRaw(requestParameters, initOverrides);
         return await response.value();
     }
 

@@ -329,6 +329,42 @@ paths:
         default:
           $ref: "#/components/responses/Problem"
   /v1/courses/imports:
+    get:
+      operationId: listCourseImports
+      tags: [Course Import]
+      summary: Page through the current user's import sessions
+      description: >-
+        Returns newest-first owner-scoped import states for process-death
+        discovery. The HMAC-bound cursor contains no workbook content or
+        storage identity. Missing and non-owned imports remain undisclosed.
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+      responses:
+        "200":
+          description: One newest-first page of owner import states
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CourseImportStatusPage"
+        "400":
+          $ref: "#/components/responses/Problem"
+        "401":
+          $ref: "#/components/responses/Problem"
+        "404":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
     post:
       operationId: createCourseImport
       x-kelimio-max-request-body-bytes: 8192
@@ -1672,7 +1708,7 @@ components:
       type: object
       additionalProperties: false
       x-kelimio-redacted-to-string: true
-      x-kelimio-redacted-field-names: [originalFileName, preview, approvalBindingSha256]
+      x-kelimio-redacted-field-names: [originalFileName, preview, approvalBindingSha256, activation]
       required:
         - id
         - status
@@ -1688,6 +1724,7 @@ components:
         - approvalBindingSha256
         - approvedAt
         - commit
+        - activation
         - failureCode
       properties:
         id:
@@ -1742,10 +1779,37 @@ components:
           description: >-
             Present only after the approved preview has been committed as an
             unpublished draft. This is not publication or entitlement proof.
+        activation:
+          x-kelimio-sensitive: true
+          oneOf:
+            - $ref: "#/components/schemas/CourseImportActivationSummary"
+            - type: "null"
+          description: >-
+            Present when the committed draft release was already activated by
+            the course-publication authority. This is recovery evidence for
+            the owner UI, not entitlement proof.
         failureCode:
           type: [string, "null"]
           pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$"
           maxLength: 80
+    CourseImportStatusPage:
+      type: object
+      additionalProperties: false
+      x-kelimio-redacted-to-string: true
+      x-kelimio-redacted-field-names: [items, nextCursor]
+      required: [items, nextCursor]
+      properties:
+        items:
+          type: array
+          x-kelimio-sensitive: true
+          maxItems: 50
+          items:
+            $ref: "#/components/schemas/CourseImportStatusResponse"
+        nextCursor:
+          type: [string, "null"]
+          x-kelimio-sensitive: true
+          minLength: 1
+          maxLength: 512
     CourseImportPreviewSummary:
       type: object
       additionalProperties: false
@@ -2218,6 +2282,24 @@ components:
         committedAt:
           type: string
           format: date-time
+    CourseImportActivationSummary:
+      type: object
+      additionalProperties: false
+      x-kelimio-redacted-to-string: true
+      x-kelimio-redacted-field-names: [releaseId]
+      required: [releaseId, operation, activatedAt, reprojectionStatus]
+      properties:
+        releaseId:
+          $ref: "#/components/schemas/Id"
+          x-kelimio-sensitive: true
+        operation:
+          $ref: "#/components/schemas/CourseReleaseOperation"
+        activatedAt:
+          type: string
+          format: date-time
+        reprojectionStatus:
+          type: string
+          enum: [PENDING, FAILED, COMPLETED, DEAD]
     CourseImportCommitResponse:
       type: object
       additionalProperties: false

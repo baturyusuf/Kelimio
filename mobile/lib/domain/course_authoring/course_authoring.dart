@@ -88,6 +88,20 @@ final class CourseImportCommit {
   final List<String> requiredClientCapabilities;
 }
 
+final class CourseImportActivationSummary {
+  const CourseImportActivationSummary({
+    required this.releaseId,
+    required this.operation,
+    required this.activatedAt,
+    required this.reprojectionStatus,
+  });
+
+  final String releaseId;
+  final CourseReleaseOperation operation;
+  final DateTime activatedAt;
+  final String reprojectionStatus;
+}
+
 final class CourseImportSummary {
   const CourseImportSummary({
     required this.id,
@@ -97,6 +111,7 @@ final class CourseImportSummary {
     required this.preview,
     required this.approvalBindingSha256,
     required this.commit,
+    required this.activation,
     required this.failureCode,
   });
 
@@ -107,11 +122,19 @@ final class CourseImportSummary {
   final CourseImportPreviewSummary? preview;
   final String? approvalBindingSha256;
   final CourseImportCommit? commit;
+  final CourseImportActivationSummary? activation;
   final String? failureCode;
 
   bool get processing =>
       status == CourseImportStatus.queued ||
       status == CourseImportStatus.processing;
+}
+
+final class CourseImportPage {
+  const CourseImportPage({required this.items, this.nextCursor});
+
+  final List<CourseImportSummary> items;
+  final String? nextCursor;
 }
 
 final class CourseImportPreviewRow {
@@ -245,6 +268,8 @@ abstract interface class CourseAuthoringRepository {
   });
 
   Future<CourseImportSummary> getImport(String importId);
+
+  Future<CourseImportPage> listImports({String? cursor, int limit = 20});
 
   Future<CourseImportPreviewPage> getPreview({
     required String importId,

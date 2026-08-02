@@ -971,7 +971,8 @@ for (const [schemaName, sensitiveFields] of Object.entries({
   CourseImportPartHeaders: ["sha256"],
   CompleteCourseImportUploadRequest: ["sourceSha256", "parts"],
   CompletedCourseImportPart: ["eTag", "sha256"],
-  CourseImportStatusResponse: ["originalFileName", "preview", "approvalBindingSha256"],
+  CourseImportStatusResponse: ["originalFileName", "preview", "approvalBindingSha256", "activation"],
+  CourseImportStatusPage: ["items", "nextCursor"],
   CourseImportPreviewSummary: ["validationReportSha256", "allocationSha256", "previewSha256", "settings"],
   CourseImportPreviewSettings: ["courseName", "targetLanguageName", "supportLanguageCodes"],
   CourseImportPreviewPage: ["items", "nextCursor"],
@@ -983,6 +984,7 @@ for (const [schemaName, sensitiveFields] of Object.entries({
   ApproveCourseImportRequest: ["approvalBindingSha256"],
   CourseImportApprovalResponse: ["approvalBindingSha256"],
   CommitCourseImportRequest: ["approvalBindingSha256"],
+  CourseImportActivationSummary: ["releaseId"],
 })) {
   const schema = contract.components.schemas[schemaName];
   assert.equal(schema["x-kelimio-redacted-to-string"], true, `${schemaName} must redact toString`);
@@ -1105,6 +1107,7 @@ const validImportStatus = {
   approvalBindingSha256: null,
   approvedAt: null,
   commit: null,
+  activation: null,
   failureCode: null,
 };
 assert.equal(
@@ -1131,6 +1134,27 @@ assert.equal(
   validateCourseImportStatus({ ...validImportStatus, scannerResponse: "stream: OK" }),
   false,
   "status must not expose raw scanner responses",
+);
+
+const validateCourseImportStatusPage = compileSchema("CourseImportStatusPage");
+const validImportStatusPage = { items: [validImportStatus], nextCursor: null };
+assert.equal(
+  validateCourseImportStatusPage(validImportStatusPage),
+  true,
+  `owner import page must satisfy the closed response schema: ${ajv.errorsText(validateCourseImportStatusPage.errors)}`,
+);
+assert.equal(
+  validateCourseImportStatusPage({
+    ...validImportStatusPage,
+    ownerUserId: "00000000-0000-4000-8000-000000000991",
+  }),
+  false,
+  "import discovery must not expose or accept client-asserted ownership",
+);
+assert.equal(
+  validateCourseImportStatusPage({ items: [], nextCursor: "" }),
+  false,
+  "a present import-discovery cursor must not be empty",
 );
 
 const validatePreviewSettings = compileSchema("CourseImportPreviewSettings");
@@ -1326,6 +1350,30 @@ assert.equal(
   }),
   true,
   `committed status must expose only draft identifiers: ${ajv.errorsText(validateCourseImportStatus.errors)}`,
+);
+assert.equal(
+  validateCourseImportStatus({
+    ...validImportStatus,
+    status: "COMMITTED",
+    commit: {
+      courseId: committedImport.courseId,
+      contentChangeSetId: committedImport.contentChangeSetId,
+      draftReleaseId: committedImport.draftReleaseId,
+      sourceRowCount: committedImport.sourceRowCount,
+      questionCount: committedImport.questionCount,
+      matchingQuestionCount: committedImport.matchingQuestionCount,
+      requiredClientCapabilities: committedImport.requiredClientCapabilities,
+      committedAt: committedImport.committedAt,
+    },
+    activation: {
+      releaseId: committedImport.draftReleaseId,
+      operation: "INITIAL_PUBLICATION",
+      activatedAt: "2026-08-02T09:00:00Z",
+      reprojectionStatus: "PENDING",
+    },
+  }),
+  true,
+  `resumed status must expose safe activation evidence: ${ajv.errorsText(validateCourseImportStatus.errors)}`,
 );
 
 console.log("Course, profile, A/B/C/D answer, and draft-only import schemas reject unsafe drift.");

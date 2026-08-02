@@ -9,6 +9,57 @@ class AppLocalizationsTr extends AppLocalizations {
   AppLocalizationsTr([String locale = 'tr']) : super(locale);
 
   @override
+  String get findPreviousImports => 'Önceki aktarımları bul';
+
+  @override
+  String get findingPreviousImports => 'Önceki aktarımlarınız bulunuyor';
+
+  @override
+  String get previousImportsHeading => 'Önceki aktarımlar';
+
+  @override
+  String get noPreviousImports =>
+      'Bu hesap için önceki bir aktarım bulunamadı.';
+
+  @override
+  String get resumeImport => 'Devam et';
+
+  @override
+  String get loadMoreImports => 'Daha fazla aktarım yükle';
+
+  @override
+  String get importUploadIncomplete =>
+      'Yükleme tamamlanmadı — dosyayı yeniden seçin';
+
+  @override
+  String get importProcessing => 'Taranıyor ve önizleme hazırlanıyor';
+
+  @override
+  String get importReadyForReview => 'İncelemeye hazır';
+
+  @override
+  String get importValidationFailed => 'Excel hatalarını inceleyin';
+
+  @override
+  String get importRejected => 'Aktarım güvenli biçimde reddedildi';
+
+  @override
+  String get importExpired => 'Yükleme süresi doldu';
+
+  @override
+  String get importApproved => 'Onaylandı — taslak oluşturulmayı bekliyor';
+
+  @override
+  String get importReadyToPublish => 'Taslak hazır — yayımlanmayı bekliyor';
+
+  @override
+  String get importAlreadyPublished => 'Yayımlandı';
+
+  @override
+  String get workbookUploadIncomplete =>
+      'Yeniden başlatmanın ardından seçilen dosya artık uygulamada değil. Güvenli yeni bir yükleme başlatmak için Excel dosyasını yeniden seçin.';
+
+  @override
   String get appName => 'Kelimio';
 
   @override

@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:kelimio_mobile/application/course_authoring_controller.dart';
 import 'package:kelimio_mobile/application/providers.dart';
 import 'package:kelimio_mobile/core/config/app_config.dart';
+import 'package:kelimio_mobile/domain/course_authoring/course_authoring.dart';
 import 'package:kelimio_mobile/l10n/generated/app_localizations.dart';
 import 'package:kelimio_mobile/presentation/screens/teacher_import_screen.dart';
 
@@ -71,6 +72,34 @@ void main() {
     );
     expect(directionality.textDirection, TextDirection.rtl);
     expect(find.byKey(const Key('teacher-select-workbook')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('previous owner import can be discovered and resumed', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(412, 915));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final resumable = courseImportSummary(CourseImportStatus.previewReady);
+    final repository = RecordingCourseAuthoringRepository(
+      importToGet: resumable,
+      importsToDiscover: [resumable],
+    );
+    await _pumpScreen(tester, repository: repository);
+
+    await tester.tap(find.byKey(const Key('teacher-discover-imports')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(Key('teacher-discovered-import-$courseImportId')),
+      findsOneWidget,
+    );
+    expect(find.text('Ready for review'), findsOneWidget);
+    await tester.tap(find.text('Continue'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Pencere'), findsOneWidget);
+    expect(repository.listCalls, 1);
     expect(tester.takeException(), isNull);
   });
 }

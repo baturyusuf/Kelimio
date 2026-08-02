@@ -114,6 +114,29 @@ class CourseImportPolicyTest {
     }
 
     @Test
+    fun `import discovery cursor is opaque tamper evident and owner bound`() {
+        val codec = CourseImportCursorCodec(settings())
+        val owner = UUID.randomUUID()
+        val position = CourseImportListPosition(
+            createdAt = OffsetDateTime.parse("2026-08-02T08:09:10.123456Z"),
+            importId = UUID.randomUUID(),
+        )
+        val cursor = codec.encodeList(owner, position)
+
+        assertThat(cursor).doesNotContain(owner.toString(), position.importId.toString(), position.createdAt.toString())
+        assertThat(codec.decodeList(owner, cursor)).isEqualTo(position)
+        assertThat(codec.decodeList(owner, null)).isNull()
+
+        val tampered = cursor.dropLast(1) + if (cursor.last() == 'A') "B" else "A"
+        assertThatThrownBy { codec.decodeList(UUID.randomUUID(), cursor) }
+            .isInstanceOf(NotFoundProblem::class.java)
+        assertThatThrownBy { codec.decodeList(owner, tampered) }
+            .isInstanceOf(NotFoundProblem::class.java)
+        assertThatThrownBy { codec.decodeList(owner, "v1.invalid.invalid") }
+            .isInstanceOf(NotFoundProblem::class.java)
+    }
+
+    @Test
     fun `required nullable response members remain present and models redact content`() {
         val mapper = JsonMapper.builder()
             .addModule(KotlinModule.Builder().build())
@@ -142,6 +165,7 @@ class CourseImportPolicyTest {
         val json = mapper.readTree(mapper.writeValueAsBytes(status))
         assertThat(json.has("approvalBindingSha256")).isTrue()
         assertThat(json.has("approvedAt")).isTrue()
+        assertThat(json.has("activation")).isTrue()
         assertThat(json.has("failureCode")).isTrue()
         assertThat(json["preview"].has("allocationSha256")).isTrue()
         assertThat(json["preview"].has("previewSha256")).isTrue()
@@ -150,6 +174,9 @@ class CourseImportPolicyTest {
         val sessionJson = mapper.readTree(mapper.writeValueAsBytes(CourseImportUploadSessionResponse(false, status, null)))
         assertThat(sessionJson.has("upload")).isTrue()
         assertThat(sessionJson["upload"].isNull).isTrue()
+        val pageJson = mapper.readTree(mapper.writeValueAsBytes(CourseImportStatusPage(listOf(status), null)))
+        assertThat(pageJson.has("nextCursor")).isTrue()
+        assertThat(pageJson["nextCursor"].isNull).isTrue()
 
         val source = CourseImportSource(0, "Sheet", 1, null, null)
         val rowJson = mapper.readTree(

@@ -9,6 +9,57 @@ class AppLocalizationsEn extends AppLocalizations {
   AppLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
+  String get findPreviousImports => 'Find previous imports';
+
+  @override
+  String get findingPreviousImports => 'Finding your previous imports';
+
+  @override
+  String get previousImportsHeading => 'Previous imports';
+
+  @override
+  String get noPreviousImports =>
+      'No previous imports were found for this account.';
+
+  @override
+  String get resumeImport => 'Continue';
+
+  @override
+  String get loadMoreImports => 'Load more imports';
+
+  @override
+  String get importUploadIncomplete =>
+      'Upload incomplete — select the file again';
+
+  @override
+  String get importProcessing => 'Scanning and preparing the preview';
+
+  @override
+  String get importReadyForReview => 'Ready for review';
+
+  @override
+  String get importValidationFailed => 'Review the workbook errors';
+
+  @override
+  String get importRejected => 'Import rejected safely';
+
+  @override
+  String get importExpired => 'Upload session expired';
+
+  @override
+  String get importApproved => 'Approved — draft creation pending';
+
+  @override
+  String get importReadyToPublish => 'Draft ready — publication pending';
+
+  @override
+  String get importAlreadyPublished => 'Published';
+
+  @override
+  String get workbookUploadIncomplete =>
+      'The app no longer has the selected file after restart. Select the workbook again to start a safe new upload.';
+
+  @override
   String get appName => 'Kelimio';
 
   @override

@@ -27,6 +27,7 @@ export 'package:kelimio_api_client/src/model/commit_course_import_request.dart';
 export 'package:kelimio_api_client/src/model/complete_course_import_upload_request.dart';
 export 'package:kelimio_api_client/src/model/completed_course_import_part.dart';
 export 'package:kelimio_api_client/src/model/course_detail.dart';
+export 'package:kelimio_api_client/src/model/course_import_activation_summary.dart';
 export 'package:kelimio_api_client/src/model/course_import_approval_response.dart';
 export 'package:kelimio_api_client/src/model/course_import_commit_response.dart';
 export 'package:kelimio_api_client/src/model/course_import_commit_summary.dart';
@@ -40,6 +41,7 @@ export 'package:kelimio_api_client/src/model/course_import_preview_settings.dart
 export 'package:kelimio_api_client/src/model/course_import_preview_summary.dart';
 export 'package:kelimio_api_client/src/model/course_import_source.dart';
 export 'package:kelimio_api_client/src/model/course_import_status.dart';
+export 'package:kelimio_api_client/src/model/course_import_status_page.dart';
 export 'package:kelimio_api_client/src/model/course_import_status_response.dart';
 export 'package:kelimio_api_client/src/model/course_import_upload_instructions.dart';
 export 'package:kelimio_api_client/src/model/course_import_upload_session_response.dart';

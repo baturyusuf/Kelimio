@@ -90,6 +90,79 @@ void main() {
       ]);
     },
   );
+
+  test(
+    'discovers and resumes a review after controller state is lost',
+    () async {
+      final resumable = courseImportSummary(CourseImportStatus.previewReady);
+      final repository = RecordingCourseAuthoringRepository(
+        importToGet: resumable,
+        importsToDiscover: [resumable],
+      );
+      final container = ProviderContainer(
+        overrides: [
+          appConfigProvider.overrideWithValue(_config),
+          workbookPickerProvider.overrideWithValue(const StubWorkbookPicker()),
+          courseAuthoringRepositoryProvider.overrideWithValue(repository),
+          courseAuthoringPollDelayProvider.overrideWithValue(Duration.zero),
+        ],
+      );
+      addTearDown(container.dispose);
+      final controller = container.read(
+        courseAuthoringControllerProvider.notifier,
+      );
+
+      await controller.discoverImports();
+      var state = container.read(courseAuthoringControllerProvider);
+      expect(repository.listCalls, 1);
+      expect(state.discoveredImports, [resumable]);
+
+      await controller.resumeImport(resumable);
+      state = container.read(courseAuthoringControllerProvider);
+      expect(state.importSummary?.id, courseImportId);
+      expect(state.previewRows, hasLength(1));
+      expect(state.activity, CourseAuthoringActivity.idle);
+    },
+  );
+
+  test(
+    'discovered publication evidence prevents a second activation',
+    () async {
+      final published = courseImportSummary(
+        CourseImportStatus.committed,
+        activation: CourseImportActivationSummary(
+          releaseId: draftReleaseId,
+          operation: CourseReleaseOperation.initialPublication,
+          activatedAt: DateTime.utc(2026, 8, 2, 9),
+          reprojectionStatus: 'PENDING',
+        ),
+      );
+      final repository = RecordingCourseAuthoringRepository(
+        importToGet: published,
+        importsToDiscover: [published],
+      );
+      final container = ProviderContainer(
+        overrides: [
+          appConfigProvider.overrideWithValue(_config),
+          workbookPickerProvider.overrideWithValue(const StubWorkbookPicker()),
+          courseAuthoringRepositoryProvider.overrideWithValue(repository),
+        ],
+      );
+      addTearDown(container.dispose);
+      final controller = container.read(
+        courseAuthoringControllerProvider.notifier,
+      );
+
+      await controller.discoverImports();
+      await controller.resumeImport(published);
+      final state = container.read(courseAuthoringControllerProvider);
+
+      expect(state.importSummary?.activation, isNotNull);
+      expect(state.impact, isNull);
+      expect(state.activation, isNull);
+      expect(repository.activationCommands, isEmpty);
+    },
+  );
 }
 
 final _config = AppConfig(

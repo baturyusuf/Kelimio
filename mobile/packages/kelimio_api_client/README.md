@@ -76,6 +76,7 @@ Class | Method | HTTP request | Description
 [*CourseImportApi*](doc/CourseImportApi.md) | [**getCourseImport**](doc/CourseImportApi.md#getcourseimport) | **GET** /v1/courses/imports/{importId} | Return the current owner-scoped import state
 [*CourseImportApi*](doc/CourseImportApi.md) | [**listCourseImportPreviewRows**](doc/CourseImportApi.md#listcourseimportpreviewrows) | **GET** /v1/courses/imports/{importId}/preview | Page through the immutable normalized owner preview
 [*CourseImportApi*](doc/CourseImportApi.md) | [**listCourseImportValidationIssues**](doc/CourseImportApi.md#listcourseimportvalidationissues) | **GET** /v1/courses/imports/{importId}/issues | Page through the immutable owner-scoped validation report
+[*CourseImportApi*](doc/CourseImportApi.md) | [**listCourseImports**](doc/CourseImportApi.md#listcourseimports) | **GET** /v1/courses/imports | Page through the current user&#39;s import sessions
 [*CourseReleaseApi*](doc/CourseReleaseApi.md) | [**activateCourseRelease**](doc/CourseReleaseApi.md#activatecourserelease) | **POST** /v1/courses/{courseId}/releases/{releaseId}/activate | Publish or roll back to an exact reviewed immutable release
 [*CourseReleaseApi*](doc/CourseReleaseApi.md) | [**getCourseReleaseImpact**](doc/CourseReleaseApi.md#getcoursereleaseimpact) | **GET** /v1/courses/{courseId}/releases/{releaseId}/impact | Review the exact owner-scoped impact of activating an immutable release
 [*DevelopmentApi*](doc/DevelopmentApi.md) | [**installLocalStarterCourse**](doc/DevelopmentApi.md#installlocalstartercourse) | **POST** /v1/development/starter-course | Install the authenticated owner&#39;s local starter course idempotently
@@ -102,6 +103,7 @@ Class | Method | HTTP request | Description
  - [CompleteCourseImportUploadRequest](doc/CompleteCourseImportUploadRequest.md)
  - [CompletedCourseImportPart](doc/CompletedCourseImportPart.md)
  - [CourseDetail](doc/CourseDetail.md)
+ - [CourseImportActivationSummary](doc/CourseImportActivationSummary.md)
  - [CourseImportApprovalResponse](doc/CourseImportApprovalResponse.md)
  - [CourseImportCommitResponse](doc/CourseImportCommitResponse.md)
  - [CourseImportCommitSummary](doc/CourseImportCommitSummary.md)
@@ -115,6 +117,7 @@ Class | Method | HTTP request | Description
  - [CourseImportPreviewSummary](doc/CourseImportPreviewSummary.md)
  - [CourseImportSource](doc/CourseImportSource.md)
  - [CourseImportStatus](doc/CourseImportStatus.md)
+ - [CourseImportStatusPage](doc/CourseImportStatusPage.md)
  - [CourseImportStatusResponse](doc/CourseImportStatusResponse.md)
  - [CourseImportUploadInstructions](doc/CourseImportUploadInstructions.md)
  - [CourseImportUploadSessionResponse](doc/CourseImportUploadSessionResponse.md)

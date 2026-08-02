@@ -23,6 +23,7 @@ src/models/CommitCourseImportRequest.ts
 src/models/CompleteCourseImportUploadRequest.ts
 src/models/CompletedCourseImportPart.ts
 src/models/CourseDetail.ts
+src/models/CourseImportActivationSummary.ts
 src/models/CourseImportApprovalResponse.ts
 src/models/CourseImportCommitResponse.ts
 src/models/CourseImportCommitSummary.ts
@@ -36,6 +37,7 @@ src/models/CourseImportPreviewSettings.ts
 src/models/CourseImportPreviewSummary.ts
 src/models/CourseImportSource.ts
 src/models/CourseImportStatus.ts
+src/models/CourseImportStatusPage.ts
 src/models/CourseImportStatusResponse.ts
 src/models/CourseImportUploadInstructions.ts
 src/models/CourseImportUploadSessionResponse.ts

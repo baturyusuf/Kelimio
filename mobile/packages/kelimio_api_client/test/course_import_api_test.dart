@@ -64,5 +64,14 @@ void main() {
     test('test listCourseImportValidationIssues', () async {
       // TODO
     });
+
+    // Page through the current user's import sessions
+    //
+    // Returns newest-first owner-scoped import states for process-death discovery. The HMAC-bound cursor contains no workbook content or storage identity. Missing and non-owned imports remain undisclosed.
+    //
+    //Future<CourseImportStatusPage> listCourseImports({ String cursor, int limit }) async
+    test('test listCourseImports', () async {
+      // TODO
+    });
   });
 }

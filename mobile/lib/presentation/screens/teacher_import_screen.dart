@@ -38,7 +38,7 @@ final class TeacherImportScreen extends ConsumerWidget {
             _ActivityCard(state: state),
             const SizedBox(height: 12),
           ],
-          if (state.importSummary == null && state.activation == null)
+          if (state.importSummary == null && state.activation == null) ...[
             FilledButton.icon(
               key: const Key('teacher-select-workbook'),
               onPressed: state.busy
@@ -47,6 +47,49 @@ final class TeacherImportScreen extends ConsumerWidget {
               icon: const Icon(Icons.upload_file),
               label: Text(context.l10n.selectWorkbook),
             ),
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              key: const Key('teacher-discover-imports'),
+              onPressed: state.busy
+                  ? null
+                  : () => unawaited(controller.discoverImports()),
+              icon: const Icon(Icons.history),
+              label: Text(context.l10n.findPreviousImports),
+            ),
+            if (state.discoveryLoaded) ...[
+              const SizedBox(height: 16),
+              Text(
+                context.l10n.previousImportsHeading,
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 8),
+              if (state.discoveredImports.isEmpty)
+                _MessageCard(
+                  icon: Icons.inbox_outlined,
+                  message: context.l10n.noPreviousImports,
+                )
+              else
+                ...state.discoveredImports.map(
+                  (item) => Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: _DiscoveredImportCard(
+                      summary: item,
+                      busy: state.busy,
+                      onResume: () => unawaited(controller.resumeImport(item)),
+                    ),
+                  ),
+                ),
+              if (state.discoveryNextCursor != null)
+                OutlinedButton.icon(
+                  key: const Key('teacher-imports-load-more'),
+                  onPressed: state.busy
+                      ? null
+                      : () => unawaited(controller.loadMoreDiscoveredImports()),
+                  icon: const Icon(Icons.expand_more),
+                  label: Text(context.l10n.loadMoreImports),
+                ),
+            ],
+          ],
           if (state.importSummary case final summary?) ...[
             _ImportHeader(summary: summary),
             const SizedBox(height: 12),
@@ -62,9 +105,16 @@ final class TeacherImportScreen extends ConsumerWidget {
                 message: context.l10n.workbookExpired,
               ),
               const SizedBox(height: 12),
+            ] else if (summary.status == CourseImportStatus.uploading) ...[
+              _MessageCard(
+                icon: Icons.upload_file_outlined,
+                message: context.l10n.workbookUploadIncomplete,
+              ),
+              const SizedBox(height: 12),
             ],
             if (_rejected(summary.status) ||
-                summary.status == CourseImportStatus.expired) ...[
+                summary.status == CourseImportStatus.expired ||
+                summary.status == CourseImportStatus.uploading) ...[
               OutlinedButton.icon(
                 key: const Key('teacher-rejected-new-import'),
                 onPressed: state.busy ? null : controller.reset,
@@ -137,7 +187,8 @@ final class TeacherImportScreen extends ConsumerWidget {
               onRefresh: () => unawaited(controller.reloadImpact()),
             ),
           ],
-          if (state.activation != null) ...[
+          if (state.activation != null ||
+              state.importSummary?.activation != null) ...[
             const SizedBox(height: 12),
             _MessageCard(
               key: const Key('teacher-publication-success'),
@@ -171,6 +222,8 @@ final class _ActivityCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final label = switch (state.activity) {
+      CourseAuthoringActivity.discovering =>
+        context.l10n.findingPreviousImports,
       CourseAuthoringActivity.preparing => context.l10n.preparingWorkbook,
       CourseAuthoringActivity.uploading => context.l10n.uploadingWorkbook,
       CourseAuthoringActivity.processing => context.l10n.processingWorkbook,
@@ -201,6 +254,58 @@ final class _ActivityCard extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+final class _DiscoveredImportCard extends StatelessWidget {
+  const _DiscoveredImportCard({
+    required this.summary,
+    required this.busy,
+    required this.onResume,
+  });
+
+  final CourseImportSummary summary;
+  final bool busy;
+  final VoidCallback onResume;
+
+  bool get resumable =>
+      summary.status != CourseImportStatus.uploading &&
+      summary.status != CourseImportStatus.expired &&
+      summary.activation == null;
+
+  @override
+  Widget build(BuildContext context) => Card(
+    key: Key('teacher-discovered-import-${summary.id}'),
+    child: ListTile(
+      leading: Icon(summary.activation == null ? Icons.history : Icons.check),
+      title: Text(summary.preview?.courseName ?? summary.fileName),
+      subtitle: Text(_statusLabel(context, summary)),
+      trailing: TextButton(
+        key: Key('teacher-resume-import-${summary.id}'),
+        onPressed: busy || !resumable ? null : onResume,
+        child: Text(context.l10n.resumeImport),
+      ),
+    ),
+  );
+
+  static String _statusLabel(
+    BuildContext context,
+    CourseImportSummary summary,
+  ) {
+    if (summary.activation != null) return context.l10n.importAlreadyPublished;
+    return switch (summary.status) {
+      CourseImportStatus.uploading => context.l10n.importUploadIncomplete,
+      CourseImportStatus.queued ||
+      CourseImportStatus.processing => context.l10n.importProcessing,
+      CourseImportStatus.previewReady => context.l10n.importReadyForReview,
+      CourseImportStatus.validationFailed =>
+        context.l10n.importValidationFailed,
+      CourseImportStatus.malwareRejected ||
+      CourseImportStatus.processingFailed => context.l10n.importRejected,
+      CourseImportStatus.expired => context.l10n.importExpired,
+      CourseImportStatus.approved => context.l10n.importApproved,
+      CourseImportStatus.committed => context.l10n.importReadyToPublish,
+    };
   }
 }
 

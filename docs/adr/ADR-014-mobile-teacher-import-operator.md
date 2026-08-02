@@ -64,9 +64,9 @@ of creating a second import, draft, or activation.
 - Command IDs remain in volatile controller state across uncertain responses.
   Workbook content and preview rows are not written to Drift or secure storage,
   and logout invalidates the complete authoring controller.
-- Process-death import discovery is intentionally not claimed: the API currently
-  has no owner import-list/resume operation. Production authoring remains
-  blocked until that recovery and the applicable authorization, consent, and
+- ADR-015 extends this volatile flow with explicit owner-scoped, no-store import
+  discovery and process-state resumption. Production authoring remains blocked
+  until the applicable authorization, consent, editor-conflict, staging, and
   operational controls exist.
 
 ### Presentation
@@ -88,7 +88,6 @@ of creating a second import, draft, or activation.
 - The guarded Android acceptance journey drives a real reviewed workbook through
   upload, private scanning, preview, all three confirmations, draft creation,
   impact review, and initial publication on a fresh Flyway V12 stack.
-- In-memory-only recovery is sufficient for the current local milestone but is
-  not sufficient for production authoring. Later editing, ETag conflict/diff
-  handling, unsaved-change recovery, role/eligibility policy, and staging proof
-  remain open Phase 3 work.
+- ADR-015 now proves server-backed recovery after controller/process-state loss.
+  Later editing, ETag conflict/diff handling, unsaved-change recovery,
+  role/eligibility policy, and staging proof remain open Phase 3 work.

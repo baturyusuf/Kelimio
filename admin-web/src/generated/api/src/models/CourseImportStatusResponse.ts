@@ -13,6 +13,13 @@
  */
 
 import { mapValues } from '../runtime';
+import type { CourseImportActivationSummary } from './CourseImportActivationSummary';
+import {
+    CourseImportActivationSummaryFromJSON,
+    CourseImportActivationSummaryFromJSONTyped,
+    CourseImportActivationSummaryToJSON,
+    CourseImportActivationSummaryToJSONTyped,
+} from './CourseImportActivationSummary';
 import type { CourseImportPreviewSummary } from './CourseImportPreviewSummary';
 import {
     CourseImportPreviewSummaryFromJSON,
@@ -127,6 +134,12 @@ export interface CourseImportStatusResponse {
     commit: CourseImportCommitSummary | null;
     /**
      *
+     * @type {CourseImportActivationSummary}
+     * @memberof CourseImportStatusResponse
+     */
+    activation: CourseImportActivationSummary | null;
+    /**
+     *
      * @type {string}
      * @memberof CourseImportStatusResponse
      */
@@ -170,6 +183,7 @@ export function instanceOfCourseImportStatusResponse(value: object): value is Co
     if (!('approvalBindingSha256' in value) || value['approvalBindingSha256'] === undefined) return false;
     if (!('approvedAt' in value) || value['approvedAt'] === undefined) return false;
     if (!('commit' in value) || value['commit'] === undefined) return false;
+    if (!('activation' in value) || value['activation'] === undefined) return false;
     if (!('failureCode' in value) || value['failureCode'] === undefined) return false;
     return true;
 }
@@ -198,6 +212,7 @@ export function CourseImportStatusResponseFromJSONTyped(json: any, ignoreDiscrim
         'approvalBindingSha256': json['approvalBindingSha256'],
         'approvedAt': (json['approvedAt'] == null ? null : new Date(json['approvedAt'])),
         'commit': CourseImportCommitSummaryFromJSON(json['commit']),
+        'activation': CourseImportActivationSummaryFromJSON(json['activation']),
         'failureCode': json['failureCode'],
     };
 }
@@ -227,6 +242,7 @@ export function CourseImportStatusResponseToJSONTyped(value?: CourseImportStatus
         'approvalBindingSha256': value['approvalBindingSha256'],
         'approvedAt': value['approvedAt'] == null ? null : ((value['approvedAt'] as any).toISOString()),
         'commit': CourseImportCommitSummaryToJSON(value['commit']),
+        'activation': CourseImportActivationSummaryToJSON(value['activation']),
         'failureCode': value['failureCode'],
     };
 }

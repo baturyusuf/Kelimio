@@ -5,6 +5,7 @@
 // ignore_for_file: unused_element
 import 'package:kelimio_api_client/src/model/course_import_commit_summary.dart';
 import 'package:kelimio_api_client/src/model/course_import_status.dart';
+import 'package:kelimio_api_client/src/model/course_import_activation_summary.dart';
 import 'package:kelimio_api_client/src/model/course_import_preview_summary.dart';
 import 'package:json_annotation/json_annotation.dart';
 
@@ -46,6 +47,8 @@ class CourseImportStatusResponse {
     required this.approvedAt,
 
     required this.commit,
+
+    required this.activation,
 
     required this.failureCode,
   });
@@ -96,6 +99,9 @@ class CourseImportStatusResponse {
   @JsonKey(name: r'commit', required: true, includeIfNull: true)
   final CourseImportCommitSummary? commit;
 
+  @JsonKey(name: r'activation', required: true, includeIfNull: true)
+  final CourseImportActivationSummary? activation;
+
   @JsonKey(name: r'failureCode', required: true, includeIfNull: true)
   final String? failureCode;
 
@@ -117,6 +123,7 @@ class CourseImportStatusResponse {
           other.approvalBindingSha256 == approvalBindingSha256 &&
           other.approvedAt == approvedAt &&
           other.commit == commit &&
+          other.activation == activation &&
           other.failureCode == failureCode;
 
   @override
@@ -135,6 +142,7 @@ class CourseImportStatusResponse {
       (approvalBindingSha256 == null ? 0 : approvalBindingSha256.hashCode) +
       (approvedAt == null ? 0 : approvedAt.hashCode) +
       (commit == null ? 0 : commit.hashCode) +
+      (activation == null ? 0 : activation.hashCode) +
       (failureCode == null ? 0 : failureCode.hashCode);
 
   factory CourseImportStatusResponse.fromJson(Map<String, dynamic> json) =>
@@ -153,6 +161,9 @@ class CourseImportStatusResponse {
     }
     if (json.containsKey(r'approvalBindingSha256')) {
       json[r'approvalBindingSha256'] = '[REDACTED]';
+    }
+    if (json.containsKey(r'activation')) {
+      json[r'activation'] = '[REDACTED]';
     }
     return json.toString();
   }

@@ -78,6 +78,11 @@ void main() {
       // TODO
     });
 
+    // CourseImportActivationSummary activation
+    test('to test the property `activation`', () async {
+      // TODO
+    });
+
     // String failureCode
     test('to test the property `failureCode`', () async {
       // TODO

@@ -12,6 +12,7 @@ import com.kelimio.api.courseauthoring.InitialCompositionKind
 import com.kelimio.api.courseauthoring.InitialProjectedQuestionType
 import com.kelimio.api.courseauthoring.InitialRecordType
 import com.kelimio.api.courseauthoring.InitialTestMode
+import com.kelimio.api.coursepublication.CourseReleaseActivationLookup
 import com.kelimio.api.idempotency.IdempotencyService
 import com.kelimio.api.identityprofile.AppUser
 import com.kelimio.api.outbox.RecordedOutboxEvent
@@ -60,6 +61,7 @@ class CourseImportService(
     private val correlationIdProvider: CorrelationIdProvider,
     private val outbox: TransactionalOutbox,
     private val initialCourseDraftCreator: InitialCourseDraftCreator,
+    private val releaseActivationLookup: CourseReleaseActivationLookup,
     private val clock: Clock,
 ) {
     @Transactional
@@ -218,6 +220,18 @@ class CourseImportService(
     @Transactional(readOnly = true)
     fun status(user: AppUser, importId: UUID): CourseImportStatusResponse =
         toStatus(repository.findOwned(user.id, importId))
+
+    @Transactional(readOnly = true)
+    fun list(user: AppUser, cursor: String?, limit: Int): CourseImportStatusPage {
+        val position = cursorCodec.decodeList(user.id, cursor)
+        val imports = repository.listOwned(user.id, position, limit + 1)
+        val visible = imports.take(limit)
+        val nextCursor = imports.getOrNull(limit)?.let {
+            val last = visible.last()
+            cursorCodec.encodeList(user.id, CourseImportListPosition(last.createdAt, last.id))
+        }
+        return CourseImportStatusPage(visible.map(::toStatus), nextCursor)
+    }
 
     @Transactional(readOnly = true)
     fun preview(user: AppUser, importId: UUID, cursor: String?, limit: Int): CourseImportPreviewPage {
@@ -608,6 +622,13 @@ class CourseImportService(
         val preview = repository.preview(current.id)
         val approval = repository.approval(current.id)
         val commit = repository.commit(current.id)
+        val activation = commit?.let {
+            releaseActivationLookup.findLatestOwned(
+                ownerUserId = current.ownerUserId,
+                courseId = it.courseId,
+                releaseId = it.draftReleaseId,
+            )
+        }
         return CourseImportStatusResponse(
             id = current.id,
             status = current.status,
@@ -623,6 +644,14 @@ class CourseImportService(
             approvalBindingSha256 = preview?.approvalBindingSha256,
             approvedAt = approval?.approvedAt,
             commit = commit?.toSummary(),
+            activation = activation?.let {
+                CourseImportActivationSummary(
+                    releaseId = it.releaseId,
+                    operation = it.operation,
+                    activatedAt = it.activatedAt,
+                    reprojectionStatus = it.reprojectionStatus,
+                )
+            },
             failureCode = current.failureCode,
         )
     }

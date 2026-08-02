@@ -2,6 +2,7 @@ package com.kelimio.api.importpipeline.intake
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.JsonInclude
+import com.kelimio.api.coursepublication.CourseReleaseOperation
 import com.kelimio.api.web.UnprocessableProblem
 import java.time.OffsetDateTime
 import java.text.Normalizer
@@ -84,7 +85,20 @@ data class CourseImportStatusResponse(
     @get:JsonInclude(JsonInclude.Include.ALWAYS) val approvalBindingSha256: String?,
     @get:JsonInclude(JsonInclude.Include.ALWAYS) val approvedAt: OffsetDateTime?,
     @get:JsonInclude(JsonInclude.Include.ALWAYS) val commit: CourseImportCommitSummary? = null,
+    @get:JsonInclude(JsonInclude.Include.ALWAYS) val activation: CourseImportActivationSummary? = null,
     @get:JsonInclude(JsonInclude.Include.ALWAYS) val failureCode: String? = null,
+) : RedactedImportModel()
+
+data class CourseImportStatusPage(
+    val items: List<CourseImportStatusResponse>,
+    @get:JsonInclude(JsonInclude.Include.ALWAYS) val nextCursor: String?,
+) : RedactedImportModel()
+
+data class CourseImportActivationSummary(
+    val releaseId: UUID,
+    val operation: CourseReleaseOperation,
+    val activatedAt: OffsetDateTime,
+    val reprojectionStatus: String,
 ) : RedactedImportModel()
 
 enum class CourseImportStatus {

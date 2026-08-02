@@ -127,6 +127,7 @@ void main() {
           'approvalBindingSha256': approvalSha,
           'approvedAt': null,
           'commit': null,
+          'activation': null,
           'failureCode': null,
         };
         final part = {'partNumber': 1, 'sizeBytes': 1, 'sha256': partSha};

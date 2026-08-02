@@ -17,6 +17,7 @@ final courseAuthoringControllerProvider =
 
 enum CourseAuthoringActivity {
   idle,
+  discovering,
   preparing,
   uploading,
   processing,
@@ -34,6 +35,9 @@ final class CourseAuthoringState {
     this.activity = CourseAuthoringActivity.idle,
     this.uploadProgress = 0,
     this.importSummary,
+    this.discoveredImports = const [],
+    this.discoveryNextCursor,
+    this.discoveryLoaded = false,
     this.previewRows = const [],
     this.previewNextCursor,
     this.issues = const [],
@@ -50,6 +54,9 @@ final class CourseAuthoringState {
   final CourseAuthoringActivity activity;
   final double uploadProgress;
   final CourseImportSummary? importSummary;
+  final List<CourseImportSummary> discoveredImports;
+  final String? discoveryNextCursor;
+  final bool discoveryLoaded;
   final List<CourseImportPreviewRow> previewRows;
   final String? previewNextCursor;
   final List<CourseImportIssue> issues;
@@ -68,6 +75,9 @@ final class CourseAuthoringState {
     CourseAuthoringActivity? activity,
     double? uploadProgress,
     Object? importSummary = _unset,
+    List<CourseImportSummary>? discoveredImports,
+    Object? discoveryNextCursor = _unset,
+    bool? discoveryLoaded,
     List<CourseImportPreviewRow>? previewRows,
     Object? previewNextCursor = _unset,
     List<CourseImportIssue>? issues,
@@ -85,6 +95,11 @@ final class CourseAuthoringState {
     importSummary: importSummary == _unset
         ? this.importSummary
         : importSummary as CourseImportSummary?,
+    discoveredImports: discoveredImports ?? this.discoveredImports,
+    discoveryNextCursor: discoveryNextCursor == _unset
+        ? this.discoveryNextCursor
+        : discoveryNextCursor as String?,
+    discoveryLoaded: discoveryLoaded ?? this.discoveryLoaded,
     previewRows: previewRows ?? this.previewRows,
     previewNextCursor: previewNextCursor == _unset
         ? this.previewNextCursor
@@ -112,6 +127,7 @@ final class CourseAuthoringController extends Notifier<CourseAuthoringState> {
   String? _approvalCommandId;
   String? _commitCommandId;
   String? _activationCommandId;
+  bool _retryDiscovery = false;
 
   @override
   CourseAuthoringState build() => const CourseAuthoringState();
@@ -119,6 +135,7 @@ final class CourseAuthoringController extends Notifier<CourseAuthoringState> {
   Future<void> selectAndUpload() async {
     _requireLocalTools();
     if (state.busy) return;
+    _retryDiscovery = false;
     SelectedWorkbook? selected;
     try {
       selected = await ref.read(workbookPickerProvider).pickWorkbook();
@@ -139,9 +156,110 @@ final class CourseAuthoringController extends Notifier<CourseAuthoringState> {
     await _uploadSelected();
   }
 
+  Future<void> discoverImports() async {
+    _requireLocalTools();
+    if (state.busy || state.importSummary != null) return;
+    _retryDiscovery = true;
+    state = state.copyWith(
+      activity: CourseAuthoringActivity.discovering,
+      discoveredImports: const [],
+      discoveryNextCursor: null,
+      discoveryLoaded: false,
+      error: null,
+    );
+    try {
+      final page = await ref
+          .read(courseAuthoringRepositoryProvider)
+          .listImports();
+      state = state.copyWith(
+        activity: CourseAuthoringActivity.idle,
+        discoveredImports: List.unmodifiable(page.items),
+        discoveryNextCursor: page.nextCursor,
+        discoveryLoaded: true,
+      );
+    } on Object catch (error) {
+      _fail(error);
+    }
+  }
+
+  Future<void> loadMoreDiscoveredImports() async {
+    final cursor = state.discoveryNextCursor;
+    if (state.busy || state.importSummary != null || cursor == null) return;
+    _retryDiscovery = true;
+    state = state.copyWith(
+      activity: CourseAuthoringActivity.discovering,
+      error: null,
+    );
+    try {
+      final page = await ref
+          .read(courseAuthoringRepositoryProvider)
+          .listImports(cursor: cursor);
+      state = state.copyWith(
+        activity: CourseAuthoringActivity.idle,
+        discoveredImports: List.unmodifiable([
+          ...state.discoveredImports,
+          ...page.items,
+        ]),
+        discoveryNextCursor: page.nextCursor,
+        discoveryLoaded: true,
+      );
+    } on Object catch (error) {
+      _fail(error);
+    }
+  }
+
+  Future<void> resumeImport(CourseImportSummary discovered) async {
+    _requireLocalTools();
+    if (state.busy) return;
+    _retryDiscovery = false;
+    _selectedWorkbook = null;
+    _createCommandId = null;
+    _completeCommandId = null;
+    _approvalCommandId = null;
+    _commitCommandId = null;
+    _activationCommandId = null;
+    state = CourseAuthoringState(
+      activity: CourseAuthoringActivity.loadingPreview,
+      importSummary: discovered,
+      commit: discovered.commit,
+    );
+    try {
+      final current = await ref
+          .read(courseAuthoringRepositoryProvider)
+          .getImport(discovered.id);
+      if (current.status == CourseImportStatus.uploading ||
+          current.status == CourseImportStatus.expired ||
+          current.activation != null) {
+        state = CourseAuthoringState(
+          importSummary: current,
+          commit: current.commit,
+        );
+        return;
+      }
+      state = state.copyWith(
+        activity: current.processing
+            ? CourseAuthoringActivity.processing
+            : CourseAuthoringActivity.loadingPreview,
+        importSummary: current,
+        commit: current.commit,
+      );
+      if (current.processing) {
+        await _pollUntilReviewable(current);
+      } else {
+        await _loadReviewData(current);
+      }
+    } on Object catch (error) {
+      _fail(error);
+    }
+  }
+
   Future<void> retry() async {
     _requireLocalTools();
     if (state.busy) return;
+    if (_retryDiscovery && state.importSummary == null) {
+      await discoverImports();
+      return;
+    }
     if (_selectedWorkbook != null &&
         _createCommandId != null &&
         _completeCommandId != null &&
@@ -162,7 +280,10 @@ final class CourseAuthoringController extends Notifier<CourseAuthoringState> {
       await _pollUntilReviewable(summary);
       return;
     }
-    if (state.commit != null && state.impact == null) {
+    if (state.commit != null &&
+        summary?.activation == null &&
+        state.activation == null &&
+        state.impact == null) {
       await reloadImpact();
       return;
     }
@@ -320,7 +441,12 @@ final class CourseAuthoringController extends Notifier<CourseAuthoringState> {
 
   Future<void> reloadImpact() async {
     final committed = state.commit;
-    if (committed == null || state.busy) return;
+    if (committed == null ||
+        state.busy ||
+        state.importSummary?.activation != null ||
+        state.activation != null) {
+      return;
+    }
     state = state.copyWith(
       activity: CourseAuthoringActivity.loadingImpact,
       error: null,
@@ -388,6 +514,7 @@ final class CourseAuthoringController extends Notifier<CourseAuthoringState> {
     _approvalCommandId = null;
     _commitCommandId = null;
     _activationCommandId = null;
+    _retryDiscovery = false;
     state = const CourseAuthoringState();
   }
 
@@ -461,20 +588,25 @@ final class CourseAuthoringController extends Notifier<CourseAuthoringState> {
       state = state.copyWith(
         activity: CourseAuthoringActivity.idle,
         importSummary: summary,
+        commit: summary.commit,
         previewRows: preview.items,
         previewNextCursor: preview.nextCursor,
         issues: issues.items,
         issueNextCursor: issues.nextCursor,
       );
+      if (summary.status == CourseImportStatus.committed &&
+          summary.activation == null &&
+          summary.commit != null) {
+        await reloadImpact();
+      }
       return;
     }
-    if (summary.status == CourseImportStatus.validationFailed ||
-        summary.status == CourseImportStatus.processingFailed ||
-        summary.status == CourseImportStatus.malwareRejected) {
+    if (summary.status == CourseImportStatus.validationFailed) {
       final issues = await repository.getIssues(importId: summary.id);
       state = state.copyWith(
         activity: CourseAuthoringActivity.idle,
         importSummary: summary,
+        commit: summary.commit,
         issues: issues.items,
         issueNextCursor: issues.nextCursor,
       );
@@ -483,6 +615,7 @@ final class CourseAuthoringController extends Notifier<CourseAuthoringState> {
     state = state.copyWith(
       activity: CourseAuthoringActivity.idle,
       importSummary: summary,
+      commit: summary.commit,
     );
   }
 
