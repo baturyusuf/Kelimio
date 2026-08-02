@@ -31,7 +31,7 @@ class WorkbookImportOrchestrator {
     ): WorkbookImportPreview {
         checkpoint()
         val issues = CappedWorkbookIssueList(MAX_COLLECTED_ISSUES, checkpoint)
-        if (workbook.rulesVersion != SUPPORTED_RULES_VERSION) {
+        if (workbook.rulesVersion !in SUPPORTED_RULES_VERSIONS) {
             issues.error(
                 WorkbookImportIssueCode.INVALID_SETTING_VALUE,
                 source = null,
@@ -98,8 +98,19 @@ class WorkbookImportOrchestrator {
                 checkpoint = checkpoint,
             ).also { testPlan ->
                 issues += testPlan.issues.map { it.toWorkbookIssue() }
-                validatePlannedTestSemantics(testPlan.tests, issues, checkpoint)
+                validatePlannedTestSemantics(workbook.rulesVersion, testPlan.tests, issues, checkpoint)
             }
+        }
+
+        val composition = if (
+            settings != null && plan?.isValid == true &&
+            issues.none { it.severity == WorkbookImportIssueSeverity.ERROR }
+        ) {
+            WorkbookQuestionComposer.compose(workbook.rulesVersion, settings, rows, plan.tests, checkpoint).also {
+                issues += it.issues
+            }.composition
+        } else {
+            null
         }
 
         return WorkbookImportPreview(
@@ -107,6 +118,7 @@ class WorkbookImportOrchestrator {
             settings = settings,
             rows = rows,
             plan = plan,
+            composition = composition,
             issues = issues,
             checkpoint = checkpoint,
         )
@@ -935,6 +947,7 @@ class WorkbookImportOrchestrator {
     }
 
     private fun validatePlannedTestSemantics(
+        rulesVersion: String,
         tests: List<PlannedTest>,
         issues: MutableList<WorkbookImportIssue>,
         checkpoint: () -> Unit,
@@ -942,7 +955,7 @@ class WorkbookImportOrchestrator {
         tests.forEach { test ->
             checkpoint()
             val mode = test.resolvedMode ?: return@forEach
-            if (mode == ResolvedTestMode.MATCHING) {
+            if (mode == ResolvedTestMode.MATCHING && rulesVersion == XLSX_V1) {
                 val source = test.rows.first().row.source
                 issues.error(
                     WorkbookImportIssueCode.UNSUPPORTED_TEST_MODE,
@@ -956,7 +969,7 @@ class WorkbookImportOrchestrator {
                 ResolvedTestMode.WORD -> WorkbookRecordType.WORD
                 ResolvedTestMode.MULTIPLE_CHOICE_CLOZE -> WorkbookRecordType.MULTIPLE_CHOICE_CLOZE
                 ResolvedTestMode.TYPED_CLOZE -> WorkbookRecordType.TYPED_CLOZE
-                ResolvedTestMode.MATCHING -> error("Handled above")
+                ResolvedTestMode.MATCHING -> WorkbookRecordType.WORD
             }
             if (requiredRecordType != null) {
                 test.rows.firstOrNull { planned ->
@@ -1238,7 +1251,9 @@ class WorkbookImportOrchestrator {
         const val MAX_CONTENT_TEXT_CODE_POINTS = 2_000
         const val MAX_QUESTION_PROMPT_CODE_POINTS = 1_000
         const val MAX_ANSWER_CODE_POINTS = 500
-        const val SUPPORTED_RULES_VERSION = "xlsx-v1"
+        const val XLSX_V1 = "xlsx-v1"
+        const val XLSX_V2 = "xlsx-v2"
+        val SUPPORTED_RULES_VERSIONS = setOf(XLSX_V1, XLSX_V2)
         const val SETTINGS_SHEET_NAME = "BILGI_AYARLAR"
         const val HEADER_ROW = 1
         const val SETTINGS_HEADER_ROW = 5

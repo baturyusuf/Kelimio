@@ -13,6 +13,10 @@ CourseImportPreviewRow _$CourseImportPreviewRowFromJson(
     json,
     requiredKeys: const [
       'ordinal',
+      'questionOrdinal',
+      'projectedQuestionType',
+      'compositionKind',
+      'groupPosition',
       'source',
       'level',
       'unit',
@@ -35,6 +39,28 @@ CourseImportPreviewRow _$CourseImportPreviewRowFromJson(
   );
   final val = CourseImportPreviewRow(
     ordinal: $checkedConvert('ordinal', (v) => (v as num).toInt()),
+    questionOrdinal: $checkedConvert(
+      'questionOrdinal',
+      (v) => (v as num?)?.toInt(),
+    ),
+    projectedQuestionType: $checkedConvert(
+      'projectedQuestionType',
+      (v) => $enumDecodeNullable(
+        _$CourseImportPreviewRowProjectedQuestionTypeEnumEnumMap,
+        v,
+      ),
+    ),
+    compositionKind: $checkedConvert(
+      'compositionKind',
+      (v) => $enumDecodeNullable(
+        _$CourseImportPreviewRowCompositionKindEnumEnumMap,
+        v,
+      ),
+    ),
+    groupPosition: $checkedConvert(
+      'groupPosition',
+      (v) => (v as num?)?.toInt(),
+    ),
     source_: $checkedConvert(
       'source',
       (v) => CourseImportSource.fromJson(v as Map<String, dynamic>),
@@ -86,6 +112,14 @@ Map<String, dynamic> _$CourseImportPreviewRowToJson(
   CourseImportPreviewRow instance,
 ) => <String, dynamic>{
   'ordinal': instance.ordinal,
+  'questionOrdinal': instance.questionOrdinal,
+  'projectedQuestionType':
+      _$CourseImportPreviewRowProjectedQuestionTypeEnumEnumMap[instance
+          .projectedQuestionType],
+  'compositionKind':
+      _$CourseImportPreviewRowCompositionKindEnumEnumMap[instance
+          .compositionKind],
+  'groupPosition': instance.groupPosition,
   'source': instance.source_.toJson(),
   'level': instance.level,
   'unit': instance.unit,
@@ -110,6 +144,18 @@ Map<String, dynamic> _$CourseImportPreviewRowToJson(
   'matchingGroup': instance.matchingGroup,
   'hidden': instance.hidden,
   'note': instance.note,
+};
+
+const _$CourseImportPreviewRowProjectedQuestionTypeEnumEnumMap = {
+  CourseImportPreviewRowProjectedQuestionTypeEnum.A: 'A',
+  CourseImportPreviewRowProjectedQuestionTypeEnum.B: 'B',
+  CourseImportPreviewRowProjectedQuestionTypeEnum.C: 'C',
+  CourseImportPreviewRowProjectedQuestionTypeEnum.D: 'D',
+};
+
+const _$CourseImportPreviewRowCompositionKindEnumEnumMap = {
+  CourseImportPreviewRowCompositionKindEnum.ROW: 'ROW',
+  CourseImportPreviewRowCompositionKindEnum.MATCHING_GROUP: 'MATCHING_GROUP',
 };
 
 const _$CourseImportPreviewRowAllocationKindEnumEnumMap = {

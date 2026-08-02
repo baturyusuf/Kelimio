@@ -113,6 +113,9 @@ data class CourseImportPreviewSummary(
     @get:JsonInclude(JsonInclude.Include.ALWAYS) val allocationSha256: String?,
     @get:JsonInclude(JsonInclude.Include.ALWAYS) val previewSha256: String?,
     @get:JsonInclude(JsonInclude.Include.ALWAYS) val settings: CourseImportPreviewSettings? = null,
+    @get:JsonInclude(JsonInclude.Include.ALWAYS) val questionCount: Int? = null,
+    @get:JsonInclude(JsonInclude.Include.ALWAYS) val matchingQuestionCount: Int? = null,
+    @get:JsonInclude(JsonInclude.Include.ALWAYS) val requiredClientCapabilities: List<String>? = null,
 ) : RedactedImportModel()
 
 data class CourseImportPreviewSettings(
@@ -157,6 +160,10 @@ data class CourseImportPreviewRow(
     @get:JsonInclude(JsonInclude.Include.ALWAYS) val matchingGroup: String?,
     val hidden: Boolean,
     @get:JsonInclude(JsonInclude.Include.ALWAYS) val note: String?,
+    @get:JsonInclude(JsonInclude.Include.ALWAYS) val questionOrdinal: Int? = null,
+    @get:JsonInclude(JsonInclude.Include.ALWAYS) val projectedQuestionType: String? = null,
+    @get:JsonInclude(JsonInclude.Include.ALWAYS) val compositionKind: String? = null,
+    @get:JsonInclude(JsonInclude.Include.ALWAYS) val groupPosition: Int? = null,
 ) : RedactedImportModel()
 
 data class CourseImportSource(
@@ -192,6 +199,10 @@ data class CourseImportCommitSummary(
     val courseId: UUID,
     val contentChangeSetId: UUID,
     val draftReleaseId: UUID,
+    val sourceRowCount: Int,
+    val questionCount: Int,
+    val matchingQuestionCount: Int,
+    val requiredClientCapabilities: List<String>,
     val committedAt: OffsetDateTime,
 ) : RedactedImportModel()
 
@@ -201,13 +212,17 @@ data class CourseImportCommitResponse(
     val courseId: UUID,
     val contentChangeSetId: UUID,
     val draftReleaseId: UUID,
+    val sourceRowCount: Int,
+    val questionCount: Int,
+    val matchingQuestionCount: Int,
+    val requiredClientCapabilities: List<String>,
     val committedAt: OffsetDateTime,
     val created: Boolean,
 ) : RedactedImportModel()
 
 object CourseImportRequestPolicy {
     const val XLSX_MEDIA_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    const val RULES_VERSION = "xlsx-v1"
+    const val RULES_VERSION = "xlsx-v2"
     const val MAX_FILE_BYTES = 25L * 1024L * 1024L
     const val PART_BYTES = 5L * 1024L * 1024L
     const val MAX_PARTS = 5
@@ -334,6 +349,10 @@ data class StoredCourseImportCommit(
     val courseId: UUID,
     val contentChangeSetId: UUID,
     val draftReleaseId: UUID,
+    val sourceRowCount: Int,
+    val questionCount: Int,
+    val matchingQuestionCount: Int,
+    val requiredClientCapabilities: List<String>,
     val committedAt: OffsetDateTime,
 ) : RedactedImportModel()
 

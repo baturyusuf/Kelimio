@@ -50,9 +50,10 @@ import 'package:kelimio_api_client/kelimio_api_client.dart';
 
 final api = KelimioApiClient().getCatalogApi();
 final String courseId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final String xKelimioClientCapabilities = xKelimioClientCapabilities_example; // String | Comma-separated bounded capability tokens implemented by the client. Missing means the empty set; this is a compatibility signal, not authorization.
 
 try {
-    final response = await api.getCourse(courseId);
+    final response = await api.getCourse(courseId, xKelimioClientCapabilities);
     print(response);
 } catch on DioException (e) {
     print("Exception when calling CatalogApi->getCourse: $e\n");

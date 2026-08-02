@@ -44,6 +44,24 @@ export interface CourseImportPreviewSummary {
      * @type {number}
      * @memberof CourseImportPreviewSummary
      */
+    questionCount: number | null;
+    /**
+     *
+     * @type {number}
+     * @memberof CourseImportPreviewSummary
+     */
+    matchingQuestionCount: number | null;
+    /**
+     *
+     * @type {Set<string>}
+     * @memberof CourseImportPreviewSummary
+     */
+    requiredClientCapabilities: Set<string> | null;
+    /**
+     *
+     * @type {number}
+     * @memberof CourseImportPreviewSummary
+     */
     levelCount: number;
     /**
      *
@@ -107,6 +125,9 @@ export interface CourseImportPreviewSummary {
 export function instanceOfCourseImportPreviewSummary(value: object): value is CourseImportPreviewSummary {
     if (!('isValid' in value) || value['isValid'] === undefined) return false;
     if (!('rowCount' in value) || value['rowCount'] === undefined) return false;
+    if (!('questionCount' in value) || value['questionCount'] === undefined) return false;
+    if (!('matchingQuestionCount' in value) || value['matchingQuestionCount'] === undefined) return false;
+    if (!('requiredClientCapabilities' in value) || value['requiredClientCapabilities'] === undefined) return false;
     if (!('levelCount' in value) || value['levelCount'] === undefined) return false;
     if (!('unitCount' in value) || value['unitCount'] === undefined) return false;
     if (!('topicCount' in value) || value['topicCount'] === undefined) return false;
@@ -132,6 +153,9 @@ export function CourseImportPreviewSummaryFromJSONTyped(json: any, ignoreDiscrim
 
         'isValid': json['isValid'],
         'rowCount': json['rowCount'],
+        'questionCount': json['questionCount'],
+        'matchingQuestionCount': json['matchingQuestionCount'],
+        'requiredClientCapabilities': json['requiredClientCapabilities'] == null ? null : new Set(json['requiredClientCapabilities']),
         'levelCount': json['levelCount'],
         'unitCount': json['unitCount'],
         'topicCount': json['topicCount'],
@@ -158,6 +182,9 @@ export function CourseImportPreviewSummaryToJSONTyped(value?: CourseImportPrevie
 
         'isValid': value['isValid'],
         'rowCount': value['rowCount'],
+        'questionCount': value['questionCount'],
+        'matchingQuestionCount': value['matchingQuestionCount'],
+        'requiredClientCapabilities': value['requiredClientCapabilities'] == null ? null : Array.from(value['requiredClientCapabilities'] as Set<any>),
         'levelCount': value['levelCount'],
         'unitCount': value['unitCount'],
         'topicCount': value['topicCount'],

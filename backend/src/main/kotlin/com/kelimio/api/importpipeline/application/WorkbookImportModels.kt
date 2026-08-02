@@ -124,6 +124,11 @@ enum class WorkbookImportIssueCode {
     DUPLICATE_ANSWER_OPTION,
     INCOMPATIBLE_TEST_MODE,
     UNSUPPORTED_TEST_MODE,
+    MATCHING_GROUP_REQUIRED,
+    MATCHING_GROUP_CROSSES_TEST,
+    INVALID_MATCHING_GROUP_SIZE,
+    INVALID_MATCHING_LABEL,
+    DUPLICATE_MATCHING_LABEL,
     UNSUPPORTED_HIDDEN_CONTENT,
     PLANNING_DUPLICATE_SOURCE_ROW,
     PLANNING_MANUAL_TEST_EXCEEDS_TARGET,
@@ -143,6 +148,7 @@ class WorkbookImportPreview internal constructor(
     val settings: CourseImportSettings?,
     rows: Collection<NormalizedWorkbookRow>,
     val plan: TestPlan?,
+    val composition: WorkbookQuestionComposition?,
     issues: Collection<WorkbookImportIssue>,
     checkpoint: () -> Unit = {},
 ) {
@@ -151,6 +157,7 @@ class WorkbookImportPreview internal constructor(
     val isValid: Boolean =
         settings != null &&
             plan?.isValid == true &&
+            composition != null &&
             this.issues.none { it.severity == WorkbookImportIssueSeverity.ERROR }
 
     val allocationSha256: String? = if (isValid) checkNotNull(plan).allocationSha256(checkpoint) else null

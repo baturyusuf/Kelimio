@@ -23,6 +23,26 @@ void main() {
       // TODO
     });
 
+    // int sourceRowCount
+    test('to test the property `sourceRowCount`', () async {
+      // TODO
+    });
+
+    // int questionCount
+    test('to test the property `questionCount`', () async {
+      // TODO
+    });
+
+    // int matchingQuestionCount
+    test('to test the property `matchingQuestionCount`', () async {
+      // TODO
+    });
+
+    // Set<String> requiredClientCapabilities
+    test('to test the property `requiredClientCapabilities`', () async {
+      // TODO
+    });
+
     // DateTime committedAt
     test('to test the property `committedAt`', () async {
       // TODO

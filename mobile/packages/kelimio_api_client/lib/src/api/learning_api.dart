@@ -27,6 +27,7 @@ class LearningApi {
   /// Parameters:
   /// * [attemptId]
   /// * [idempotencyKey] - Stable UUID generated once for the logical command.
+  /// * [xKelimioClientCapabilities] - Comma-separated bounded capability tokens implemented by the client. Missing means the empty set; this is a compatibility signal, not authorization.
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -39,6 +40,7 @@ class LearningApi {
   Future<Response<FinishAttemptResponse>> finishAttempt({
     required String attemptId,
     required String idempotencyKey,
+    String? xKelimioClientCapabilities,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -56,6 +58,8 @@ class LearningApi {
       method: r'POST',
       headers: <String, dynamic>{
         r'Idempotency-Key': idempotencyKey,
+        if (xKelimioClientCapabilities != null)
+          r'X-Kelimio-Client-Capabilities': xKelimioClientCapabilities,
         ...?headers,
       },
       extra: <String, dynamic>{
@@ -196,6 +200,7 @@ class LearningApi {
   /// Parameters:
   /// * [attemptId]
   /// * [submissionId]
+  /// * [xKelimioClientCapabilities] - Comma-separated bounded capability tokens implemented by the client. Missing means the empty set; this is a compatibility signal, not authorization.
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -208,6 +213,7 @@ class LearningApi {
   Future<Response<AnswerRecordedResponse>> getRecordedAnswer({
     required String attemptId,
     required String submissionId,
+    String? xKelimioClientCapabilities,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -230,7 +236,11 @@ class LearningApi {
         );
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{...?headers},
+      headers: <String, dynamic>{
+        if (xKelimioClientCapabilities != null)
+          r'X-Kelimio-Client-Capabilities': xKelimioClientCapabilities,
+        ...?headers,
+      },
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
           {'type': 'http', 'scheme': 'bearer', 'name': 'bearerAuth'},
@@ -287,6 +297,7 @@ class LearningApi {
   /// Parameters:
   /// * [testId]
   /// * [idempotencyKey] - Stable UUID generated once for the logical command.
+  /// * [xKelimioClientCapabilities] - Comma-separated bounded capability tokens implemented by the client. Missing means the empty set; this is a compatibility signal, not authorization.
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -299,6 +310,7 @@ class LearningApi {
   Future<Response<AttemptResponse>> startAttempt({
     required String testId,
     required String idempotencyKey,
+    String? xKelimioClientCapabilities,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -316,6 +328,8 @@ class LearningApi {
       method: r'POST',
       headers: <String, dynamic>{
         r'Idempotency-Key': idempotencyKey,
+        if (xKelimioClientCapabilities != null)
+          r'X-Kelimio-Client-Capabilities': xKelimioClientCapabilities,
         ...?headers,
       },
       extra: <String, dynamic>{
@@ -375,6 +389,7 @@ class LearningApi {
   /// * [attemptId]
   /// * [idempotencyKey] - Stable UUID generated once for the logical command.
   /// * [submitAnswerRequest]
+  /// * [xKelimioClientCapabilities] - Comma-separated bounded capability tokens implemented by the client. Missing means the empty set; this is a compatibility signal, not authorization.
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -388,6 +403,7 @@ class LearningApi {
     required String attemptId,
     required String idempotencyKey,
     SubmitAnswerRequest? submitAnswerRequest,
+    String? xKelimioClientCapabilities,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -405,6 +421,8 @@ class LearningApi {
       method: r'POST',
       headers: <String, dynamic>{
         r'Idempotency-Key': idempotencyKey,
+        if (xKelimioClientCapabilities != null)
+          r'X-Kelimio-Client-Capabilities': xKelimioClientCapabilities,
         ...?headers,
       },
       extra: <String, dynamic>{

@@ -1,5 +1,6 @@
 package com.kelimio.api.catalog
 
+import com.kelimio.api.clientcapability.ClientCapabilityPolicy
 import com.kelimio.api.identityprofile.CurrentUserService
 import jakarta.validation.Valid
 import jakarta.validation.constraints.Max
@@ -37,25 +38,33 @@ class CatalogController(
         targetLanguage: String?,
         @RequestParam(required = false) @Pattern(regexp = CANONICAL_LANGUAGE_TAG_PATTERN)
         supportLanguage: String?,
+        @RequestHeader(ClientCapabilityPolicy.HEADER_NAME, required = false) capabilities: String?,
     ): CoursePageResponse = catalogService.list(
         currentUserService.requireCompleted(jwt),
         cursor,
         targetLanguage,
         supportLanguage,
         limit,
+        ClientCapabilityPolicy.parse(capabilities),
     ).toResponse()
 
     @GetMapping("/courses/{courseId}")
     fun courseDetails(
         @AuthenticationPrincipal jwt: Jwt,
         @PathVariable courseId: UUID,
-    ): CourseDetailResponse = catalogService.details(currentUserService.requireCompleted(jwt), courseId).toResponse()
+        @RequestHeader(ClientCapabilityPolicy.HEADER_NAME, required = false) capabilities: String?,
+    ): CourseDetailResponse = catalogService.details(
+        currentUserService.requireCompleted(jwt),
+        courseId,
+        ClientCapabilityPolicy.parse(capabilities),
+    ).toResponse()
 
     @PostMapping("/courses/{courseId}/enrollments")
     fun enroll(
         @AuthenticationPrincipal jwt: Jwt,
         @PathVariable courseId: UUID,
         @RequestHeader("Idempotency-Key") idempotencyKey: UUID,
+        @RequestHeader(ClientCapabilityPolicy.HEADER_NAME, required = false) capabilities: String?,
         @Valid @RequestBody request: EnrollmentRequest,
     ): ResponseEntity<EnrollmentResponse> {
         val result = catalogService.enroll(
@@ -63,6 +72,7 @@ class CatalogController(
             courseId = courseId,
             supportLanguage = request.supportLanguage,
             idempotencyKey = idempotencyKey,
+            clientCapabilities = ClientCapabilityPolicy.parse(capabilities),
         )
         val status = if (result.created) HttpStatus.CREATED else HttpStatus.OK
         return ResponseEntity.status(status).body(

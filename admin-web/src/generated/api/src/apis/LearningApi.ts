@@ -40,6 +40,7 @@ import {
 export interface FinishAttemptRequest {
     attemptId: string;
     idempotencyKey: string;
+    xKelimioClientCapabilities?: string;
 }
 
 export interface GetCourseProgressRequest {
@@ -49,17 +50,20 @@ export interface GetCourseProgressRequest {
 export interface GetRecordedAnswerRequest {
     attemptId: string;
     submissionId: string;
+    xKelimioClientCapabilities?: string;
 }
 
 export interface StartAttemptRequest {
     testId: string;
     idempotencyKey: string;
+    xKelimioClientCapabilities?: string;
 }
 
 export interface SubmitAnswerOperationRequest {
     attemptId: string;
     idempotencyKey: string;
     submitAnswerRequest: SubmitAnswerRequest | null;
+    xKelimioClientCapabilities?: string;
 }
 
 /**
@@ -74,6 +78,7 @@ export interface LearningApiInterface {
      * @summary Finish an attempt after all planned questions are answered
      * @param {string} attemptId
      * @param {string} idempotencyKey Stable UUID generated once for the logical command.
+     * @param {string} [xKelimioClientCapabilities] Comma-separated bounded capability tokens implemented by the client. Missing means the empty set; this is a compatibility signal, not authorization.
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof LearningApiInterface
@@ -106,6 +111,7 @@ export interface LearningApiInterface {
      * @summary Reconcile one previously committed answer owned by the current user
      * @param {string} attemptId
      * @param {string} submissionId
+     * @param {string} [xKelimioClientCapabilities] Comma-separated bounded capability tokens implemented by the client. Missing means the empty set; this is a compatibility signal, not authorization.
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof LearningApiInterface
@@ -123,6 +129,7 @@ export interface LearningApiInterface {
      * @summary Start an online attempt for the current test revision
      * @param {string} testId
      * @param {string} idempotencyKey Stable UUID generated once for the logical command.
+     * @param {string} [xKelimioClientCapabilities] Comma-separated bounded capability tokens implemented by the client. Missing means the empty set; this is a compatibility signal, not authorization.
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof LearningApiInterface
@@ -140,6 +147,7 @@ export interface LearningApiInterface {
      * @param {string} attemptId
      * @param {string} idempotencyKey Stable UUID generated once for the logical command.
      * @param {SubmitAnswerRequest} submitAnswerRequest
+     * @param {string} [xKelimioClientCapabilities] Comma-separated bounded capability tokens implemented by the client. Missing means the empty set; this is a compatibility signal, not authorization.
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof LearningApiInterface
@@ -183,6 +191,10 @@ export class LearningApi extends runtime.BaseAPI implements LearningApiInterface
 
         if (requestParameters['idempotencyKey'] != null) {
             headerParameters['Idempotency-Key'] = String(requestParameters['idempotencyKey']);
+        }
+
+        if (requestParameters['xKelimioClientCapabilities'] != null) {
+            headerParameters['X-Kelimio-Client-Capabilities'] = String(requestParameters['xKelimioClientCapabilities']);
         }
 
         if (this.configuration && this.configuration.accessToken) {
@@ -285,6 +297,10 @@ export class LearningApi extends runtime.BaseAPI implements LearningApiInterface
 
         const headerParameters: runtime.HTTPHeaders = {};
 
+        if (requestParameters['xKelimioClientCapabilities'] != null) {
+            headerParameters['X-Kelimio-Client-Capabilities'] = String(requestParameters['xKelimioClientCapabilities']);
+        }
+
         if (this.configuration && this.configuration.accessToken) {
             const token = this.configuration.accessToken;
             const tokenString = await token("bearerAuth", []);
@@ -341,6 +357,10 @@ export class LearningApi extends runtime.BaseAPI implements LearningApiInterface
 
         if (requestParameters['idempotencyKey'] != null) {
             headerParameters['Idempotency-Key'] = String(requestParameters['idempotencyKey']);
+        }
+
+        if (requestParameters['xKelimioClientCapabilities'] != null) {
+            headerParameters['X-Kelimio-Client-Capabilities'] = String(requestParameters['xKelimioClientCapabilities']);
         }
 
         if (this.configuration && this.configuration.accessToken) {
@@ -407,6 +427,10 @@ export class LearningApi extends runtime.BaseAPI implements LearningApiInterface
 
         if (requestParameters['idempotencyKey'] != null) {
             headerParameters['Idempotency-Key'] = String(requestParameters['idempotencyKey']);
+        }
+
+        if (requestParameters['xKelimioClientCapabilities'] != null) {
+            headerParameters['X-Kelimio-Client-Capabilities'] = String(requestParameters['xKelimioClientCapabilities']);
         }
 
         if (this.configuration && this.configuration.accessToken) {

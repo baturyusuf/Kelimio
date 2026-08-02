@@ -32,6 +32,7 @@ export interface EnrollInCourseRequest {
     courseId: string;
     idempotencyKey: string;
     createEnrollmentRequest: CreateEnrollmentRequest;
+    xKelimioClientCapabilities?: string;
 }
 
 /**
@@ -47,6 +48,7 @@ export interface EnrollmentApiInterface {
      * @param {string} courseId
      * @param {string} idempotencyKey Stable UUID generated once for the logical command.
      * @param {CreateEnrollmentRequest} createEnrollmentRequest
+     * @param {string} [xKelimioClientCapabilities] Comma-separated bounded capability tokens implemented by the client. Missing means the empty set; this is a compatibility signal, not authorization.
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof EnrollmentApiInterface
@@ -98,6 +100,10 @@ export class EnrollmentApi extends runtime.BaseAPI implements EnrollmentApiInter
 
         if (requestParameters['idempotencyKey'] != null) {
             headerParameters['Idempotency-Key'] = String(requestParameters['idempotencyKey']);
+        }
+
+        if (requestParameters['xKelimioClientCapabilities'] != null) {
+            headerParameters['X-Kelimio-Client-Capabilities'] = String(requestParameters['xKelimioClientCapabilities']);
         }
 
         if (this.configuration && this.configuration.accessToken) {

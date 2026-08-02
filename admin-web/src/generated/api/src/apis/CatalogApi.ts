@@ -30,9 +30,11 @@ import {
 
 export interface GetCourseRequest {
     courseId: string;
+    xKelimioClientCapabilities?: string;
 }
 
 export interface ListCatalogCoursesRequest {
+    xKelimioClientCapabilities?: string;
     cursor?: string;
     limit?: number;
     targetLanguage?: string;
@@ -50,6 +52,7 @@ export interface CatalogApiInterface {
      *
      * @summary Return course details visible to the authenticated user
      * @param {string} courseId
+     * @param {string} [xKelimioClientCapabilities] Comma-separated bounded capability tokens implemented by the client. Missing means the empty set; this is a compatibility signal, not authorization.
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof CatalogApiInterface
@@ -64,6 +67,7 @@ export interface CatalogApiInterface {
     /**
      *
      * @summary List public, published courses
+     * @param {string} [xKelimioClientCapabilities] Comma-separated bounded capability tokens implemented by the client. Missing means the empty set; this is a compatibility signal, not authorization.
      * @param {string} [cursor] Opaque tamper-evident cursor bound to the authenticated owner, import, immutable preview/report identity, and position. It contains no workbook text or storage coordinates.
      * @param {number} [limit]
      * @param {string} [targetLanguage]
@@ -100,6 +104,10 @@ export class CatalogApi extends runtime.BaseAPI implements CatalogApiInterface {
         const queryParameters: any = {};
 
         const headerParameters: runtime.HTTPHeaders = {};
+
+        if (requestParameters['xKelimioClientCapabilities'] != null) {
+            headerParameters['X-Kelimio-Client-Capabilities'] = String(requestParameters['xKelimioClientCapabilities']);
+        }
 
         if (this.configuration && this.configuration.accessToken) {
             const token = this.configuration.accessToken;
@@ -154,6 +162,10 @@ export class CatalogApi extends runtime.BaseAPI implements CatalogApiInterface {
         }
 
         const headerParameters: runtime.HTTPHeaders = {};
+
+        if (requestParameters['xKelimioClientCapabilities'] != null) {
+            headerParameters['X-Kelimio-Client-Capabilities'] = String(requestParameters['xKelimioClientCapabilities']);
+        }
 
         if (this.configuration && this.configuration.accessToken) {
             const token = this.configuration.accessToken;

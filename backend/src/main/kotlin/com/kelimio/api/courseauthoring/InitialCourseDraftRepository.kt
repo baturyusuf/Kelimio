@@ -333,6 +333,8 @@ internal class InitialCourseDraftRepository(
     private fun insertQuestions(command: InitialCourseDraftCommand, graph: ImportedCourseDraftGraph) {
         graph.tests.forEach { test ->
             test.questions.forEachIndexed { index, question ->
+                val representative = question.sourceRows.first()
+                val matching = question.questionType == "D"
                 dsl.execute(
                     "insert into question(id, course_id, created_at) values (?, ?, cast(? as timestamptz))",
                     question.id,
@@ -346,8 +348,11 @@ internal class InitialCourseDraftRepository(
                         prompt, correct_answer, alternative_correct_answer,
                         answer_match_policy, answer_match_language,
                         correct_answer_match_key, alternative_answer_match_key,
+                        matching_policy, matching_label_policy, matching_order_policy,
+                        matching_target_language,
                         status, created_at
-                    ) values (?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, 'DRAFT', cast(? as timestamptz))
+                    ) values (?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                        'DRAFT', cast(? as timestamptz))
                     """.trimIndent(),
                     question.revisionId,
                     question.id,
@@ -355,14 +360,17 @@ internal class InitialCourseDraftRepository(
                     question.questionType,
                     question.prompt,
                     question.correctAnswer,
-                    question.row.alternativeCorrectAnswer,
+                    if (matching) null else representative.alternativeCorrectAnswer,
                     if (question.questionType == "C") TYPED_ANSWER_POLICY_VERSION else null,
                     if (question.questionType == "C") command.settings.targetLanguageCode else null,
                     question.correctAnswerMatchKey,
                     question.alternativeAnswerMatchKey,
+                    if (matching) MATCHING_POLICY_VERSION else null,
+                    if (matching) MATCHING_LABEL_POLICY_VERSION else null,
+                    if (matching) MATCHING_ORDER_POLICY_VERSION else null,
+                    if (matching) command.settings.targetLanguageCode else null,
                     command.committedAt,
                 )
-                val row = question.row
                 dsl.execute(
                     """
                     insert into question_revision_authoring(
@@ -376,52 +384,121 @@ internal class InitialCourseDraftRepository(
                     question.id,
                     graph.courseId,
                     graph.changeSetId,
-                    row.ordinal,
-                    row.sourceSheetOrdinal,
-                    row.sourceSheetName,
-                    row.sourceRowNumber,
-                    row.allocationReason.name,
-                    row.recordType.name,
-                    row.targetText,
-                    row.matchingGroup,
-                    row.hidden,
-                    row.note,
+                    representative.questionOrdinal,
+                    representative.sourceSheetOrdinal,
+                    representative.sourceSheetName,
+                    representative.sourceRowNumber,
+                    representative.allocationReason.name,
+                    if (matching) "MATCHING_GROUP" else representative.recordType.name,
+                    representative.targetText,
+                    representative.matchingGroup,
+                    representative.hidden,
+                    representative.note,
                     command.committedAt,
                 )
-                row.translations.forEach { (language, translation) ->
+                if (matching) {
+                    question.matchingPairs.forEach { pair ->
+                        dsl.execute(
+                            """
+                            insert into question_revision_matching_pair(
+                                target_item_id, question_revision_id, course_id,
+                                position, target_text, target_label_key
+                            ) values (?, ?, ?, ?, ?, ?)
+                            """.trimIndent(),
+                            pair.targetItemId,
+                            question.revisionId,
+                            graph.courseId,
+                            pair.position,
+                            pair.targetText,
+                            pair.targetLabelKey,
+                        )
+                        pair.translations.forEach { translation ->
+                            dsl.execute(
+                                """
+                                insert into question_revision_matching_translation(
+                                    support_item_id, question_revision_id, course_id,
+                                    target_item_id, support_language, support_text,
+                                    support_label_key
+                                ) values (?, ?, ?, ?, ?, ?, ?)
+                                """.trimIndent(),
+                                translation.supportItemId,
+                                question.revisionId,
+                                graph.courseId,
+                                translation.targetItemId,
+                                translation.language,
+                                translation.text,
+                                translation.labelKey,
+                            )
+                        }
+                    }
+                } else {
+                    representative.translations.forEach { (language, translation) ->
+                        dsl.execute(
+                            """
+                            insert into question_revision_translation(
+                                question_revision_id, course_id, support_language,
+                                translation_text, created_at
+                            ) values (?, ?, ?, ?, cast(? as timestamptz))
+                            """.trimIndent(),
+                            question.revisionId,
+                            graph.courseId,
+                            language,
+                            translation,
+                            command.committedAt,
+                        )
+                    }
+                    val distractorLanguage = when (representative.recordType) {
+                        InitialRecordType.WORD -> command.settings.defaultSupportLanguageCode
+                        InitialRecordType.MULTIPLE_CHOICE_CLOZE -> command.settings.targetLanguageCode
+                        InitialRecordType.TYPED_CLOZE -> null
+                    }
+                    representative.wrongAnswers.forEachIndexed { distractorIndex, distractor ->
+                        dsl.execute(
+                            """
+                            insert into question_revision_authored_distractor(
+                                question_revision_id, course_id, language_code,
+                                position, distractor_text, created_at
+                            ) values (?, ?, ?, ?, ?, cast(? as timestamptz))
+                            """.trimIndent(),
+                            question.revisionId,
+                            graph.courseId,
+                            checkNotNull(distractorLanguage),
+                            distractorIndex + 1,
+                            distractor,
+                            command.committedAt,
+                        )
+                    }
+                }
+                dsl.execute(
+                    """
+                    insert into question_revision_import_composition(
+                        question_revision_id, course_id, content_change_set_id,
+                        import_id, composition_kind, source_row_count,
+                        first_source_ordinal, created_at
+                    ) values (?, ?, ?, ?, ?, ?, ?, cast(? as timestamptz))
+                    """.trimIndent(),
+                    question.revisionId,
+                    graph.courseId,
+                    graph.changeSetId,
+                    command.sourceImportId,
+                    if (matching) "MATCHING_GROUP" else "ROW",
+                    question.sourceRows.size,
+                    representative.ordinal,
+                    command.committedAt,
+                )
+                question.sourceRows.forEachIndexed { sourceIndex, sourceRow ->
                     dsl.execute(
                         """
-                        insert into question_revision_translation(
-                            question_revision_id, course_id, support_language,
-                            translation_text, created_at
-                        ) values (?, ?, ?, ?, cast(? as timestamptz))
+                        insert into question_revision_import_source(
+                            question_revision_id, course_id, import_id,
+                            source_ordinal, position
+                        ) values (?, ?, ?, ?, ?)
                         """.trimIndent(),
                         question.revisionId,
                         graph.courseId,
-                        language,
-                        translation,
-                        command.committedAt,
-                    )
-                }
-                val distractorLanguage = when (row.recordType) {
-                    InitialRecordType.WORD -> command.settings.defaultSupportLanguageCode
-                    InitialRecordType.MULTIPLE_CHOICE_CLOZE -> command.settings.targetLanguageCode
-                    InitialRecordType.TYPED_CLOZE -> null
-                }
-                row.wrongAnswers.forEachIndexed { distractorIndex, distractor ->
-                    dsl.execute(
-                        """
-                        insert into question_revision_authored_distractor(
-                            question_revision_id, course_id, language_code,
-                            position, distractor_text, created_at
-                        ) values (?, ?, ?, ?, ?, cast(? as timestamptz))
-                        """.trimIndent(),
-                        question.revisionId,
-                        graph.courseId,
-                        checkNotNull(distractorLanguage),
-                        distractorIndex + 1,
-                        distractor,
-                        command.committedAt,
+                        command.sourceImportId,
+                        sourceRow.ordinal,
+                        sourceIndex + 1,
                     )
                 }
                 dsl.execute(
@@ -457,5 +534,8 @@ internal class InitialCourseDraftRepository(
     private companion object {
         const val BATCH_SIZE = 250
         const val TYPED_ANSWER_POLICY_VERSION = "typed-answer-v1"
+        const val MATCHING_POLICY_VERSION = "matching-v1"
+        const val MATCHING_LABEL_POLICY_VERSION = "matching-label-v1"
+        const val MATCHING_ORDER_POLICY_VERSION = "matching-order-v1"
     }
 }

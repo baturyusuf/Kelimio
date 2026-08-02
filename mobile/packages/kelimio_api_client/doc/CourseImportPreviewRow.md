@@ -9,6 +9,10 @@ import 'package:kelimio_api_client/api.dart';
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **ordinal** | **int** |  |
+**questionOrdinal** | **int** |  |
+**projectedQuestionType** | **String** |  |
+**compositionKind** | **String** |  |
+**groupPosition** | **int** |  |
 **source_** | [**CourseImportSource**](CourseImportSource.md) |  |
 **level** | **String** |  |
 **unit** | **String** |  |

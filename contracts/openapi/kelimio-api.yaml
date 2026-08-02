@@ -92,6 +92,7 @@ paths:
       tags: [Catalog]
       summary: List public, published courses
       parameters:
+        - $ref: "#/components/parameters/ClientCapabilities"
         - $ref: "#/components/parameters/Cursor"
         - $ref: "#/components/parameters/Limit"
         - name: targetLanguage
@@ -120,6 +121,7 @@ paths:
       summary: Return course details visible to the authenticated user
       parameters:
         - $ref: "#/components/parameters/CourseId"
+        - $ref: "#/components/parameters/ClientCapabilities"
       responses:
         "200":
           description: Course details
@@ -163,6 +165,7 @@ paths:
       parameters:
         - $ref: "#/components/parameters/CourseId"
         - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/ClientCapabilities"
       requestBody:
         required: true
         content:
@@ -198,6 +201,7 @@ paths:
           schema:
             $ref: "#/components/schemas/Id"
         - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/ClientCapabilities"
       responses:
         "201":
           description: Attempt created; answer keys are deliberately absent
@@ -223,6 +227,7 @@ paths:
       parameters:
         - $ref: "#/components/parameters/AttemptId"
         - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/ClientCapabilities"
       requestBody:
         required: true
         content:
@@ -268,6 +273,7 @@ paths:
           required: true
           schema:
             $ref: "#/components/schemas/Id"
+        - $ref: "#/components/parameters/ClientCapabilities"
       responses:
         "200":
           description: Previously committed authoritative answer result
@@ -292,6 +298,7 @@ paths:
       parameters:
         - $ref: "#/components/parameters/AttemptId"
         - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/ClientCapabilities"
       responses:
         "200":
           description: Final attempt result
@@ -724,6 +731,18 @@ components:
       schema:
         type: string
         format: uuid
+    ClientCapabilities:
+      name: X-Kelimio-Client-Capabilities
+      in: header
+      required: false
+      description: >-
+        Comma-separated bounded capability tokens implemented by the client.
+        Missing means the empty set; this is a compatibility signal, not authorization.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 1040
+        pattern: "^[a-z][a-z0-9]*(?:\\.[a-z][a-z0-9]*)+(?:, ?[a-z][a-z0-9]*(?:\\.[a-z][a-z0-9]*)+)*$"
   responses:
     Problem:
       description: RFC 9457 problem details
@@ -761,6 +780,12 @@ components:
       maxLength: 35
       pattern: "^[a-z]{2,8}(?:-[A-Z][a-z]{3})?(?:-(?:[A-Z]{2}|[0-9]{3}))?(?:-(?:[a-z0-9]{5,8}|[0-9][a-z0-9]{3}))*$"
       examples: [tr, en, ar, fr, pt-BR, zh-Hant]
+    ClientCapability:
+      type: string
+      minLength: 3
+      maxLength: 64
+      pattern: "^[a-z][a-z0-9]*(?:\\.[a-z][a-z0-9]*)+$"
+      examples: [question.matching.v1]
     MeResponse:
       type: object
       additionalProperties: false
@@ -1640,6 +1665,9 @@ components:
       required:
         - isValid
         - rowCount
+        - questionCount
+        - matchingQuestionCount
+        - requiredClientCapabilities
         - levelCount
         - unitCount
         - topicCount
@@ -1657,6 +1685,20 @@ components:
           type: integer
           minimum: 0
           maximum: 10000
+        questionCount:
+          type: [integer, "null"]
+          minimum: 1
+          maximum: 10000
+        matchingQuestionCount:
+          type: [integer, "null"]
+          minimum: 0
+          maximum: 10000
+        requiredClientCapabilities:
+          type: [array, "null"]
+          maxItems: 16
+          uniqueItems: true
+          items:
+            $ref: "#/components/schemas/ClientCapability"
         levelCount:
           type: integer
           minimum: 0
@@ -1813,6 +1855,10 @@ components:
         - note
       required:
         - ordinal
+        - questionOrdinal
+        - projectedQuestionType
+        - compositionKind
+        - groupPosition
         - source
         - level
         - unit
@@ -1836,6 +1882,20 @@ components:
           type: integer
           minimum: 1
           maximum: 10000
+        questionOrdinal:
+          type: [integer, "null"]
+          minimum: 1
+          maximum: 10000
+        projectedQuestionType:
+          type: [string, "null"]
+          enum: [A, B, C, D, null]
+        compositionKind:
+          type: [string, "null"]
+          enum: [ROW, MATCHING_GROUP, null]
+        groupPosition:
+          type: [integer, "null"]
+          minimum: 1
+          maximum: 6
         source:
           $ref: "#/components/schemas/CourseImportSource"
           x-kelimio-sensitive: true
@@ -2032,7 +2092,15 @@ components:
     CourseImportCommitSummary:
       type: object
       additionalProperties: false
-      required: [courseId, contentChangeSetId, draftReleaseId, committedAt]
+      required:
+        - courseId
+        - contentChangeSetId
+        - draftReleaseId
+        - sourceRowCount
+        - questionCount
+        - matchingQuestionCount
+        - requiredClientCapabilities
+        - committedAt
       properties:
         courseId:
           $ref: "#/components/schemas/Id"
@@ -2040,6 +2108,24 @@ components:
           $ref: "#/components/schemas/Id"
         draftReleaseId:
           $ref: "#/components/schemas/Id"
+        sourceRowCount:
+          type: integer
+          minimum: 1
+          maximum: 10000
+        questionCount:
+          type: integer
+          minimum: 1
+          maximum: 10000
+        matchingQuestionCount:
+          type: integer
+          minimum: 0
+          maximum: 10000
+        requiredClientCapabilities:
+          type: array
+          maxItems: 16
+          uniqueItems: true
+          items:
+            $ref: "#/components/schemas/ClientCapability"
         committedAt:
           type: string
           format: date-time
@@ -2052,6 +2138,10 @@ components:
         - courseId
         - contentChangeSetId
         - draftReleaseId
+        - sourceRowCount
+        - questionCount
+        - matchingQuestionCount
+        - requiredClientCapabilities
         - committedAt
         - created
       properties:
@@ -2066,6 +2156,24 @@ components:
           $ref: "#/components/schemas/Id"
         draftReleaseId:
           $ref: "#/components/schemas/Id"
+        sourceRowCount:
+          type: integer
+          minimum: 1
+          maximum: 10000
+        questionCount:
+          type: integer
+          minimum: 1
+          maximum: 10000
+        matchingQuestionCount:
+          type: integer
+          minimum: 0
+          maximum: 10000
+        requiredClientCapabilities:
+          type: array
+          maxItems: 16
+          uniqueItems: true
+          items:
+            $ref: "#/components/schemas/ClientCapability"
         committedAt:
           type: string
           format: date-time

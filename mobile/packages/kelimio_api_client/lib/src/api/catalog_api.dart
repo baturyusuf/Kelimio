@@ -23,6 +23,7 @@ class CatalogApi {
   ///
   /// Parameters:
   /// * [courseId]
+  /// * [xKelimioClientCapabilities] - Comma-separated bounded capability tokens implemented by the client. Missing means the empty set; this is a compatibility signal, not authorization.
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -34,6 +35,7 @@ class CatalogApi {
   /// Throws [DioException] if API call or serialization fails
   Future<Response<CourseDetail>> getCourse({
     required String courseId,
+    String? xKelimioClientCapabilities,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -49,7 +51,11 @@ class CatalogApi {
     );
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{...?headers},
+      headers: <String, dynamic>{
+        if (xKelimioClientCapabilities != null)
+          r'X-Kelimio-Client-Capabilities': xKelimioClientCapabilities,
+        ...?headers,
+      },
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
           {'type': 'http', 'scheme': 'bearer', 'name': 'bearerAuth'},
@@ -104,6 +110,7 @@ class CatalogApi {
   ///
   ///
   /// Parameters:
+  /// * [xKelimioClientCapabilities] - Comma-separated bounded capability tokens implemented by the client. Missing means the empty set; this is a compatibility signal, not authorization.
   /// * [cursor] - Opaque tamper-evident cursor bound to the authenticated owner, import, immutable preview/report identity, and position. It contains no workbook text or storage coordinates.
   /// * [limit]
   /// * [targetLanguage]
@@ -118,6 +125,7 @@ class CatalogApi {
   /// Returns a [Future] containing a [Response] with a [CoursePage] as data
   /// Throws [DioException] if API call or serialization fails
   Future<Response<CoursePage>> listCatalogCourses({
+    String? xKelimioClientCapabilities,
     String? cursor,
     int? limit = 20,
     String? targetLanguage,
@@ -132,7 +140,11 @@ class CatalogApi {
     final _path = r'/v1/catalog/courses';
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{...?headers},
+      headers: <String, dynamic>{
+        if (xKelimioClientCapabilities != null)
+          r'X-Kelimio-Client-Capabilities': xKelimioClientCapabilities,
+        ...?headers,
+      },
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
           {'type': 'http', 'scheme': 'bearer', 'name': 'bearerAuth'},

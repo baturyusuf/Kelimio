@@ -35,6 +35,30 @@ export interface CourseImportPreviewRow {
     ordinal: number;
     /**
      *
+     * @type {number}
+     * @memberof CourseImportPreviewRow
+     */
+    questionOrdinal: number | null;
+    /**
+     *
+     * @type {string}
+     * @memberof CourseImportPreviewRow
+     */
+    projectedQuestionType: CourseImportPreviewRowProjectedQuestionTypeEnum | null;
+    /**
+     *
+     * @type {string}
+     * @memberof CourseImportPreviewRow
+     */
+    compositionKind: CourseImportPreviewRowCompositionKindEnum | null;
+    /**
+     *
+     * @type {number}
+     * @memberof CourseImportPreviewRow
+     */
+    groupPosition: number | null;
+    /**
+     *
      * @type {CourseImportSource}
      * @memberof CourseImportPreviewRow
      */
@@ -147,6 +171,26 @@ export interface CourseImportPreviewRow {
 /**
  * @export
  */
+export const CourseImportPreviewRowProjectedQuestionTypeEnum = {
+    A: 'A',
+    B: 'B',
+    C: 'C',
+    D: 'D'
+} as const;
+export type CourseImportPreviewRowProjectedQuestionTypeEnum = typeof CourseImportPreviewRowProjectedQuestionTypeEnum[keyof typeof CourseImportPreviewRowProjectedQuestionTypeEnum];
+
+/**
+ * @export
+ */
+export const CourseImportPreviewRowCompositionKindEnum = {
+    Row: 'ROW',
+    MatchingGroup: 'MATCHING_GROUP'
+} as const;
+export type CourseImportPreviewRowCompositionKindEnum = typeof CourseImportPreviewRowCompositionKindEnum[keyof typeof CourseImportPreviewRowCompositionKindEnum];
+
+/**
+ * @export
+ */
 export const CourseImportPreviewRowAllocationKindEnum = {
     Fixed: 'FIXED',
     Automatic: 'AUTOMATIC'
@@ -191,6 +235,10 @@ export type CourseImportPreviewRowRecordTypeEnum = typeof CourseImportPreviewRow
  */
 export function instanceOfCourseImportPreviewRow(value: object): value is CourseImportPreviewRow {
     if (!('ordinal' in value) || value['ordinal'] === undefined) return false;
+    if (!('questionOrdinal' in value) || value['questionOrdinal'] === undefined) return false;
+    if (!('projectedQuestionType' in value) || value['projectedQuestionType'] === undefined) return false;
+    if (!('compositionKind' in value) || value['compositionKind'] === undefined) return false;
+    if (!('groupPosition' in value) || value['groupPosition'] === undefined) return false;
     if (!('source' in value) || value['source'] === undefined) return false;
     if (!('level' in value) || value['level'] === undefined) return false;
     if (!('unit' in value) || value['unit'] === undefined) return false;
@@ -223,6 +271,10 @@ export function CourseImportPreviewRowFromJSONTyped(json: any, ignoreDiscriminat
     return {
 
         'ordinal': json['ordinal'],
+        'questionOrdinal': json['questionOrdinal'],
+        'projectedQuestionType': json['projectedQuestionType'],
+        'compositionKind': json['compositionKind'],
+        'groupPosition': json['groupPosition'],
         'source': CourseImportSourceFromJSON(json['source']),
         'level': json['level'],
         'unit': json['unit'],
@@ -256,6 +308,10 @@ export function CourseImportPreviewRowToJSONTyped(value?: CourseImportPreviewRow
     return {
 
         'ordinal': value['ordinal'],
+        'questionOrdinal': value['questionOrdinal'],
+        'projectedQuestionType': value['projectedQuestionType'],
+        'compositionKind': value['compositionKind'],
+        'groupPosition': value['groupPosition'],
         'source': CourseImportSourceToJSON(value['source']),
         'level': value['level'],
         'unit': value['unit'],

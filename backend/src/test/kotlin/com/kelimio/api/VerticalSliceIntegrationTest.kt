@@ -388,7 +388,10 @@ class VerticalSliceIntegrationTest {
             jsonPath("$.created") { value(false) }
         }
 
-        mockMvc.get("/v1/courses/$courseId") { with(ownerJwt) }
+        mockMvc.get("/v1/courses/$courseId") {
+            with(ownerJwt)
+            header("X-Kelimio-Client-Capabilities", "question.matching.v1")
+        }
             .andExpect {
                 status { isOk() }
                 jsonPath("$.name") { value("Örnek Türkçe Kelime Kursu") }
@@ -556,6 +559,7 @@ class VerticalSliceIntegrationTest {
         mockMvc.post("/v1/courses/${fixture.courseId}/enrollments") {
             with(learnerJwt)
             header("Idempotency-Key", UUID.randomUUID().toString())
+            header("X-Kelimio-Client-Capabilities", "question.matching.v1")
             contentType = MediaType.APPLICATION_JSON
             content = """{"supportLanguage":"en"}"""
         }.andExpect { status { isCreated() } }
@@ -1071,9 +1075,16 @@ class VerticalSliceIntegrationTest {
         }
         mockMvc.get("/v1/me") { with(learnerJwt) }.andExpect { status { isOk() } }
         completeProfileSetup(learnerJwt, displayName = "Matching Learner")
+        mockMvc.get("/v1/courses/${fixture.courseId}") {
+            with(learnerJwt)
+        }.andExpect {
+            status { isConflict() }
+            jsonPath("$.type") { value("https://api.kelimio.invalid/problems/client-upgrade-required") }
+        }
         mockMvc.post("/v1/courses/${fixture.courseId}/enrollments") {
             with(learnerJwt)
             header("Idempotency-Key", UUID.randomUUID().toString())
+            header("X-Kelimio-Client-Capabilities", "question.matching.v1")
             contentType = MediaType.APPLICATION_JSON
             content = """{"supportLanguage":"en"}"""
         }.andExpect { status { isCreated() } }
@@ -1082,6 +1093,7 @@ class VerticalSliceIntegrationTest {
         fun startAttempt(): String = mockMvc.post("/v1/tests/${fixture.testId}/attempts") {
             with(learnerJwt)
             header("Idempotency-Key", startKey.toString())
+            header("X-Kelimio-Client-Capabilities", "question.matching.v1")
         }.andExpect {
             status { isCreated() }
             jsonPath("$.supportLanguage") { value("en") }
@@ -1151,6 +1163,7 @@ class VerticalSliceIntegrationTest {
         val nullElementResponse = mockMvc.post("/v1/attempts/$attemptId/answers") {
             with(learnerJwt)
             header("Idempotency-Key", nullElementSubmissionId.toString())
+            header("X-Kelimio-Client-Capabilities", "question.matching.v1")
             contentType = MediaType.APPLICATION_JSON
             content =
                 """
@@ -1172,6 +1185,7 @@ class VerticalSliceIntegrationTest {
         val missingFieldResponse = mockMvc.post("/v1/attempts/$attemptId/answers") {
             with(learnerJwt)
             header("Idempotency-Key", missingFieldSubmissionId.toString())
+            header("X-Kelimio-Client-Capabilities", "question.matching.v1")
             contentType = MediaType.APPLICATION_JSON
             content =
                 """
@@ -1194,6 +1208,7 @@ class VerticalSliceIntegrationTest {
         mockMvc.post("/v1/attempts/$attemptId/answers") {
             with(learnerJwt)
             header("Idempotency-Key", duplicateSubmissionId.toString())
+            header("X-Kelimio-Client-Capabilities", "question.matching.v1")
             contentType = MediaType.APPLICATION_JSON
             content = objectMapper.writeValueAsString(
                 mapOf(
@@ -1212,6 +1227,7 @@ class VerticalSliceIntegrationTest {
         mockMvc.post("/v1/attempts/$attemptId/answers") {
             with(learnerJwt)
             header("Idempotency-Key", foreignSubmissionId.toString())
+            header("X-Kelimio-Client-Capabilities", "question.matching.v1")
             contentType = MediaType.APPLICATION_JSON
             content = objectMapper.writeValueAsString(
                 mapOf(
@@ -1248,6 +1264,7 @@ class VerticalSliceIntegrationTest {
         val firstAnswerBody = mockMvc.post("/v1/attempts/$attemptId/answers") {
             with(learnerJwt)
             header("Idempotency-Key", submissionId.toString())
+            header("X-Kelimio-Client-Capabilities", "question.matching.v1")
             contentType = MediaType.APPLICATION_JSON
             content = matchingBody(correctMatches.reversed())
         }.andExpect {
@@ -1271,6 +1288,7 @@ class VerticalSliceIntegrationTest {
         mockMvc.post("/v1/attempts/$attemptId/answers") {
             with(learnerJwt)
             header("Idempotency-Key", submissionId.toString())
+            header("X-Kelimio-Client-Capabilities", "question.matching.v1")
             contentType = MediaType.APPLICATION_JSON
             content = matchingBody(correctMatches)
         }.andExpect {
@@ -1287,12 +1305,14 @@ class VerticalSliceIntegrationTest {
         mockMvc.post("/v1/attempts/$attemptId/answers") {
             with(learnerJwt)
             header("Idempotency-Key", submissionId.toString())
+            header("X-Kelimio-Client-Capabilities", "question.matching.v1")
             contentType = MediaType.APPLICATION_JSON
             content = matchingBody(changedMatches)
         }.andExpect { status { isConflict() } }
 
         mockMvc.get("/v1/attempts/$attemptId/answers/$submissionId") {
             with(learnerJwt)
+            header("X-Kelimio-Client-Capabilities", "question.matching.v1")
         }.andExpect {
             status { isOk() }
             header { string("Cache-Control", "no-store") }
@@ -1391,6 +1411,7 @@ class VerticalSliceIntegrationTest {
         val wrongStartBody = mockMvc.post("/v1/tests/${fixture.testId}/attempts") {
             with(learnerJwt)
             header("Idempotency-Key", UUID.randomUUID().toString())
+            header("X-Kelimio-Client-Capabilities", "question.matching.v1")
         }.andExpect { status { isCreated() } }
             .andReturn().response.contentAsString
         val wrongStart = objectMapper.readTree(wrongStartBody)
@@ -1413,6 +1434,7 @@ class VerticalSliceIntegrationTest {
         mockMvc.post("/v1/attempts/$wrongAttemptId/answers") {
             with(learnerJwt)
             header("Idempotency-Key", wrongSubmissionId.toString())
+            header("X-Kelimio-Client-Capabilities", "question.matching.v1")
             contentType = MediaType.APPLICATION_JSON
             content = objectMapper.writeValueAsString(
                 mapOf(
@@ -1465,6 +1487,7 @@ class VerticalSliceIntegrationTest {
             mockMvc.post("/v1/tests/${fixture.testId}/attempts") {
                 with(learnerJwt)
                 header("Idempotency-Key", UUID.randomUUID().toString())
+                header("X-Kelimio-Client-Capabilities", "question.matching.v1")
             }.andExpect { status { isCreated() } }
                 .andReturn().response.contentAsString,
         )
@@ -1516,6 +1539,7 @@ class VerticalSliceIntegrationTest {
         val missingKeyResponse = mockMvc.post("/v1/attempts/$missingKeyAttemptId/answers") {
             with(learnerJwt)
             header("Idempotency-Key", missingKeySubmissionId.toString())
+            header("X-Kelimio-Client-Capabilities", "question.matching.v1")
             contentType = MediaType.APPLICATION_JSON
             content = objectMapper.writeValueAsString(
                 mapOf(

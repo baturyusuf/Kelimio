@@ -72,6 +72,9 @@ void main() {
         final summary = {
           'isValid': true,
           'rowCount': 1,
+          'questionCount': 1,
+          'matchingQuestionCount': 0,
+          'requiredClientCapabilities': <String>[],
           'levelCount': 1,
           'unitCount': 1,
           'topicCount': 1,
@@ -85,6 +88,10 @@ void main() {
         };
         final row = {
           'ordinal': 1,
+          'questionOrdinal': 1,
+          'projectedQuestionType': 'A',
+          'compositionKind': 'ROW',
+          'groupPosition': null,
           'source': source,
           'level': 'SECRET_LEVEL',
           'unit': 'SECRET_UNIT',

@@ -233,7 +233,7 @@ class CourseImportProcessingCoordinator(
                             rulesVersion = claim.rulesVersion,
                             parserVersion = settings.parserVersion,
                             contentSchemaVersion = if (materialized.summary.isValid) {
-                                IMPORT_CONTENT_SCHEMA_VERSION
+                                contentSchemaVersion(claim.rulesVersion)
                             } else {
                                 null
                             },
@@ -333,8 +333,13 @@ class CourseImportProcessingCoordinator(
 
     private fun now(): OffsetDateTime = OffsetDateTime.ofInstant(clock.instant(), ZoneOffset.UTC)
 
+    private fun contentSchemaVersion(rulesVersion: String): String = when (rulesVersion) {
+        "xlsx-v1" -> "import-content-v1"
+        "xlsx-v2" -> "import-content-v2"
+        else -> throw ImportMaterializationException("unsupported-rules-version", retryable = false)
+    }
+
     private companion object {
-        const val IMPORT_CONTENT_SCHEMA_VERSION = "import-content-v1"
         val WORKER_DEADLINE: Duration = Duration.ofMinutes(6)
         val PROCESSING_LEASE: Duration = Duration.ofMinutes(7)
     }

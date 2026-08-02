@@ -1,6 +1,7 @@
 package com.kelimio.api.learningsession
 
 import com.kelimio.api.energy.EnergySnapshot
+import com.kelimio.api.clientcapability.ClientCompatibilityService
 import com.kelimio.api.identityprofile.CurrentUserService
 import com.kelimio.api.web.UnprocessableProblem
 import org.assertj.core.api.Assertions.assertThat
@@ -196,7 +197,8 @@ class SubmitAnswerPrivacyTest {
     fun `controller rejects invalid typed envelopes before identity or transactional service work`(output: CapturedOutput) {
         val currentUserService = mock(CurrentUserService::class.java)
         val learningSessionService = mock(LearningSessionService::class.java)
-        val controller = LearningSessionController(currentUserService, learningSessionService)
+        val compatibilityService = mock(ClientCompatibilityService::class.java)
+        val controller = LearningSessionController(currentUserService, learningSessionService, compatibilityService)
         val sensitiveInvalidAnswer = "private-answer-${UUID.randomUUID()}\u202E"
         val invalidAnswers = listOf(
             "   ",
@@ -211,6 +213,7 @@ class SubmitAnswerPrivacyTest {
                     jwt = mock(Jwt::class.java),
                     attemptId = UUID.randomUUID(),
                     idempotencyKey = UUID.randomUUID(),
+                    capabilities = null,
                     request = SubmitAnswerRequest(
                         submissionId = UUID.randomUUID(),
                         questionRevisionId = UUID.randomUUID(),

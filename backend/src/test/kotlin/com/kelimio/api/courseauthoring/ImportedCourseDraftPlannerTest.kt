@@ -34,7 +34,7 @@ class ImportedCourseDraftPlannerTest {
             .containsExactly("Ev", "Günlük")
         assertThat(graph.tests.map(DraftTest::number)).containsExactly(1, 2, 1)
         assertThat(graph.tests.map(DraftTest::position)).containsExactly(1, 1, 1)
-        assertThat(graph.questions.map { it.row.ordinal }).containsExactly(1, 2, 3, 4)
+        assertThat(graph.questions.map { it.sourceRows.single().ordinal }).containsExactly(1, 2, 3, 4)
         assertThat(graph.rowCount).isEqualTo(4)
 
         val typedQuestion = graph.questions.single { it.questionType == "C" }
@@ -64,6 +64,48 @@ class ImportedCourseDraftPlannerTest {
                 ImportedCourseDraftPlanner().plan(command(rows = listOf(row)))
             }.isInstanceOf(InitialCourseDraftValidationException::class.java)
         }
+    }
+
+    @Test
+    fun `planner composes grouped source rows into one complete matching revision`() {
+        val rows = listOf(
+            wordRow(1).copy(
+                resolvedMode = InitialTestMode.MATCHING,
+                questionOrdinal = 1,
+                projectedQuestionType = InitialProjectedQuestionType.D,
+                compositionKind = InitialCompositionKind.MATCHING_GROUP,
+                groupPosition = 1,
+            ),
+            wordRow(2, sourceRowNumber = 3).copy(
+                resolvedMode = InitialTestMode.MATCHING,
+                questionOrdinal = 1,
+                projectedQuestionType = InitialProjectedQuestionType.D,
+                compositionKind = InitialCompositionKind.MATCHING_GROUP,
+                groupPosition = 2,
+            ),
+        )
+
+        val graph = ImportedCourseDraftPlanner(newId = sequentialIds()).plan(
+            command(rows = rows).copy(
+                expectedQuestionCount = 1,
+                expectedMatchingQuestionCount = 1,
+                requiredClientCapabilities = listOf("question.matching.v1"),
+            ),
+        )
+
+        assertThat(graph.sourceRowCount).isEqualTo(2)
+        assertThat(graph.questionCount).isEqualTo(1)
+        assertThat(graph.matchingQuestionCount).isEqualTo(1)
+        assertThat(graph.requiredClientCapabilities).containsExactly("question.matching.v1")
+        val matching = graph.questions.single()
+        assertThat(matching.questionType).isEqualTo("D")
+        assertThat(matching.prompt).isNull()
+        assertThat(matching.correctAnswer).isNull()
+        assertThat(matching.matchingPairs.map(DraftMatchingPair::position)).containsExactly(1, 2)
+        assertThat(matching.matchingPairs.map(DraftMatchingPair::targetItemId)).doesNotHaveDuplicates()
+        assertThat(matching.matchingPairs.flatMap(DraftMatchingPair::translations).map(DraftMatchingTranslation::supportItemId))
+            .doesNotHaveDuplicates()
+        assertThat(matching.matchingPairs.flatMap(DraftMatchingPair::translations)).hasSize(6)
     }
 
     @Test

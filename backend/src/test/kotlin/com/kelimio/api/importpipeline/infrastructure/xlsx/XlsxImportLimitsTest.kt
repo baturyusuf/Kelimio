@@ -47,7 +47,6 @@ class XlsxImportLimitsTest {
 
         val v1 = XlsxImportLimits.V1
         val relaxedPolicies = listOf(
-            v1.copy(rulesVersion = "xlsx-v2"),
             v1.copy(maxCompressedBytes = v1.maxCompressedBytes + 1),
             v1.copy(maxZipEntries = v1.maxZipEntries + 1),
             v1.copy(maxInflatedEntryBytes = v1.maxInflatedEntryBytes + 1),
@@ -72,5 +71,11 @@ class XlsxImportLimitsTest {
             assertThatThrownBy { SecureXlsxReader(policy) }
                 .isInstanceOf(IllegalArgumentException::class.java)
         }
+    }
+
+    @Test
+    fun `v2 changes semantics without relaxing any reader security ceiling`() {
+        assertThat(XlsxImportLimits.V2).isEqualTo(XlsxImportLimits.V1.copy(rulesVersion = "xlsx-v2"))
+        assertThatCode { SecureXlsxReader(XlsxImportLimits.V2) }.doesNotThrowAnyException()
     }
 }

@@ -10,6 +10,9 @@ Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **isValid** | **bool** |  |
 **rowCount** | **int** |  |
+**questionCount** | **int** |  |
+**matchingQuestionCount** | **int** |  |
+**requiredClientCapabilities** | **Set&lt;String&gt;** |  |
 **levelCount** | **int** |  |
 **unitCount** | **int** |  |
 **topicCount** | **int** |  |

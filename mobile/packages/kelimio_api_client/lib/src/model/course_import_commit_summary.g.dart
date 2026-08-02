@@ -15,6 +15,10 @@ CourseImportCommitSummary _$CourseImportCommitSummaryFromJson(
       'courseId',
       'contentChangeSetId',
       'draftReleaseId',
+      'sourceRowCount',
+      'questionCount',
+      'matchingQuestionCount',
+      'requiredClientCapabilities',
       'committedAt',
     ],
   );
@@ -25,6 +29,19 @@ CourseImportCommitSummary _$CourseImportCommitSummaryFromJson(
       (v) => v as String,
     ),
     draftReleaseId: $checkedConvert('draftReleaseId', (v) => v as String),
+    sourceRowCount: $checkedConvert(
+      'sourceRowCount',
+      (v) => (v as num).toInt(),
+    ),
+    questionCount: $checkedConvert('questionCount', (v) => (v as num).toInt()),
+    matchingQuestionCount: $checkedConvert(
+      'matchingQuestionCount',
+      (v) => (v as num).toInt(),
+    ),
+    requiredClientCapabilities: $checkedConvert(
+      'requiredClientCapabilities',
+      (v) => (v as List<dynamic>).map((e) => e as String).toSet(),
+    ),
     committedAt: $checkedConvert(
       'committedAt',
       (v) => DateTime.parse(v as String),
@@ -39,5 +56,9 @@ Map<String, dynamic> _$CourseImportCommitSummaryToJson(
   'courseId': instance.courseId,
   'contentChangeSetId': instance.contentChangeSetId,
   'draftReleaseId': instance.draftReleaseId,
+  'sourceRowCount': instance.sourceRowCount,
+  'questionCount': instance.questionCount,
+  'matchingQuestionCount': instance.matchingQuestionCount,
+  'requiredClientCapabilities': instance.requiredClientCapabilities.toList(),
   'committedAt': instance.committedAt.toIso8601String(),
 };

@@ -17,7 +17,7 @@ Method | HTTP request | Description
 
 
 # **finishAttempt**
-> FinishAttemptResponse finishAttempt(attemptId, idempotencyKey)
+> FinishAttemptResponse finishAttempt(attemptId, idempotencyKey, xKelimioClientCapabilities)
 
 Finish an attempt after all planned questions are answered
 
@@ -28,9 +28,10 @@ import 'package:kelimio_api_client/api.dart';
 final api = KelimioApiClient().getLearningApi();
 final String attemptId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
 final String idempotencyKey = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String | Stable UUID generated once for the logical command.
+final String xKelimioClientCapabilities = xKelimioClientCapabilities_example; // String | Comma-separated bounded capability tokens implemented by the client. Missing means the empty set; this is a compatibility signal, not authorization.
 
 try {
-    final response = api.finishAttempt(attemptId, idempotencyKey);
+    final response = api.finishAttempt(attemptId, idempotencyKey, xKelimioClientCapabilities);
     print(response);
 } catch on DioException (e) {
     print('Exception when calling LearningApi->finishAttempt: $e\n');
@@ -43,6 +44,7 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **attemptId** | **String**|  |
  **idempotencyKey** | **String**| Stable UUID generated once for the logical command. |
+ **xKelimioClientCapabilities** | **String**| Comma-separated bounded capability tokens implemented by the client. Missing means the empty set; this is a compatibility signal, not authorization. | [optional]
 
 ### Return type
 
@@ -103,7 +105,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **getRecordedAnswer**
-> AnswerRecordedResponse getRecordedAnswer(attemptId, submissionId)
+> AnswerRecordedResponse getRecordedAnswer(attemptId, submissionId, xKelimioClientCapabilities)
 
 Reconcile one previously committed answer owned by the current user
 
@@ -116,9 +118,10 @@ import 'package:kelimio_api_client/api.dart';
 final api = KelimioApiClient().getLearningApi();
 final String attemptId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
 final String submissionId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final String xKelimioClientCapabilities = xKelimioClientCapabilities_example; // String | Comma-separated bounded capability tokens implemented by the client. Missing means the empty set; this is a compatibility signal, not authorization.
 
 try {
-    final response = api.getRecordedAnswer(attemptId, submissionId);
+    final response = api.getRecordedAnswer(attemptId, submissionId, xKelimioClientCapabilities);
     print(response);
 } catch on DioException (e) {
     print('Exception when calling LearningApi->getRecordedAnswer: $e\n');
@@ -131,6 +134,7 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **attemptId** | **String**|  |
  **submissionId** | **String**|  |
+ **xKelimioClientCapabilities** | **String**| Comma-separated bounded capability tokens implemented by the client. Missing means the empty set; this is a compatibility signal, not authorization. | [optional]
 
 ### Return type
 
@@ -148,7 +152,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **startAttempt**
-> AttemptResponse startAttempt(testId, idempotencyKey)
+> AttemptResponse startAttempt(testId, idempotencyKey, xKelimioClientCapabilities)
 
 Start an online attempt for the current test revision
 
@@ -159,9 +163,10 @@ import 'package:kelimio_api_client/api.dart';
 final api = KelimioApiClient().getLearningApi();
 final String testId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
 final String idempotencyKey = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String | Stable UUID generated once for the logical command.
+final String xKelimioClientCapabilities = xKelimioClientCapabilities_example; // String | Comma-separated bounded capability tokens implemented by the client. Missing means the empty set; this is a compatibility signal, not authorization.
 
 try {
-    final response = api.startAttempt(testId, idempotencyKey);
+    final response = api.startAttempt(testId, idempotencyKey, xKelimioClientCapabilities);
     print(response);
 } catch on DioException (e) {
     print('Exception when calling LearningApi->startAttempt: $e\n');
@@ -174,6 +179,7 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **testId** | **String**|  |
  **idempotencyKey** | **String**| Stable UUID generated once for the logical command. |
+ **xKelimioClientCapabilities** | **String**| Comma-separated bounded capability tokens implemented by the client. Missing means the empty set; this is a compatibility signal, not authorization. | [optional]
 
 ### Return type
 
@@ -191,7 +197,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **submitAnswer**
-> AnswerRecordedResponse submitAnswer(attemptId, idempotencyKey, submitAnswerRequest)
+> AnswerRecordedResponse submitAnswer(attemptId, idempotencyKey, submitAnswerRequest, xKelimioClientCapabilities)
 
 Record and evaluate one online answer exactly once
 
@@ -205,9 +211,10 @@ final api = KelimioApiClient().getLearningApi();
 final String attemptId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
 final String idempotencyKey = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String | Stable UUID generated once for the logical command.
 final SubmitAnswerRequest submitAnswerRequest = ; // SubmitAnswerRequest |
+final String xKelimioClientCapabilities = xKelimioClientCapabilities_example; // String | Comma-separated bounded capability tokens implemented by the client. Missing means the empty set; this is a compatibility signal, not authorization.
 
 try {
-    final response = api.submitAnswer(attemptId, idempotencyKey, submitAnswerRequest);
+    final response = api.submitAnswer(attemptId, idempotencyKey, submitAnswerRequest, xKelimioClientCapabilities);
     print(response);
 } catch on DioException (e) {
     print('Exception when calling LearningApi->submitAnswer: $e\n');
@@ -221,6 +228,7 @@ Name | Type | Description  | Notes
  **attemptId** | **String**|  |
  **idempotencyKey** | **String**| Stable UUID generated once for the logical command. |
  **submitAnswerRequest** | [**SubmitAnswerRequest**](SubmitAnswerRequest.md)|  |
+ **xKelimioClientCapabilities** | **String**| Comma-separated bounded capability tokens implemented by the client. Missing means the empty set; this is a compatibility signal, not authorization. | [optional]
 
 ### Return type
 

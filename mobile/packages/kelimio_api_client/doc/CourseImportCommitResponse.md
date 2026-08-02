@@ -13,6 +13,10 @@ Name | Type | Description | Notes
 **courseId** | **String** |  |
 **contentChangeSetId** | **String** |  |
 **draftReleaseId** | **String** |  |
+**sourceRowCount** | **int** |  |
+**questionCount** | **int** |  |
+**matchingQuestionCount** | **int** |  |
+**requiredClientCapabilities** | **Set&lt;String&gt;** |  |
 **committedAt** | [**DateTime**](DateTime.md) |  |
 **created** | **bool** |  |
 

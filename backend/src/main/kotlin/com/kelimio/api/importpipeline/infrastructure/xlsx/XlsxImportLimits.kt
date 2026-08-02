@@ -104,5 +104,15 @@ data class XlsxImportLimits(
             maxStyleRecords = 10_000,
             maxWallClock = Duration.ofMinutes(6),
         )
+
+        // xlsx-v2 changes only deterministic semantic composition. Its binary
+        // package/parser boundary remains exactly as strict as xlsx-v1.
+        val V2 = V1.copy(rulesVersion = "xlsx-v2")
+
+        internal fun baselineFor(rulesVersion: String): XlsxImportLimits = when (rulesVersion) {
+            V1.rulesVersion -> V1
+            V2.rulesVersion -> V2
+            else -> throw IllegalArgumentException("The XLSX rules version is not supported")
+        }
     }
 }

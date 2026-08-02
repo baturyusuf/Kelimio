@@ -33,6 +33,9 @@ class ConflictProblem(message: String) : ApiProblem(HttpStatus.CONFLICT, "confli
 class ProfileSetupRequiredProblem :
     ApiProblem(HttpStatus.CONFLICT, "profile-setup-required", "Profile setup must be completed first.")
 
+class ClientUpgradeRequiredProblem :
+    ApiProblem(HttpStatus.CONFLICT, "client-upgrade-required", "This course requires a newer app capability.")
+
 class UnprocessableProblem(message: String) :
     ApiProblem(HttpStatus.UNPROCESSABLE_ENTITY, "unprocessable-entity", message)
 

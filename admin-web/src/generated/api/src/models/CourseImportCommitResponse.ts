@@ -51,6 +51,30 @@ export interface CourseImportCommitResponse {
     draftReleaseId: string;
     /**
      *
+     * @type {number}
+     * @memberof CourseImportCommitResponse
+     */
+    sourceRowCount: number;
+    /**
+     *
+     * @type {number}
+     * @memberof CourseImportCommitResponse
+     */
+    questionCount: number;
+    /**
+     *
+     * @type {number}
+     * @memberof CourseImportCommitResponse
+     */
+    matchingQuestionCount: number;
+    /**
+     *
+     * @type {Set<string>}
+     * @memberof CourseImportCommitResponse
+     */
+    requiredClientCapabilities: Set<string>;
+    /**
+     *
      * @type {Date}
      * @memberof CourseImportCommitResponse
      */
@@ -82,6 +106,10 @@ export function instanceOfCourseImportCommitResponse(value: object): value is Co
     if (!('courseId' in value) || value['courseId'] === undefined) return false;
     if (!('contentChangeSetId' in value) || value['contentChangeSetId'] === undefined) return false;
     if (!('draftReleaseId' in value) || value['draftReleaseId'] === undefined) return false;
+    if (!('sourceRowCount' in value) || value['sourceRowCount'] === undefined) return false;
+    if (!('questionCount' in value) || value['questionCount'] === undefined) return false;
+    if (!('matchingQuestionCount' in value) || value['matchingQuestionCount'] === undefined) return false;
+    if (!('requiredClientCapabilities' in value) || value['requiredClientCapabilities'] === undefined) return false;
     if (!('committedAt' in value) || value['committedAt'] === undefined) return false;
     if (!('created' in value) || value['created'] === undefined) return false;
     return true;
@@ -102,6 +130,10 @@ export function CourseImportCommitResponseFromJSONTyped(json: any, ignoreDiscrim
         'courseId': json['courseId'],
         'contentChangeSetId': json['contentChangeSetId'],
         'draftReleaseId': json['draftReleaseId'],
+        'sourceRowCount': json['sourceRowCount'],
+        'questionCount': json['questionCount'],
+        'matchingQuestionCount': json['matchingQuestionCount'],
+        'requiredClientCapabilities': new Set(json['requiredClientCapabilities']),
         'committedAt': (new Date(json['committedAt'])),
         'created': json['created'],
     };
@@ -123,6 +155,10 @@ export function CourseImportCommitResponseToJSONTyped(value?: CourseImportCommit
         'courseId': value['courseId'],
         'contentChangeSetId': value['contentChangeSetId'],
         'draftReleaseId': value['draftReleaseId'],
+        'sourceRowCount': value['sourceRowCount'],
+        'questionCount': value['questionCount'],
+        'matchingQuestionCount': value['matchingQuestionCount'],
+        'requiredClientCapabilities': Array.from(value['requiredClientCapabilities'] as Set<any>),
         'committedAt': ((value['committedAt']).toISOString()),
         'created': value['created'],
     };

@@ -58,6 +58,7 @@ final dioProvider = Provider<Dio>((ref) {
   dio.interceptors.addAll([
     CorrelationInterceptor(ref.watch(identifierFactoryProvider)),
     IdempotencyInterceptor(),
+    ClientCapabilityInterceptor(),
     AuthInterceptor(dio, ref.watch(accessTokenProviderProvider)),
     AnswerKeyLeakGuardInterceptor(),
     RedactedLogInterceptor(enabled: !config.isProduction),

@@ -25,6 +25,7 @@ class EnrollmentApi {
   /// * [courseId]
   /// * [idempotencyKey] - Stable UUID generated once for the logical command.
   /// * [createEnrollmentRequest]
+  /// * [xKelimioClientCapabilities] - Comma-separated bounded capability tokens implemented by the client. Missing means the empty set; this is a compatibility signal, not authorization.
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -38,6 +39,7 @@ class EnrollmentApi {
     required String courseId,
     required String idempotencyKey,
     required CreateEnrollmentRequest createEnrollmentRequest,
+    String? xKelimioClientCapabilities,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -55,6 +57,8 @@ class EnrollmentApi {
       method: r'POST',
       headers: <String, dynamic>{
         r'Idempotency-Key': idempotencyKey,
+        if (xKelimioClientCapabilities != null)
+          r'X-Kelimio-Client-Capabilities': xKelimioClientCapabilities,
         ...?headers,
       },
       extra: <String, dynamic>{

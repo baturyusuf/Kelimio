@@ -30,6 +30,16 @@ final class IdempotencyInterceptor extends Interceptor {
   }
 }
 
+final class ClientCapabilityInterceptor extends Interceptor {
+  static const matchingV1 = 'question.matching.v1';
+
+  @override
+  void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
+    options.headers['X-Kelimio-Client-Capabilities'] = matchingV1;
+    handler.next(options);
+  }
+}
+
 final class AuthInterceptor extends Interceptor {
   AuthInterceptor(this._dio, this._tokens);
 

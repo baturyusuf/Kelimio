@@ -33,6 +33,7 @@ class CatalogRepository(
         targetLanguage: String?,
         supportLanguage: String?,
         pageSize: Int,
+        clientCapabilities: Set<String>,
     ): List<CourseSummary> {
         val cursorCondition = cursor?.let { Courses.ID.gt(it) } ?: noCondition()
         val targetCondition = targetLanguage?.let { Courses.TARGET_LANGUAGE.eq(it) } ?: noCondition()
@@ -43,6 +44,17 @@ class CatalogRepository(
                     .and(CourseSupportLanguages.LANGUAGE_CODE.eq(language)),
             )
         } ?: noCondition()
+        val unsupportedCapability = org.jooq.impl.DSL.notExists(
+            selectOne().from(COURSE_RELEASE_CAPABILITIES)
+                .where(RELEASE_CAPABILITY_RELEASE_ID.eq(Courses.ACTIVE_RELEASE_ID))
+                .and(
+                    if (clientCapabilities.isEmpty()) {
+                        noCondition()
+                    } else {
+                        RELEASE_CAPABILITY.notIn(clientCapabilities)
+                    },
+                ),
+        )
         return dsl.select(
             Courses.ID,
             Courses.NAME,
@@ -61,6 +73,7 @@ class CatalogRepository(
             .and(cursorCondition)
             .and(targetCondition)
             .and(supportCondition)
+            .and(unsupportedCapability)
             .orderBy(Courses.ID.asc())
             .limit(pageSize)
             .fetch { record ->
@@ -446,4 +459,18 @@ class CatalogRepository(
             releaseId = releaseId,
             enrolled = enrolled,
         )
+
+    private companion object {
+        val COURSE_RELEASE_CAPABILITIES = org.jooq.impl.DSL.table(
+            org.jooq.impl.DSL.name("course_release_required_capability"),
+        )
+        val RELEASE_CAPABILITY_RELEASE_ID = org.jooq.impl.DSL.field(
+            org.jooq.impl.DSL.name("course_release_required_capability", "course_release_id"),
+            UUID::class.java,
+        )
+        val RELEASE_CAPABILITY = org.jooq.impl.DSL.field(
+            org.jooq.impl.DSL.name("course_release_required_capability", "capability"),
+            String::class.java,
+        )
+    }
 }

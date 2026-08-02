@@ -2,6 +2,8 @@ package com.kelimio.api.learningsession
 
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonInclude
+import com.kelimio.api.clientcapability.ClientCapabilityPolicy
+import com.kelimio.api.clientcapability.ClientCompatibilityService
 import com.kelimio.api.energy.EnergySnapshot
 import com.kelimio.api.identityprofile.CurrentUserService
 import com.kelimio.api.language.InvalidTypedAnswerException
@@ -34,6 +36,7 @@ import java.util.UUID
 class LearningSessionController(
     private val currentUserService: CurrentUserService,
     private val learningSessionService: LearningSessionService,
+    private val clientCompatibilityService: ClientCompatibilityService,
 ) {
     @PostMapping("/tests/{testId}/attempts")
     @ResponseStatus(HttpStatus.CREATED)
@@ -41,20 +44,35 @@ class LearningSessionController(
         @AuthenticationPrincipal jwt: Jwt,
         @PathVariable testId: UUID,
         @RequestHeader("Idempotency-Key") idempotencyKey: UUID,
-    ): StartAttemptResponse =
-        learningSessionService.startAttempt(currentUserService.requireCompleted(jwt), testId, idempotencyKey).toResponse()
+        @RequestHeader(ClientCapabilityPolicy.HEADER_NAME, required = false) capabilities: String?,
+    ): StartAttemptResponse {
+        val user = currentUserService.requireCompleted(jwt)
+        clientCompatibilityService.requirePublishedTest(
+            testId,
+            user.id,
+            ClientCapabilityPolicy.parse(capabilities),
+        )
+        return learningSessionService.startAttempt(user, testId, idempotencyKey).toResponse()
+    }
 
     @PostMapping("/attempts/{attemptId}/answers")
     fun submitAnswer(
         @AuthenticationPrincipal jwt: Jwt,
         @PathVariable attemptId: UUID,
         @RequestHeader("Idempotency-Key") idempotencyKey: UUID,
+        @RequestHeader(ClientCapabilityPolicy.HEADER_NAME, required = false) capabilities: String?,
         @Valid @RequestBody request: SubmitAnswerRequest,
     ): ResponseEntity<SubmitAnswerResponse> {
         val answer = request.toSubmittedAnswer()
+        val user = currentUserService.requireCompleted(jwt)
+        clientCompatibilityService.requireOwnedAttempt(
+            attemptId,
+            user.id,
+            ClientCapabilityPolicy.parse(capabilities),
+        )
         return noStore(
             learningSessionService.submitAnswer(
-                user = currentUserService.requireCompleted(jwt),
+                user = user,
                 attemptId = attemptId,
                 submissionId = request.submissionId,
                 questionRevisionId = request.questionRevisionId,
@@ -69,22 +87,38 @@ class LearningSessionController(
         @AuthenticationPrincipal jwt: Jwt,
         @PathVariable attemptId: UUID,
         @PathVariable submissionId: UUID,
-    ): ResponseEntity<SubmitAnswerResponse> =
-        noStore(
+        @RequestHeader(ClientCapabilityPolicy.HEADER_NAME, required = false) capabilities: String?,
+    ): ResponseEntity<SubmitAnswerResponse> {
+        val user = currentUserService.requireCompleted(jwt)
+        clientCompatibilityService.requireOwnedAttempt(
+            attemptId,
+            user.id,
+            ClientCapabilityPolicy.parse(capabilities),
+        )
+        return noStore(
             learningSessionService.getRecordedAnswer(
-                currentUserService.requireCompleted(jwt),
+                user,
                 attemptId,
                 submissionId,
             ).toResponse(),
         )
+    }
 
     @PostMapping("/attempts/{attemptId}/finish")
     fun finishAttempt(
         @AuthenticationPrincipal jwt: Jwt,
         @PathVariable attemptId: UUID,
         @RequestHeader("Idempotency-Key") idempotencyKey: UUID,
-    ): FinishAttemptResponse =
-        learningSessionService.finishAttempt(currentUserService.requireCompleted(jwt), attemptId, idempotencyKey).toResponse()
+        @RequestHeader(ClientCapabilityPolicy.HEADER_NAME, required = false) capabilities: String?,
+    ): FinishAttemptResponse {
+        val user = currentUserService.requireCompleted(jwt)
+        clientCompatibilityService.requireOwnedAttempt(
+            attemptId,
+            user.id,
+            ClientCapabilityPolicy.parse(capabilities),
+        )
+        return learningSessionService.finishAttempt(user, attemptId, idempotencyKey).toResponse()
+    }
 }
 
 class SubmitAnswerRequest(

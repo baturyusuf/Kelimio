@@ -1,5 +1,6 @@
 package com.kelimio.api.catalog
 
+import com.kelimio.api.clientcapability.ClientCompatibilityService
 import com.kelimio.api.identityprofile.AppUser
 import com.kelimio.api.idempotency.IdempotencyService
 import com.kelimio.api.language.InvalidLanguageTagException
@@ -17,6 +18,7 @@ class CatalogService(
     private val repository: CatalogRepository,
     private val idempotencyService: IdempotencyService,
     private val languageTagNormalizer: LanguageTagNormalizer,
+    private val clientCompatibilityService: ClientCompatibilityService,
 ) {
     @Transactional(readOnly = true)
     fun list(
@@ -25,6 +27,7 @@ class CatalogService(
         targetLanguage: String?,
         supportLanguage: String?,
         limit: Int,
+        clientCapabilities: Set<String>,
     ): CatalogPage {
         val parsedCursor = cursor?.let {
             runCatching { UUID.fromString(it) }.getOrElse {
@@ -39,6 +42,7 @@ class CatalogService(
             canonicalTargetLanguage,
             canonicalSupportLanguage,
             limit + 1,
+            clientCapabilities,
         )
         val hasNext = rows.size > limit
         val items = rows.take(limit)
@@ -49,6 +53,7 @@ class CatalogService(
     fun details(
         user: AppUser,
         courseId: UUID,
+        clientCapabilities: Set<String>,
     ): CourseDetails {
         val course = repository.findPublishedCourse(courseId, user.id)
             ?: throw NotFoundProblem("Course was not found.")
@@ -56,6 +61,7 @@ class CatalogService(
         if (visibility != "PUBLIC" && !course.enrolled) {
             throw ForbiddenProblem("Private courses require an invitation.")
         }
+        clientCompatibilityService.requireRelease(course.releaseId, clientCapabilities)
         return CourseDetails(course, repository.findActiveTests(courseId))
     }
 
@@ -65,6 +71,7 @@ class CatalogService(
         courseId: UUID,
         supportLanguage: String,
         idempotencyKey: UUID,
+        clientCapabilities: Set<String>,
     ): EnrollmentResult {
         val canonicalSupportLanguage = normalizeLanguageTag(supportLanguage, "supportLanguage")
         val lookup = idempotencyService.lockAndFind(
@@ -74,14 +81,19 @@ class CatalogService(
             "$courseId|$canonicalSupportLanguage",
         )
         lookup.resourceId?.let { enrollmentId ->
-            return repository.findEnrollment(enrollmentId)
+            val enrollment = repository.findEnrollment(enrollmentId)
                 ?: throw ConflictProblem("The idempotent enrollment no longer exists.")
+            val releaseId = repository.findPublishedCourse(courseId, user.id)?.releaseId
+                ?: throw NotFoundProblem("Course was not found.")
+            clientCompatibilityService.requireRelease(releaseId, clientCapabilities)
+            return enrollment
         }
         val course = repository.findPublishedCourse(courseId, user.id)
             ?: throw NotFoundProblem("Course was not found.")
         if (repository.findVisibility(courseId) != "PUBLIC") {
             throw ForbiddenProblem("Private courses require an invitation.")
         }
+        clientCompatibilityService.requireRelease(course.releaseId, clientCapabilities)
         if (course.accessType != "FREE") {
             throw ConflictProblem("A verified store entitlement is required for this course.")
         }

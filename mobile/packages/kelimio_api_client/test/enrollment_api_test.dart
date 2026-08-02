@@ -8,7 +8,7 @@ void main() {
   group(EnrollmentApi, () {
     // Enroll the authenticated user in a free public course
     //
-    //Future<EnrollmentResponse> enrollInCourse(String courseId, String idempotencyKey, CreateEnrollmentRequest createEnrollmentRequest) async
+    //Future<EnrollmentResponse> enrollInCourse(String courseId, String idempotencyKey, CreateEnrollmentRequest createEnrollmentRequest, { String xKelimioClientCapabilities }) async
     test('test enrollInCourse', () async {
       // TODO
     });

@@ -23,14 +23,23 @@ absent before submission and from analytics/recovery data; only the
 transaction-specific post-commit response or reconciliation result may contain
 the submitted question's narrowly scoped feedback described above.
 
-The Phase 3 intake contract stops before course creation. It creates a bounded
-resumable multipart XLSX upload, accepts an exact versioned object for isolated
-S3/SQS/ClamAV processing, exposes owner-scoped no-store preview/report pages,
-and appends approval for one provenance-binding digest. It accepts no client
-owner, object key/version, scanner verdict, validation result, workflow state,
-course ID, or publication claim. There is deliberately no import `commit`
-endpoint until the immutable content schema and production Type-D allocation
-semantics can represent the workbook without loss.
+The Phase 3 intake contract is draft-only and stops before publication. It
+creates a bounded resumable multipart XLSX upload, accepts an exact versioned
+object for isolated S3/SQS/ClamAV processing, exposes owner-scoped no-store
+preview/report pages, and appends approval for one provenance-binding digest.
+The separate idempotent `commit` endpoint consumes that exact approved preview
+and creates one unpublished immutable draft hierarchy. Under `xlsx-v2`, preview
+rows expose their projected question ordinal, composition kind, group position,
+and projected question type; the summary and commit response expose source-row,
+runtime-question, matching-question, and required-client-capability counts. The
+request accepts no client owner, object key/version, scanner verdict, validation
+result, workflow state, course ID, or publication claim.
+
+Clients may advertise bounded renderer capabilities through the optional
+`X-Kelimio-Client-Capabilities` header. Catalog listing excludes incompatible
+releases, while direct detail, enrollment, and learning operations fail with
+`client-upgrade-required`. This signal is never treated as authentication or
+authorization.
 
 Generate clients with the pinned OpenAPI Generator container:
 

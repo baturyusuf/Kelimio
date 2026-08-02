@@ -397,10 +397,13 @@ class CourseImportWorkerRepository(
                 import_id, quarantine_artifact_id, archive_source_artifact_id,
                 report_artifact_id, clean_scan_id, rules_version, parser_version,
                 content_schema_version, settings_payload,
-                is_valid, row_count, level_count, unit_count, topic_count, test_count,
+                is_valid, row_count, question_count, matching_question_count,
+                required_client_capabilities,
+                level_count, unit_count, topic_count, test_count,
                 warning_count, error_count, validation_report_sha256,
                 allocation_sha256, preview_sha256, approval_binding_sha256, created_at
-            ) values (?, ?, ?, ?, ?, ?, ?, ?, cast(? as jsonb), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, cast(? as timestamptz))
+            ) values (?, ?, ?, ?, ?, ?, ?, ?, cast(? as jsonb), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                cast(? as timestamptz))
             """.trimIndent(),
             claim.importId,
             quarantineArtifact.id,
@@ -413,6 +416,9 @@ class CourseImportWorkerRepository(
             persisted.summary.settings?.let(objectMapper::writeValueAsString),
             persisted.summary.isValid,
             persisted.summary.rowCount,
+            persisted.summary.questionCount?.let { it },
+            persisted.summary.matchingQuestionCount?.let { it },
+            persisted.summary.requiredClientCapabilities?.toTypedArray(),
             persisted.summary.levelCount,
             persisted.summary.unitCount,
             persisted.summary.topicCount,

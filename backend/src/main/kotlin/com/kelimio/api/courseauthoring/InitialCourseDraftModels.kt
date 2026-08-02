@@ -19,6 +19,9 @@ data class InitialCourseDraftCommand(
     val expectedUnitCount: Int,
     val expectedTopicCount: Int,
     val expectedTestCount: Int,
+    val expectedQuestionCount: Int = rows.size,
+    val expectedMatchingQuestionCount: Int = 0,
+    val requiredClientCapabilities: List<String> = emptyList(),
 )
 
 data class InitialCourseDraftSettings(
@@ -60,6 +63,14 @@ data class InitialCourseDraftRow(
     val matchingGroup: String?,
     val hidden: Boolean,
     val note: String?,
+    val questionOrdinal: Int = ordinal,
+    val projectedQuestionType: InitialProjectedQuestionType = when (recordType) {
+        InitialRecordType.WORD -> InitialProjectedQuestionType.A
+        InitialRecordType.MULTIPLE_CHOICE_CLOZE -> InitialProjectedQuestionType.B
+        InitialRecordType.TYPED_CLOZE -> InitialProjectedQuestionType.C
+    },
+    val compositionKind: InitialCompositionKind = InitialCompositionKind.ROW,
+    val groupPosition: Int? = null,
 )
 
 enum class InitialCourseVisibility {
@@ -92,11 +103,26 @@ enum class InitialRecordType {
     TYPED_CLOZE,
 }
 
+enum class InitialProjectedQuestionType {
+    A,
+    B,
+    C,
+    D,
+}
+
+enum class InitialCompositionKind {
+    ROW,
+    MATCHING_GROUP,
+}
+
 data class InitialCourseDraftResult(
     val courseId: UUID,
     val contentChangeSetId: UUID,
     val draftReleaseId: UUID,
-    val rowCount: Int,
+    val sourceRowCount: Int,
+    val questionCount: Int,
+    val matchingQuestionCount: Int,
+    val requiredClientCapabilities: List<String>,
     val levelCount: Int,
     val unitCount: Int,
     val topicCount: Int,

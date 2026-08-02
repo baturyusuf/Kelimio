@@ -21,6 +21,12 @@ class CourseImportPreviewSummary {
 
     required this.rowCount,
 
+    required this.questionCount,
+
+    required this.matchingQuestionCount,
+
+    required this.requiredClientCapabilities,
+
     required this.levelCount,
 
     required this.unitCount,
@@ -49,6 +55,23 @@ class CourseImportPreviewSummary {
   // maximum: 10000
   @JsonKey(name: r'rowCount', required: true, includeIfNull: false)
   final int rowCount;
+
+  // minimum: 1
+  // maximum: 10000
+  @JsonKey(name: r'questionCount', required: true, includeIfNull: true)
+  final int? questionCount;
+
+  // minimum: 0
+  // maximum: 10000
+  @JsonKey(name: r'matchingQuestionCount', required: true, includeIfNull: true)
+  final int? matchingQuestionCount;
+
+  @JsonKey(
+    name: r'requiredClientCapabilities',
+    required: true,
+    includeIfNull: true,
+  )
+  final Set<String>? requiredClientCapabilities;
 
   // minimum: 0
   // maximum: 64
@@ -102,6 +125,9 @@ class CourseImportPreviewSummary {
       other is CourseImportPreviewSummary &&
           other.isValid == isValid &&
           other.rowCount == rowCount &&
+          other.questionCount == questionCount &&
+          other.matchingQuestionCount == matchingQuestionCount &&
+          other.requiredClientCapabilities == requiredClientCapabilities &&
           other.levelCount == levelCount &&
           other.unitCount == unitCount &&
           other.topicCount == topicCount &&
@@ -117,6 +143,11 @@ class CourseImportPreviewSummary {
   int get hashCode =>
       isValid.hashCode +
       rowCount.hashCode +
+      (questionCount == null ? 0 : questionCount.hashCode) +
+      (matchingQuestionCount == null ? 0 : matchingQuestionCount.hashCode) +
+      (requiredClientCapabilities == null
+          ? 0
+          : requiredClientCapabilities.hashCode) +
       levelCount.hashCode +
       unitCount.hashCode +
       topicCount.hashCode +

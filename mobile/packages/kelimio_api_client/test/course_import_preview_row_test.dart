@@ -13,6 +13,26 @@ void main() {
       // TODO
     });
 
+    // int questionOrdinal
+    test('to test the property `questionOrdinal`', () async {
+      // TODO
+    });
+
+    // String projectedQuestionType
+    test('to test the property `projectedQuestionType`', () async {
+      // TODO
+    });
+
+    // String compositionKind
+    test('to test the property `compositionKind`', () async {
+      // TODO
+    });
+
+    // int groupPosition
+    test('to test the property `groupPosition`', () async {
+      // TODO
+    });
+
     // CourseImportSource source_
     test('to test the property `source_`', () async {
       // TODO

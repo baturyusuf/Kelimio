@@ -257,7 +257,8 @@ class CourseImportRepository(
         select import_id, quarantine_artifact_id, archive_source_artifact_id,
                report_artifact_id, clean_scan_id, rules_version, parser_version,
                content_schema_version, settings_payload,
-               is_valid, row_count, level_count, unit_count, topic_count,
+               is_valid, row_count, question_count, matching_question_count,
+               required_client_capabilities, level_count, unit_count, topic_count,
                test_count, warning_count, error_count, validation_report_sha256,
                allocation_sha256, preview_sha256, approval_binding_sha256
           from course_import_preview
@@ -286,7 +287,9 @@ class CourseImportRepository(
     fun commit(importId: UUID): StoredCourseImportCommit? = dsl.fetchOne(
         """
         select id, import_id, owner_user_id, approval_id, approval_binding_sha256,
-               course_id, content_change_set_id, draft_release_id, committed_at
+               course_id, content_change_set_id, draft_release_id,
+               row_count, question_count, matching_question_count,
+               required_client_capabilities, committed_at
           from course_import_commit
          where import_id = ?
         """.trimIndent(),
@@ -301,6 +304,13 @@ class CourseImportRepository(
             courseId = it.get("course_id", UUID::class.java)!!,
             contentChangeSetId = it.get("content_change_set_id", UUID::class.java)!!,
             draftReleaseId = it.get("draft_release_id", UUID::class.java)!!,
+            sourceRowCount = it.get("row_count", Int::class.java)!!,
+            questionCount = it.get("question_count", Int::class.java)!!,
+            matchingQuestionCount = it.get("matching_question_count", Int::class.java)!!,
+            requiredClientCapabilities = it.get(
+                "required_client_capabilities",
+                Array<String>::class.java,
+            )!!.toList(),
             committedAt = it.get("committed_at", OffsetDateTime::class.java)!!,
         )
     }
@@ -428,9 +438,10 @@ class CourseImportRepository(
                 id, import_id, owner_user_id, approval_id, approval_binding_sha256,
                 content_schema_version, source_sha256, allocation_sha256, preview_sha256,
                 course_id, content_change_set_id, draft_release_id, outbox_event_id,
-                row_count, level_count, unit_count, topic_count, test_count,
+                row_count, question_count, matching_question_count, required_client_capabilities,
+                level_count, unit_count, topic_count, test_count,
                 committed_at, correlation_id
-            ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+            ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
                 cast(? as timestamptz), ?)
             """.trimIndent(),
             commitId,
@@ -446,7 +457,10 @@ class CourseImportRepository(
             draft.contentChangeSetId,
             draft.draftReleaseId,
             outboxEventId,
-            draft.rowCount,
+            draft.sourceRowCount,
+            draft.questionCount,
+            draft.matchingQuestionCount,
+            draft.requiredClientCapabilities.toTypedArray(),
             draft.levelCount,
             draft.unitCount,
             draft.topicCount,
@@ -489,6 +503,10 @@ class CourseImportRepository(
             courseId = draft.courseId,
             contentChangeSetId = draft.contentChangeSetId,
             draftReleaseId = draft.draftReleaseId,
+            sourceRowCount = draft.sourceRowCount,
+            questionCount = draft.questionCount,
+            matchingQuestionCount = draft.matchingQuestionCount,
+            requiredClientCapabilities = draft.requiredClientCapabilities,
             committedAt = now,
         )
     }
@@ -596,6 +614,12 @@ class CourseImportRepository(
         summary = CourseImportPreviewSummary(
             isValid = row.get("is_valid", Boolean::class.java)!!,
             rowCount = row.get("row_count", Int::class.java)!!,
+            questionCount = row.get("question_count", Int::class.java),
+            matchingQuestionCount = row.get("matching_question_count", Int::class.java),
+            requiredClientCapabilities = row.get(
+                "required_client_capabilities",
+                Array<String>::class.java,
+            )?.toList(),
             levelCount = row.get("level_count", Int::class.java)!!,
             unitCount = row.get("unit_count", Int::class.java)!!,
             topicCount = row.get("topic_count", Int::class.java)!!,

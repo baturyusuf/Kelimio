@@ -491,7 +491,7 @@ function Invoke-DatabaseScalar {
 function Assert-LocalInfrastructure {
     $flyway = Invoke-DatabaseScalar `
         "select version from flyway_schema_history where success and version is not null order by installed_rank desc limit 1"
-    if ($flyway -ne "10") { throw "The isolated database did not reach Flyway V10." }
+    if ($flyway -ne "11") { throw "The isolated database did not reach Flyway V11." }
     foreach ($bucket in @("kelimio-local-import-quarantine", "kelimio-local-import-archive")) {
         $status = Invoke-DockerCapture (Get-ComposeArguments @(
             "exec", "-T", "localstack", "awslocal", "s3api", "get-bucket-versioning",
@@ -654,13 +654,23 @@ try {
     $validImportId = Start-Import $ownerToken "reviewed-course.xlsx" $workbookBytes
     $validStatus = Wait-ImportStatus $ownerToken $validImportId "PREVIEW_READY"
     if ($validStatus.preview.isValid -ne $true -or
+        $validStatus.rulesVersion -ne "xlsx-v2" -or
+        $validStatus.preview.rowCount -ne 23 -or
+        $validStatus.preview.questionCount -ne 14 -or
+        $validStatus.preview.matchingQuestionCount -ne 3 -or
+        @($validStatus.preview.requiredClientCapabilities).Count -ne 1 -or
+        $validStatus.preview.requiredClientCapabilities[0] -ne "question.matching.v1" -or
         [string]::IsNullOrWhiteSpace($validStatus.approvalBindingSha256)) {
         throw "The reviewed workbook did not produce an approvable preview."
     }
     [void] (Send-Json "GET" "$($script:apiBase)/v1/courses/imports/$validImportId" $otherToken $null "" @(404))
     $preview = Send-Json "GET" "$($script:apiBase)/v1/courses/imports/$validImportId/preview?limit=1" `
         $ownerToken $null "" @(200)
-    if (@($preview.Body.items).Count -ne 1 -or [string]::IsNullOrWhiteSpace($preview.Body.nextCursor)) {
+    if (@($preview.Body.items).Count -ne 1 -or
+        [string]::IsNullOrWhiteSpace($preview.Body.nextCursor) -or
+        $null -eq $preview.Body.items[0].questionOrdinal -or
+        [string]::IsNullOrWhiteSpace($preview.Body.items[0].projectedQuestionType) -or
+        [string]::IsNullOrWhiteSpace($preview.Body.items[0].compositionKind)) {
         throw "The reviewed workbook preview did not expose bounded cursor pagination."
     }
     [void] (Send-Json "GET" "$($script:apiBase)/v1/courses/imports/$validImportId/preview?limit=1" `
@@ -693,7 +703,11 @@ try {
     if ($commit.Body.status -ne "COMMITTED" -or $commit.Body.created -ne $true -or
         [string]::IsNullOrWhiteSpace($commit.Body.courseId) -or
         [string]::IsNullOrWhiteSpace($commit.Body.contentChangeSetId) -or
-        [string]::IsNullOrWhiteSpace($commit.Body.draftReleaseId)) {
+        [string]::IsNullOrWhiteSpace($commit.Body.draftReleaseId) -or
+        $commit.Body.sourceRowCount -ne 23 -or $commit.Body.questionCount -ne 14 -or
+        $commit.Body.matchingQuestionCount -ne 3 -or
+        @($commit.Body.requiredClientCapabilities).Count -ne 1 -or
+        $commit.Body.requiredClientCapabilities[0] -ne "question.matching.v1") {
         throw "The approved preview did not create one identified draft graph."
     }
     $commitReplay = Send-Json "POST" "$($script:apiBase)/v1/courses/imports/$validImportId/commit" $ownerToken @{
@@ -702,13 +716,16 @@ try {
     if ($commitReplay.Body.created -ne $false -or
         $commitReplay.Body.courseId -ne $commit.Body.courseId -or
         $commitReplay.Body.contentChangeSetId -ne $commit.Body.contentChangeSetId -or
-        $commitReplay.Body.draftReleaseId -ne $commit.Body.draftReleaseId) {
+        $commitReplay.Body.draftReleaseId -ne $commit.Body.draftReleaseId -or
+        $commitReplay.Body.questionCount -ne $commit.Body.questionCount) {
         throw "The draft commit idempotency replay changed the committed result."
     }
     $committedStatus = Wait-ImportStatus $ownerToken $validImportId "COMMITTED"
     if ($committedStatus.commit.courseId -ne $commit.Body.courseId -or
         $committedStatus.commit.contentChangeSetId -ne $commit.Body.contentChangeSetId -or
-        $committedStatus.commit.draftReleaseId -ne $commit.Body.draftReleaseId) {
+        $committedStatus.commit.draftReleaseId -ne $commit.Body.draftReleaseId -or
+        $committedStatus.commit.questionCount -ne $commit.Body.questionCount -or
+        $committedStatus.commit.matchingQuestionCount -ne $commit.Body.matchingQuestionCount) {
         throw "The committed import status does not reconcile to the immutable draft result."
     }
     $committedPreview = Send-Json "GET" "$($script:apiBase)/v1/courses/imports/$validImportId/preview?limit=1" `
@@ -770,14 +787,18 @@ try {
         (Invoke-DatabaseScalar "select count(*) from content_unit where course_id = '$courseId'") -ne "$($validStatus.preview.unitCount)" -or
         (Invoke-DatabaseScalar "select count(*) from content_topic where course_id = '$courseId'") -ne "$($validStatus.preview.topicCount)" -or
         (Invoke-DatabaseScalar "select count(*) from test_revision where course_id = '$courseId'") -ne "$($validStatus.preview.testCount)" -or
-        (Invoke-DatabaseScalar "select count(*) from question_revision where course_id = '$courseId'") -ne "$($validStatus.preview.rowCount)" -or
+        (Invoke-DatabaseScalar "select count(*) from question_revision where course_id = '$courseId'") -ne "$($validStatus.preview.questionCount)" -or
         (Invoke-DatabaseScalar "select count(*) from question_revision_option o join question_revision q on q.id = o.question_revision_id where q.course_id = '$courseId'") -ne "0") {
         throw "The draft hierarchy counts do not match the exact approved preview."
     }
-    if ((Invoke-DatabaseScalar "select case when count(*) = (select coalesce(sum((select count(*) from jsonb_object_keys(r.payload->'translations'))), 0) from course_import_preview_row r where import_id = '$validImportId') then 1 else 0 end from question_revision_translation where course_id = '$courseId'") -ne "1" -or
-        (Invoke-DatabaseScalar "select case when count(*) = (select coalesce(sum(jsonb_array_length(payload->'wrongAnswers')), 0) from course_import_preview_row where import_id = '$validImportId') then 1 else 0 end from question_revision_authored_distractor where course_id = '$courseId'") -ne "1" -or
-        (Invoke-DatabaseScalar "select case when count(*) filter (where matching_group is not null) = (select count(*) from course_import_preview_row where import_id = '$validImportId' and payload->>'matchingGroup' is not null) then 1 else 0 end from question_revision_authoring where course_id = '$courseId'") -ne "1") {
-        throw "The committed draft lost translations, authored distractors, or matching provenance."
+    if ((Invoke-DatabaseScalar "select count(*) from question_revision_import_composition where import_id = '$validImportId'") -ne "$($validStatus.preview.questionCount)" -or
+        (Invoke-DatabaseScalar "select count(*) from question_revision_import_source where import_id = '$validImportId'") -ne "$($validStatus.preview.rowCount)" -or
+        (Invoke-DatabaseScalar "select count(*) from question_revision_import_composition where import_id = '$validImportId' and composition_kind = 'MATCHING_GROUP'") -ne "$($validStatus.preview.matchingQuestionCount)" -or
+        (Invoke-DatabaseScalar "select count(*) from question_revision_import_source s join question_revision_import_composition c on c.question_revision_id = s.question_revision_id where s.import_id = '$validImportId' and c.composition_kind = 'MATCHING_GROUP'") -ne "12" -or
+        (Invoke-DatabaseScalar "select count(*) from question_revision_matching_pair p join question_revision q on q.id = p.question_revision_id where q.course_id = '$courseId'") -ne "12" -or
+        (Invoke-DatabaseScalar "select count(*) from question_revision_matching_translation t join question_revision q on q.id = t.question_revision_id where q.course_id = '$courseId'") -ne "36" -or
+        (Invoke-DatabaseScalar "select count(*) from course_release_required_capability where course_release_id = '$draftReleaseId' and capability = 'question.matching.v1'") -ne "1") {
+        throw "The committed draft lost source lineage, matching composition, or its release capability."
     }
     if ((Invoke-DatabaseScalar "select count(*) from course_release_level_revision where course_release_id = '$draftReleaseId'") -ne "$($validStatus.preview.levelCount)" -or
         (Invoke-DatabaseScalar "select count(*) from course_release_unit_revision where course_release_id = '$draftReleaseId'") -ne "$($validStatus.preview.unitCount)" -or
@@ -788,7 +809,7 @@ try {
         (Invoke-DatabaseScalar "select count(*) from question_revision where course_id = '$courseId' and status = 'ACTIVE'") -ne "0") {
         throw "The immutable draft manifest is incomplete or unexpectedly active."
     }
-    if ((Invoke-DatabaseScalar "select count(*) from outbox_event e join outbox_delivery d on d.event_id = e.id where e.event_type = 'course.draft-created-from-import.v1' and e.aggregate_id = '$courseId' and e.payload ?& array['eventId','importId','courseId','contentChangeSetId','draftReleaseId','rowCount','testCount'] and not (e.payload ?| array['originalFileName','sourceSha256','previewSha256','text','prompt','answer']) and (select count(*) from jsonb_object_keys(e.payload)) = 7 and d.published_at is null") -ne "1") {
+    if ((Invoke-DatabaseScalar "select count(*) from outbox_event e join outbox_delivery d on d.event_id = e.id where e.event_type = 'course.draft-created-from-import.v2' and e.schema_version = 2 and e.aggregate_id = '$courseId' and e.payload ?& array['eventId','importId','courseId','contentChangeSetId','draftReleaseId','sourceRowCount','questionCount','matchingQuestionCount','testCount','requiredClientCapabilities'] and not (e.payload ?| array['originalFileName','sourceSha256','previewSha256','text','prompt','answer']) and (select count(*) from jsonb_object_keys(e.payload)) = 10 and d.published_at is null") -ne "1") {
         throw "The draft-created outbox fact is missing, delivered, or contains sensitive authoring data."
     }
     if ((Invoke-DatabaseScalar `
@@ -797,7 +818,7 @@ try {
     }
     Wait-QueueDrained "kelimio-import"
     Wait-QueueDrained "kelimio-import-dlq"
-    Write-Host "Local import E2E passed: exact draft commit, idempotency, immutable hierarchy, no publication, invalid validation, malware rejection, ownership, and queues."
+    Write-Host "Local import E2E passed: Type-D composition, exact draft commit, source lineage, release capability, idempotency, no publication, invalid validation, malware rejection, ownership, and queues."
 } catch {
     $failure = $_
     try {

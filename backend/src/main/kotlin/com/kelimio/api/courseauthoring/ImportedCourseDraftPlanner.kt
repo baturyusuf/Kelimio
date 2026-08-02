@@ -1,6 +1,9 @@
 package com.kelimio.api.courseauthoring
 
 import com.kelimio.api.language.TypedAnswerPolicy
+import com.kelimio.api.language.MatchingLabelPolicy
+import java.text.Normalizer
+import java.util.Locale
 import java.util.UUID
 
 internal class ImportedCourseDraftPlanner(
@@ -11,6 +14,10 @@ internal class ImportedCourseDraftPlanner(
         val orderedRows = command.rows.sortedBy(InitialCourseDraftRow::ordinal)
         rejectUnless(orderedRows.isNotEmpty())
         rejectUnless(orderedRows.map(InitialCourseDraftRow::ordinal) == (1..orderedRows.size).toList())
+        rejectUnless(
+            orderedRows.map(InitialCourseDraftRow::questionOrdinal).distinct() ==
+                (1..command.expectedQuestionCount).toList(),
+        )
         rejectUnless(
             orderedRows.map { it.sourceSheetOrdinal to it.sourceRowNumber }.distinct().size == orderedRows.size,
         )
@@ -41,7 +48,7 @@ internal class ImportedCourseDraftPlanner(
                 )
             }
             rejectUnless(test.allocationKind == row.allocationKind && test.resolvedMode == row.resolvedMode)
-            test.questions += question(row, command.settings)
+            test.rowsByQuestionOrdinal.getOrPut(row.questionOrdinal, ::mutableListOf) += row
         }
 
         val immutableLevels = levels.values.mapIndexed { levelIndex, level ->
@@ -63,6 +70,10 @@ internal class ImportedCourseDraftPlanner(
                                 title = topic.title,
                                 position = topicIndex + 1,
                                 tests = topic.tests.values.mapIndexed { testIndex, test ->
+                                    val questions = test.rowsByQuestionOrdinal.values.map { rows ->
+                                        question(rows, command.settings)
+                                    }
+                                    validateTestComposition(test.resolvedMode, questions)
                                     DraftTest(
                                         id = test.id,
                                         revisionId = test.revisionId,
@@ -70,7 +81,7 @@ internal class ImportedCourseDraftPlanner(
                                         allocationKind = test.allocationKind,
                                         resolvedMode = test.resolvedMode,
                                         position = testIndex + 1,
-                                        questions = test.questions.toList(),
+                                        questions = questions,
                                     )
                                 },
                             )
@@ -84,44 +95,84 @@ internal class ImportedCourseDraftPlanner(
         rejectUnless(graph.unitCount == command.expectedUnitCount)
         rejectUnless(graph.topicCount == command.expectedTopicCount)
         rejectUnless(graph.testCount == command.expectedTestCount)
-        rejectUnless(graph.rowCount == command.rows.size)
+        rejectUnless(graph.sourceRowCount == command.rows.size)
+        rejectUnless(graph.questionCount == command.expectedQuestionCount)
+        rejectUnless(graph.matchingQuestionCount == command.expectedMatchingQuestionCount)
+        rejectUnless(graph.requiredClientCapabilities == command.requiredClientCapabilities)
         return graph
     }
 
-    private fun question(row: InitialCourseDraftRow, settings: InitialCourseDraftSettings): DraftQuestion {
+    private fun question(
+        rows: List<InitialCourseDraftRow>,
+        settings: InitialCourseDraftSettings,
+    ): DraftQuestion {
+        rejectUnless(rows.isNotEmpty())
+        val row = rows.first()
+        val matching = row.compositionKind == InitialCompositionKind.MATCHING_GROUP
+        if (matching) {
+            rejectUnless(rows.size in 2..6)
+            rejectUnless(rows.all { it.compositionKind == InitialCompositionKind.MATCHING_GROUP })
+            rejectUnless(rows.all { it.projectedQuestionType == InitialProjectedQuestionType.D })
+            rejectUnless(rows.mapNotNull(InitialCourseDraftRow::groupPosition) == (1..rows.size).toList())
+            rejectUnless(rows.mapNotNull(InitialCourseDraftRow::matchingGroup).map { it.groupCollisionKey() }.distinct().size == 1)
+        } else {
+            rejectUnless(rows.size == 1 && row.groupPosition == null)
+        }
         val prompt = when (row.recordType) {
             InitialRecordType.WORD -> row.targetText
             InitialRecordType.MULTIPLE_CHOICE_CLOZE,
             InitialRecordType.TYPED_CLOZE,
             -> checkNotNull(row.sentence)
         }
-        val correctAnswer = when (row.recordType) {
-            InitialRecordType.WORD -> checkNotNull(row.translations[settings.defaultSupportLanguageCode])
-            InitialRecordType.MULTIPLE_CHOICE_CLOZE,
-            InitialRecordType.TYPED_CLOZE,
-            -> checkNotNull(row.correctAnswer)
+        val correctAnswer = when {
+            matching -> null
+            row.recordType == InitialRecordType.WORD -> checkNotNull(row.translations[settings.defaultSupportLanguageCode])
+            else -> checkNotNull(row.correctAnswer)
         }
-        val typedCorrectKey = if (row.recordType == InitialRecordType.TYPED_CLOZE) {
-            TypedAnswerPolicy.canonicalize(correctAnswer, settings.targetLanguageCode)
+        val typedCorrectKey = if (row.projectedQuestionType == InitialProjectedQuestionType.C) {
+            TypedAnswerPolicy.canonicalize(checkNotNull(correctAnswer), settings.targetLanguageCode)
         } else {
             null
         }
         val typedAlternativeKey = row.alternativeCorrectAnswer?.let {
             TypedAnswerPolicy.canonicalize(it, settings.targetLanguageCode)
         }
+        val matchingPairs = if (matching) {
+            rows.mapIndexed { index, member ->
+                val targetItemId = newId()
+                DraftMatchingPair(
+                    targetItemId = targetItemId,
+                    position = index + 1,
+                    targetText = member.targetText,
+                    targetLabelKey = MatchingLabelPolicy.canonicalize(
+                        member.targetText,
+                        settings.targetLanguageCode,
+                    ),
+                    translations = settings.supportLanguageCodes.map { language ->
+                        val text = checkNotNull(member.translations[language])
+                        DraftMatchingTranslation(
+                            supportItemId = newId(),
+                            targetItemId = targetItemId,
+                            language = language,
+                            text = text,
+                            labelKey = MatchingLabelPolicy.canonicalize(text, language),
+                        )
+                    },
+                )
+            }
+        } else {
+            emptyList()
+        }
         return DraftQuestion(
             id = newId(),
             revisionId = newId(),
-            row = row,
-            questionType = when (row.recordType) {
-                InitialRecordType.WORD -> "A"
-                InitialRecordType.MULTIPLE_CHOICE_CLOZE -> "B"
-                InitialRecordType.TYPED_CLOZE -> "C"
-            },
-            prompt = prompt,
+            sourceRows = rows,
+            questionType = row.projectedQuestionType.name,
+            prompt = prompt.takeUnless { matching },
             correctAnswer = correctAnswer,
             correctAnswerMatchKey = typedCorrectKey,
             alternativeAnswerMatchKey = typedAlternativeKey,
+            matchingPairs = matchingPairs,
         )
     }
 
@@ -140,19 +191,46 @@ internal class ImportedCourseDraftPlanner(
         rejectUnless(settings.offlineMode == "SCORELESS_PRACTICE")
     }
 
+    private fun validateTestComposition(mode: InitialTestMode, questions: List<DraftQuestion>) {
+        rejectUnless(questions.isNotEmpty())
+        when (mode) {
+            InitialTestMode.MIXED -> Unit
+            InitialTestMode.WORD -> rejectUnless(questions.all { it.questionType == "A" })
+            InitialTestMode.MATCHING -> rejectUnless(questions.all { it.questionType == "D" })
+            InitialTestMode.MULTIPLE_CHOICE_CLOZE -> rejectUnless(questions.all { it.questionType == "B" })
+            InitialTestMode.TYPED_CLOZE -> rejectUnless(questions.all { it.questionType == "C" })
+        }
+    }
+
     private fun validateRow(row: InitialCourseDraftRow, settings: InitialCourseDraftSettings) {
         rejectUnless(row.ordinal in 1..10_000)
+        rejectUnless(row.questionOrdinal in 1..10_000)
         rejectUnless(row.sourceSheetOrdinal in 0..63)
         rejectUnless(row.sourceSheetName.length in 1..31)
         rejectUnless(row.sourceRowNumber in 1..1_048_576)
         rejectUnless(row.level.length in 1..2_000 && row.unit.length in 1..2_000 && row.topic.length in 1..2_000)
         rejectUnless(row.testNumber > 0)
-        rejectUnless(row.resolvedMode != InitialTestMode.MATCHING)
         rejectUnless(!row.hidden)
         rejectUnless(row.targetText.length in 1..2_000)
         rejectUnless(row.matchingGroup == null || row.matchingGroup.length in 1..2_000)
         rejectUnless(row.note == null || row.note.length in 1..2_000)
         rejectUnless(row.wrongAnswers.size <= 3 && row.wrongAnswers.all { it.length in 1..2_000 })
+        when (row.compositionKind) {
+            InitialCompositionKind.ROW -> {
+                rejectUnless(row.groupPosition == null)
+                rejectUnless(row.projectedQuestionType == when (row.recordType) {
+                    InitialRecordType.WORD -> InitialProjectedQuestionType.A
+                    InitialRecordType.MULTIPLE_CHOICE_CLOZE -> InitialProjectedQuestionType.B
+                    InitialRecordType.TYPED_CLOZE -> InitialProjectedQuestionType.C
+                })
+            }
+            InitialCompositionKind.MATCHING_GROUP -> {
+                rejectUnless(row.recordType == InitialRecordType.WORD)
+                rejectUnless(row.projectedQuestionType == InitialProjectedQuestionType.D)
+                rejectUnless(row.groupPosition in 1..6)
+                rejectUnless(row.matchingGroup != null)
+            }
+        }
         when (row.recordType) {
             InitialRecordType.WORD -> {
                 rejectUnless(row.targetText.length <= 1_000)
@@ -211,8 +289,11 @@ internal class ImportedCourseDraftPlanner(
         val number: Int,
         val allocationKind: InitialAllocationKind,
         val resolvedMode: InitialTestMode,
-        val questions: MutableList<DraftQuestion> = mutableListOf(),
+        val rowsByQuestionOrdinal: LinkedHashMap<Int, MutableList<InitialCourseDraftRow>> = linkedMapOf(),
     )
+
+    private fun String.groupCollisionKey(): String =
+        Normalizer.normalize(uppercase(Locale.ROOT).lowercase(Locale.ROOT), Normalizer.Form.NFC)
 }
 
 internal data class ImportedCourseDraftGraph(
@@ -229,7 +310,12 @@ internal data class ImportedCourseDraftGraph(
     val unitCount: Int = units.size
     val topicCount: Int = topics.size
     val testCount: Int = tests.size
-    val rowCount: Int = questions.size
+    val sourceRowCount: Int = questions.sumOf { it.sourceRows.size }
+    val rowCount: Int = sourceRowCount
+    val questionCount: Int = questions.size
+    val matchingQuestionCount: Int = questions.count { it.questionType == "D" }
+    val requiredClientCapabilities: List<String> =
+        if (matchingQuestionCount == 0) emptyList() else listOf("question.matching.v1")
 }
 
 internal data class DraftLevel(
@@ -269,10 +355,27 @@ internal data class DraftTest(
 internal data class DraftQuestion(
     val id: UUID,
     val revisionId: UUID,
-    val row: InitialCourseDraftRow,
+    val sourceRows: List<InitialCourseDraftRow>,
     val questionType: String,
-    val prompt: String,
-    val correctAnswer: String,
+    val prompt: String?,
+    val correctAnswer: String?,
     val correctAnswerMatchKey: String?,
     val alternativeAnswerMatchKey: String?,
+    val matchingPairs: List<DraftMatchingPair>,
+)
+
+internal data class DraftMatchingPair(
+    val targetItemId: UUID,
+    val position: Int,
+    val targetText: String,
+    val targetLabelKey: String,
+    val translations: List<DraftMatchingTranslation>,
+)
+
+internal data class DraftMatchingTranslation(
+    val supportItemId: UUID,
+    val targetItemId: UUID,
+    val language: String,
+    val text: String,
+    val labelKey: String,
 )

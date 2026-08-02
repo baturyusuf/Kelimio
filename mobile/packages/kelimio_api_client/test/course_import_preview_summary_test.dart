@@ -18,6 +18,21 @@ void main() {
       // TODO
     });
 
+    // int questionCount
+    test('to test the property `questionCount`', () async {
+      // TODO
+    });
+
+    // int matchingQuestionCount
+    test('to test the property `matchingQuestionCount`', () async {
+      // TODO
+    });
+
+    // Set<String> requiredClientCapabilities
+    test('to test the property `requiredClientCapabilities`', () async {
+      // TODO
+    });
+
     // int levelCount
     test('to test the property `levelCount`', () async {
       // TODO

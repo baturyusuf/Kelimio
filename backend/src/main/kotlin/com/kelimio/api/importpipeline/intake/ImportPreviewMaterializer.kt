@@ -38,8 +38,13 @@ class ImportPreviewMaterializer(
         if (remaining.isZero || remaining.isNegative) {
             throw ImportMaterializationException("parser-deadline-exceeded", retryable = true)
         }
+        val baseline = when (claim.rulesVersion) {
+            XlsxImportLimits.V1.rulesVersion -> XlsxImportLimits.V1
+            XlsxImportLimits.V2.rulesVersion -> XlsxImportLimits.V2
+            else -> throw ImportMaterializationException("unsupported-rules-version", retryable = false)
+        }
         val reader = SecureXlsxReader(
-            XlsxImportLimits.V1.copy(maxWallClock = minOf(remaining, XlsxImportLimits.V1.maxWallClock)),
+            baseline.copy(maxWallClock = minOf(remaining, baseline.maxWallClock)),
         )
         val preview = try {
             Files.newInputStream(verifiedArchive).use { input ->
@@ -84,6 +89,9 @@ class ImportPreviewMaterializer(
         val counts = PreviewCounts(
             isValid = effectiveValid,
             rowCount = rows.size,
+            questionCount = preview.composition?.questionCount?.takeIf { effectiveValid },
+            matchingQuestionCount = preview.composition?.matchingQuestionCount?.takeIf { effectiveValid },
+            requiredClientCapabilities = preview.composition?.requiredClientCapabilities?.takeIf { effectiveValid },
             levelCount = if (effectiveValid) preview.levelCount else 0,
             unitCount = if (effectiveValid) preview.unitCount else 0,
             topicCount = if (effectiveValid) preview.topicCount else 0,
@@ -138,6 +146,10 @@ class ImportPreviewMaterializer(
             val row = checkNotNull(normalized[planned.row.source])
             CourseImportPreviewRow(
                 ordinal = index + 1,
+                questionOrdinal = checkNotNull(preview.composition).row(row.source).questionOrdinal,
+                projectedQuestionType = preview.composition.row(row.source).questionType.name,
+                compositionKind = preview.composition.row(row.source).compositionKind.name,
+                groupPosition = preview.composition.row(row.source).groupPosition,
                 source = CourseImportSource(
                     sheetOrdinal = row.source.sheetOrdinal,
                     sheetName = row.source.sheetName,
@@ -177,7 +189,7 @@ class ImportPreviewMaterializer(
             source = null,
             message = "The workbook failed secure XLSX validation.",
         )
-        val counts = PreviewCounts(false, 0, 0, 0, 0, 0, 0, 1, null, null)
+        val counts = PreviewCounts(false, 0, null, null, null, 0, 0, 0, 0, 0, 1, null, null)
         val report = validationReport(claim, counts, listOf(issue))
         return MaterializedImportPreview(counts.toSummary(report.sha256, null), emptyList(), listOf(issue), report.bytes)
     }
@@ -188,7 +200,7 @@ class ImportPreviewMaterializer(
         issues: List<CourseImportValidationIssue>,
     ): DeterministicReport {
         val report = mapOf(
-            "schemaVersion" to 1,
+            "schemaVersion" to 2,
             "importId" to claim.importId.toString(),
             "sourceSha256" to claim.assertedSourceSha256,
             "sourceSizeBytes" to claim.expectedSizeBytes,
@@ -196,6 +208,9 @@ class ImportPreviewMaterializer(
             "parserVersion" to settings.parserVersion,
             "valid" to counts.isValid,
             "rowCount" to counts.rowCount,
+            "questionCount" to counts.questionCount,
+            "matchingQuestionCount" to counts.matchingQuestionCount,
+            "requiredClientCapabilities" to counts.requiredClientCapabilities,
             "levelCount" to counts.levelCount,
             "unitCount" to counts.unitCount,
             "topicCount" to counts.topicCount,
@@ -236,6 +251,9 @@ class ImportPreviewMaterializer(
     private data class PreviewCounts(
         val isValid: Boolean,
         val rowCount: Int,
+        val questionCount: Int?,
+        val matchingQuestionCount: Int?,
+        val requiredClientCapabilities: List<String>?,
         val levelCount: Int,
         val unitCount: Int,
         val topicCount: Int,
@@ -246,18 +264,21 @@ class ImportPreviewMaterializer(
         val previewSha256: String?,
     ) {
         fun toSummary(reportSha256: String, settings: CourseImportPreviewSettings?) = CourseImportPreviewSummary(
-            isValid,
-            rowCount,
-            levelCount,
-            unitCount,
-            topicCount,
-            testCount,
-            warningCount,
-            errorCount,
-            reportSha256,
-            allocationSha256,
-            previewSha256,
-            settings,
+            isValid = isValid,
+            rowCount = rowCount,
+            questionCount = questionCount,
+            matchingQuestionCount = matchingQuestionCount,
+            requiredClientCapabilities = requiredClientCapabilities,
+            levelCount = levelCount,
+            unitCount = unitCount,
+            topicCount = topicCount,
+            testCount = testCount,
+            warningCount = warningCount,
+            errorCount = errorCount,
+            validationReportSha256 = reportSha256,
+            allocationSha256 = allocationSha256,
+            previewSha256 = previewSha256,
+            settings = settings,
         )
     }
 

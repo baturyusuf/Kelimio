@@ -14,6 +14,9 @@ CourseImportPreviewSummary _$CourseImportPreviewSummaryFromJson(
     requiredKeys: const [
       'isValid',
       'rowCount',
+      'questionCount',
+      'matchingQuestionCount',
+      'requiredClientCapabilities',
       'levelCount',
       'unitCount',
       'topicCount',
@@ -29,6 +32,18 @@ CourseImportPreviewSummary _$CourseImportPreviewSummaryFromJson(
   final val = CourseImportPreviewSummary(
     isValid: $checkedConvert('isValid', (v) => v as bool),
     rowCount: $checkedConvert('rowCount', (v) => (v as num).toInt()),
+    questionCount: $checkedConvert(
+      'questionCount',
+      (v) => (v as num?)?.toInt(),
+    ),
+    matchingQuestionCount: $checkedConvert(
+      'matchingQuestionCount',
+      (v) => (v as num?)?.toInt(),
+    ),
+    requiredClientCapabilities: $checkedConvert(
+      'requiredClientCapabilities',
+      (v) => (v as List<dynamic>?)?.map((e) => e as String).toSet(),
+    ),
     levelCount: $checkedConvert('levelCount', (v) => (v as num).toInt()),
     unitCount: $checkedConvert('unitCount', (v) => (v as num).toInt()),
     topicCount: $checkedConvert('topicCount', (v) => (v as num).toInt()),
@@ -56,6 +71,9 @@ Map<String, dynamic> _$CourseImportPreviewSummaryToJson(
 ) => <String, dynamic>{
   'isValid': instance.isValid,
   'rowCount': instance.rowCount,
+  'questionCount': instance.questionCount,
+  'matchingQuestionCount': instance.matchingQuestionCount,
+  'requiredClientCapabilities': instance.requiredClientCapabilities?.toList(),
   'levelCount': instance.levelCount,
   'unitCount': instance.unitCount,
   'topicCount': instance.topicCount,

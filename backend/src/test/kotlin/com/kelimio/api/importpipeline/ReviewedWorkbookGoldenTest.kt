@@ -9,11 +9,41 @@ import com.kelimio.api.importpipeline.domain.RowAllocationReason
 import com.kelimio.api.importpipeline.domain.TestAllocationKind
 import com.kelimio.api.importpipeline.domain.WorkbookRecordType
 import com.kelimio.api.importpipeline.infrastructure.xlsx.SecureXlsxReader
+import com.kelimio.api.importpipeline.infrastructure.xlsx.XlsxImportLimits
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import java.security.MessageDigest
 
 class ReviewedWorkbookGoldenTest {
+    @Test
+    fun `rules v2 composes the reviewed mixed-test groups into matching questions`() {
+        val rawWorkbook = checkNotNull(javaClass.getResourceAsStream(FIXTURE_PATH)).use { source ->
+            SecureXlsxReader(XlsxImportLimits.V2).read(
+                originalFileName = "kurs_excel_plani_v3_test_numarali.xlsx",
+                declaredMediaType = SecureXlsxReader.XLSX_MEDIA_TYPE,
+                source = source,
+            )
+        }
+
+        val preview = WorkbookImportOrchestrator().preview(rawWorkbook)
+
+        assertThat(preview.isValid).isTrue()
+        assertThat(preview.issues).isEmpty()
+        val composition = checkNotNull(preview.composition)
+        assertThat(composition.questionCount).isEqualTo(14)
+        assertThat(composition.matchingQuestionCount).isEqualTo(3)
+        assertThat(composition.requiredClientCapabilities).containsExactly("question.matching.v1")
+        assertThat(composition.rows).hasSize(23)
+        assertThat(composition.rows.count { it.questionType.name == "D" }).isEqualTo(12)
+        assertThat(
+            composition.rows
+                .filter { it.questionType.name == "D" }
+                .groupingBy { it.questionOrdinal }
+                .eachCount()
+                .values,
+        ).containsExactlyInAnyOrder(4, 6, 2)
+    }
+
     @Test
     fun `owner supplied workbook produces the reviewed deterministic preview`() {
         val bytes = checkNotNull(javaClass.getResourceAsStream(FIXTURE_PATH)) {

@@ -19,6 +19,14 @@ class CourseImportPreviewRow {
   CourseImportPreviewRow({
     required this.ordinal,
 
+    required this.questionOrdinal,
+
+    required this.projectedQuestionType,
+
+    required this.compositionKind,
+
+    required this.groupPosition,
+
     required this.source_,
 
     required this.level,
@@ -60,6 +68,22 @@ class CourseImportPreviewRow {
   // maximum: 10000
   @JsonKey(name: r'ordinal', required: true, includeIfNull: false)
   final int ordinal;
+
+  // minimum: 1
+  // maximum: 10000
+  @JsonKey(name: r'questionOrdinal', required: true, includeIfNull: true)
+  final int? questionOrdinal;
+
+  @JsonKey(name: r'projectedQuestionType', required: true, includeIfNull: true)
+  final CourseImportPreviewRowProjectedQuestionTypeEnum? projectedQuestionType;
+
+  @JsonKey(name: r'compositionKind', required: true, includeIfNull: true)
+  final CourseImportPreviewRowCompositionKindEnum? compositionKind;
+
+  // minimum: 1
+  // maximum: 6
+  @JsonKey(name: r'groupPosition', required: true, includeIfNull: true)
+  final int? groupPosition;
 
   @JsonKey(name: r'source', required: true, includeIfNull: false)
   final CourseImportSource source_;
@@ -127,6 +151,10 @@ class CourseImportPreviewRow {
       identical(this, other) ||
       other is CourseImportPreviewRow &&
           other.ordinal == ordinal &&
+          other.questionOrdinal == questionOrdinal &&
+          other.projectedQuestionType == projectedQuestionType &&
+          other.compositionKind == compositionKind &&
+          other.groupPosition == groupPosition &&
           other.source_ == source_ &&
           other.level == level &&
           other.unit == unit &&
@@ -149,6 +177,10 @@ class CourseImportPreviewRow {
   @override
   int get hashCode =>
       ordinal.hashCode +
+      (questionOrdinal == null ? 0 : questionOrdinal.hashCode) +
+      (projectedQuestionType == null ? 0 : projectedQuestionType.hashCode) +
+      (compositionKind == null ? 0 : compositionKind.hashCode) +
+      (groupPosition == null ? 0 : groupPosition.hashCode) +
       source_.hashCode +
       level.hashCode +
       unit.hashCode +
@@ -216,6 +248,38 @@ class CourseImportPreviewRow {
     }
     return json.toString();
   }
+}
+
+enum CourseImportPreviewRowProjectedQuestionTypeEnum {
+  @JsonValue(r'A')
+  A(r'A'),
+  @JsonValue(r'B')
+  B(r'B'),
+  @JsonValue(r'C')
+  C(r'C'),
+  @JsonValue(r'D')
+  D(r'D');
+
+  const CourseImportPreviewRowProjectedQuestionTypeEnum(this.value);
+
+  final String value;
+
+  @override
+  String toString() => value;
+}
+
+enum CourseImportPreviewRowCompositionKindEnum {
+  @JsonValue(r'ROW')
+  ROW(r'ROW'),
+  @JsonValue(r'MATCHING_GROUP')
+  MATCHING_GROUP(r'MATCHING_GROUP');
+
+  const CourseImportPreviewRowCompositionKindEnum(this.value);
+
+  final String value;
+
+  @override
+  String toString() => value;
 }
 
 enum CourseImportPreviewRowAllocationKindEnum {

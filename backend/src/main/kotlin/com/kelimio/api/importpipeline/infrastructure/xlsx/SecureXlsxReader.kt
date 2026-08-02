@@ -25,7 +25,7 @@ class SecureXlsxReader(
     private val limits: XlsxImportLimits = XlsxImportLimits.V1,
 ) {
     init {
-        limits.requireNoLooserThan(XlsxImportLimits.V1)
+        limits.requireNoLooserThan(XlsxImportLimits.baselineFor(limits.rulesVersion))
     }
 
     fun read(

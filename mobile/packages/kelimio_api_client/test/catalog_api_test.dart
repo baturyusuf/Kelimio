@@ -8,14 +8,14 @@ void main() {
   group(CatalogApi, () {
     // Return course details visible to the authenticated user
     //
-    //Future<CourseDetail> getCourse(String courseId) async
+    //Future<CourseDetail> getCourse(String courseId, { String xKelimioClientCapabilities }) async
     test('test getCourse', () async {
       // TODO
     });
 
     // List public, published courses
     //
-    //Future<CoursePage> listCatalogCourses({ String cursor, int limit, String targetLanguage, String supportLanguage }) async
+    //Future<CoursePage> listCatalogCourses({ String xKelimioClientCapabilities, String cursor, int limit, String targetLanguage, String supportLanguage }) async
     test('test listCatalogCourses', () async {
       // TODO
     });

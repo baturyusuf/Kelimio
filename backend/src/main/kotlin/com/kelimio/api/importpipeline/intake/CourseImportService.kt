@@ -8,6 +8,8 @@ import com.kelimio.api.courseauthoring.InitialCourseDraftRow
 import com.kelimio.api.courseauthoring.InitialCourseDraftSettings
 import com.kelimio.api.courseauthoring.InitialCourseDraftValidationException
 import com.kelimio.api.courseauthoring.InitialCourseVisibility
+import com.kelimio.api.courseauthoring.InitialCompositionKind
+import com.kelimio.api.courseauthoring.InitialProjectedQuestionType
 import com.kelimio.api.courseauthoring.InitialRecordType
 import com.kelimio.api.courseauthoring.InitialTestMode
 import com.kelimio.api.idempotency.IdempotencyService
@@ -341,7 +343,7 @@ class CourseImportService(
         }
         val preview = repository.preview(importId)
             ?.takeIf {
-                it.summary.isValid && it.contentSchemaVersion == IMPORT_CONTENT_SCHEMA_VERSION &&
+                it.summary.isValid && it.contentSchemaVersion in IMPORT_CONTENT_SCHEMA_VERSIONS &&
                     it.summary.settings != null && it.approvalBindingSha256 == request.approvalBindingSha256
             }
             ?: throw ConflictProblem("The approved preview is not commit-ready.")
@@ -368,22 +370,43 @@ class CourseImportService(
             throw ConflictProblem("The approved preview is not commit-ready.")
         }
         val eventId = UUID.randomUUID()
+        val contentSchemaVersion = checkNotNull(preview.contentSchemaVersion)
+        val matchingContent = contentSchemaVersion == IMPORT_CONTENT_V2
         outbox.appendRecorded(
             RecordedOutboxEvent(
                 id = eventId,
                 aggregateType = "course",
                 aggregateId = draft.courseId,
-                eventType = "course.draft-created-from-import.v1",
-                schemaVersion = 1,
-                payload = mapOf(
-                    "eventId" to eventId,
-                    "importId" to importId,
-                    "courseId" to draft.courseId,
-                    "contentChangeSetId" to draft.contentChangeSetId,
-                    "draftReleaseId" to draft.draftReleaseId,
-                    "rowCount" to draft.rowCount,
-                    "testCount" to draft.testCount,
-                ),
+                eventType = if (matchingContent) {
+                    "course.draft-created-from-import.v2"
+                } else {
+                    "course.draft-created-from-import.v1"
+                },
+                schemaVersion = if (matchingContent) 2 else 1,
+                payload = if (matchingContent) {
+                    mapOf(
+                        "eventId" to eventId,
+                        "importId" to importId,
+                        "courseId" to draft.courseId,
+                        "contentChangeSetId" to draft.contentChangeSetId,
+                        "draftReleaseId" to draft.draftReleaseId,
+                        "sourceRowCount" to draft.sourceRowCount,
+                        "questionCount" to draft.questionCount,
+                        "matchingQuestionCount" to draft.matchingQuestionCount,
+                        "testCount" to draft.testCount,
+                        "requiredClientCapabilities" to draft.requiredClientCapabilities,
+                    )
+                } else {
+                    mapOf(
+                        "eventId" to eventId,
+                        "importId" to importId,
+                        "courseId" to draft.courseId,
+                        "contentChangeSetId" to draft.contentChangeSetId,
+                        "draftReleaseId" to draft.draftReleaseId,
+                        "rowCount" to draft.sourceRowCount,
+                        "testCount" to draft.testCount,
+                    )
+                },
                 correlationId = correlationId,
                 occurredAt = committedAt,
             ),
@@ -630,7 +653,7 @@ class CourseImportService(
         const val COMPLETE_OPERATION = "course-import.complete"
         const val APPROVE_OPERATION = "course-import.approve"
         const val COMMIT_OPERATION = "course-import.commit"
-        const val IMPORT_CONTENT_SCHEMA_VERSION = "import-content-v1"
+        val IMPORT_CONTENT_SCHEMA_VERSIONS = setOf("import-content-v1", "import-content-v2")
         val COMPLETE_SEMANTIC_ERROR_CODES = setOf(
             "BadDigest",
             "EntityTooSmall",
@@ -679,6 +702,10 @@ private fun StoredCourseImportCommit.toSummary() = CourseImportCommitSummary(
     courseId = courseId,
     contentChangeSetId = contentChangeSetId,
     draftReleaseId = draftReleaseId,
+    sourceRowCount = sourceRowCount,
+    questionCount = questionCount,
+    matchingQuestionCount = matchingQuestionCount,
+    requiredClientCapabilities = requiredClientCapabilities,
     committedAt = committedAt,
 )
 
@@ -688,6 +715,10 @@ private fun StoredCourseImportCommit.toResponse(created: Boolean) = CourseImport
     courseId = courseId,
     contentChangeSetId = contentChangeSetId,
     draftReleaseId = draftReleaseId,
+    sourceRowCount = sourceRowCount,
+    questionCount = questionCount,
+    matchingQuestionCount = matchingQuestionCount,
+    requiredClientCapabilities = requiredClientCapabilities,
     committedAt = committedAt,
     created = created,
 )
@@ -700,6 +731,25 @@ private fun StoredPreview.toDraftCommand(
     committedAt: OffsetDateTime,
 ): InitialCourseDraftCommand {
     val approvedSettings = summary.settings ?: throw InitialCourseDraftValidationException()
+    val legacyContent = contentSchemaVersion == IMPORT_CONTENT_V1
+    if (!legacyContent && contentSchemaVersion != IMPORT_CONTENT_V2) {
+        throw InitialCourseDraftValidationException()
+    }
+    val expectedQuestionCount = summary.questionCount ?: if (legacyContent) {
+        summary.rowCount
+    } else {
+        throw InitialCourseDraftValidationException()
+    }
+    val expectedMatchingQuestionCount = summary.matchingQuestionCount ?: if (legacyContent) {
+        0
+    } else {
+        throw InitialCourseDraftValidationException()
+    }
+    val requiredCapabilities = summary.requiredClientCapabilities ?: if (legacyContent) {
+        emptyList()
+    } else {
+        throw InitialCourseDraftValidationException()
+    }
     fun <T : Enum<T>> parse(value: String, enumClass: Class<T>): T = runCatching {
         java.lang.Enum.valueOf(enumClass, value)
     }.getOrElse { throw InitialCourseDraftValidationException() }
@@ -726,8 +776,29 @@ private fun StoredPreview.toDraftCommand(
             offlineMode = approvedSettings.offlineMode,
         ),
         rows = rows.map { row ->
+            val projectedType = row.projectedQuestionType ?: if (legacyContent) {
+                when (row.recordType) {
+                    "WORD" -> "A"
+                    "MULTIPLE_CHOICE_CLOZE" -> "B"
+                    "TYPED_CLOZE" -> "C"
+                    else -> throw InitialCourseDraftValidationException()
+                }
+            } else {
+                throw InitialCourseDraftValidationException()
+            }
             InitialCourseDraftRow(
                 ordinal = row.ordinal,
+                questionOrdinal = row.questionOrdinal ?: if (legacyContent) {
+                    row.ordinal
+                } else {
+                    throw InitialCourseDraftValidationException()
+                },
+                projectedQuestionType = parse(projectedType, InitialProjectedQuestionType::class.java),
+                compositionKind = parse(
+                    row.compositionKind ?: if (legacyContent) "ROW" else throw InitialCourseDraftValidationException(),
+                    InitialCompositionKind::class.java,
+                ),
+                groupPosition = row.groupPosition,
                 sourceSheetOrdinal = row.source.sheetOrdinal,
                 sourceSheetName = row.source.sheetName,
                 sourceRowNumber = row.source.rowNumber,
@@ -750,9 +821,15 @@ private fun StoredPreview.toDraftCommand(
                 note = row.note,
             )
         },
+        expectedQuestionCount = expectedQuestionCount,
+        expectedMatchingQuestionCount = expectedMatchingQuestionCount,
+        requiredClientCapabilities = requiredCapabilities,
         expectedLevelCount = summary.levelCount,
         expectedUnitCount = summary.unitCount,
         expectedTopicCount = summary.topicCount,
         expectedTestCount = summary.testCount,
     )
 }
+
+private const val IMPORT_CONTENT_V1 = "import-content-v1"
+private const val IMPORT_CONTENT_V2 = "import-content-v2"
