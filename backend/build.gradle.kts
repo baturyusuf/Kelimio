@@ -36,12 +36,18 @@ dependencies {
     implementation("software.amazon.awssdk:ssm")
     implementation("software.amazon.awssdk:url-connection-client")
 
-    runtimeOnly("org.postgresql:postgresql")
+    runtimeOnly("org.postgresql:postgresql:42.7.12")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.security:spring-security-test")
     testImplementation("org.testcontainers:junit-jupiter")
     testImplementation("org.testcontainers:postgresql")
+}
+
+configurations.configureEach {
+    // Every AWS SDK client is wired to UrlConnectionHttpClient explicitly.
+    // Keep the unused async Netty implementation out of the runtime image.
+    exclude(group = "software.amazon.awssdk", module = "netty-nio-client")
 }
 
 dependencyLocking {

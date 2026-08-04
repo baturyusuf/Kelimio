@@ -104,6 +104,7 @@ resource "aws_lambda_permission" "cognito_account_linker" {
   function_name  = aws_lambda_function.account_linker.function_name
   principal      = "cognito-idp.amazonaws.com"
   source_account = data.aws_caller_identity.current.account_id
+  source_arn     = aws_cognito_user_pool.this.arn
 }
 
 resource "aws_cognito_user_pool" "this" {
@@ -178,8 +179,6 @@ resource "aws_cognito_user_pool" "this" {
   }
 
   tags = var.tags
-
-  depends_on = [aws_lambda_permission.cognito_account_linker]
 }
 
 resource "aws_secretsmanager_secret" "google_oidc" {

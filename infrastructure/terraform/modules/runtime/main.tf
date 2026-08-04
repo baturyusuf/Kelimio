@@ -115,6 +115,10 @@ resource "aws_vpc_security_group_egress_rule" "api_to_database" {
   description                  = "TLS PostgreSQL"
 }
 
+# The task has no public ingress and no NAT. It must reach dynamic AWS public
+# endpoints and Cognito's public JWKS endpoint, whose addresses cannot be
+# represented by a stable allowlist. ADR-018 accepts this TLS-only egress.
+#trivy:ignore:AVD-AWS-0104
 resource "aws_vpc_security_group_egress_rule" "api_https" {
   security_group_id = aws_security_group.api.id
   cidr_ipv4         = "0.0.0.0/0"

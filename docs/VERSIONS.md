@@ -8,6 +8,7 @@ These versions are owner-approved starting pins. Scaffold and CI must enforce th
 | --- | --- | --- | --- |
 | Java | 21 LTS | Gradle Java toolchain and CI setup | Production runtime and compilation target. |
 | Spring Boot | 3.5.16 | Backend plugin/version catalog | The master requirement is the current stable 3.x line on Java 21. Boot 4 is deliberately not selected. |
+| PostgreSQL JDBC | 42.7.12 | Exact runtime dependency and Gradle lockfile | Security floor for TLS/SCRAM database connections. |
 | Backend Gradle | 8.14.3 | Committed backend Gradle wrapper | Commit `gradlew`, `gradlew.bat`, wrapper properties, and `gradle-wrapper.jar`. |
 | Kotlin | 2.4.10 | Backend plugin/version catalog | Compatibility must be verified by the initial build and CI matrix. |
 | Apache POI | 5.5.1 | Backend dependency declaration and Gradle lockfile | Used only by the isolated XLSX import worker/parser boundary; production parsing uses the event/SAX APIs and never evaluates formulas. |

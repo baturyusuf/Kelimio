@@ -56,6 +56,12 @@ durability, authorization, audit, or release controls would be unacceptable.
   task's private address through a VPC link and Cloud Map SRV discovery; no SSH,
   public container port, NAT Gateway, or ALB is created. ECS Exec, when enabled,
   is KMS-encrypted, IAM-controlled, and logged.
+- The API task has explicit PostgreSQL and VPC DNS egress plus TLS-only port 443
+  egress. The latter is required for dynamic AWS public service endpoints and
+  Cognito's public JWKS endpoint in the no-NAT topology; those addresses do not
+  provide a stable least-privilege CIDR allowlist. This narrow outbound exception
+  never permits public ingress and must be revisited if private endpoints become
+  cheaper than the accepted risk or the workload grows beyond the beta footprint.
 - Use one Single-AZ RDS PostgreSQL instance as the durable source of truth with
   encryption, automated backups, point-in-time recovery, deletion protection,
   and a restore rehearsal. Availability is intentionally lower than ADR-001;
