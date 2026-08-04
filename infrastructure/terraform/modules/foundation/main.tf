@@ -53,11 +53,6 @@ data "aws_iam_policy_document" "application_kms" {
       ]
     }
 
-    condition {
-      test     = "StringEquals"
-      variable = "kms:ViaService"
-      values   = ["logs.${data.aws_region.current.region}.${data.aws_partition.current.dns_suffix}"]
-    }
   }
 
   statement {
