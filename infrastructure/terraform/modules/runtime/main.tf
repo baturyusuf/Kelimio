@@ -497,6 +497,7 @@ resource "aws_ecs_task_definition" "api" {
   execution_role_arn       = aws_iam_role.api_execution.arn
   task_role_arn            = aws_iam_role.api_task.arn
   track_latest             = false
+  enable_fault_injection   = false
 
   runtime_platform {
     operating_system_family = "LINUX"
@@ -504,7 +505,8 @@ resource "aws_ecs_task_definition" "api" {
   }
 
   volume {
-    name = "tmp"
+    name                = "tmp"
+    configure_at_launch = false
   }
 
   container_definitions = jsonencode([{
@@ -528,8 +530,10 @@ resource "aws_ecs_task_definition" "api" {
     }]
     linuxParameters = {
       initProcessEnabled = true
-      capabilities       = { drop = ["ALL"] }
+      capabilities       = { add = [], drop = ["ALL"] }
     }
+    systemControls = []
+    volumesFrom    = []
     environment = [
       { name = "AWS_REGION", value = var.aws_region },
       { name = "KELIMIO_BUILD_REVISION", value = var.build_revision },
@@ -593,6 +597,7 @@ resource "aws_ecs_task_definition" "migration" {
   execution_role_arn       = aws_iam_role.migration_execution.arn
   task_role_arn            = aws_iam_role.migration_task.arn
   track_latest             = false
+  enable_fault_injection   = false
 
   runtime_platform {
     operating_system_family = "LINUX"
@@ -600,7 +605,8 @@ resource "aws_ecs_task_definition" "migration" {
   }
 
   volume {
-    name = "tmp"
+    name                = "tmp"
+    configure_at_launch = false
   }
 
   container_definitions = jsonencode([{
@@ -609,6 +615,7 @@ resource "aws_ecs_task_definition" "migration" {
     essential              = true
     readonlyRootFilesystem = true
     user                   = "kelimio"
+    portMappings           = []
     mountPoints = [{
       sourceVolume  = "tmp"
       containerPath = "/tmp"
@@ -616,8 +623,10 @@ resource "aws_ecs_task_definition" "migration" {
     }]
     linuxParameters = {
       initProcessEnabled = true
-      capabilities       = { drop = ["ALL"] }
+      capabilities       = { add = [], drop = ["ALL"] }
     }
+    systemControls = []
+    volumesFrom    = []
     environment = [
       { name = "AWS_REGION", value = var.aws_region },
       { name = "KELIMIO_BUILD_REVISION", value = var.build_revision },
@@ -680,8 +689,6 @@ resource "aws_service_discovery_service" "api" {
       type = "SRV"
     }
   }
-
-  health_check_custom_config {}
 
   tags = var.tags
 }
