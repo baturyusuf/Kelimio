@@ -38,8 +38,8 @@ claim that the Kelimio application runtime is deployed or publish-ready.
 
 ## GitHub production environment
 
-- The private repository now has a `production` environment restricted to
-  branch `codex/foundation-vertical-slice` for the initial canary work.
+- The private repository now has a `production` environment restricted to the
+  permanent release branch `main`.
 - Eight non-secret AWS/deployment variables are installed, and the operations
   address is stored as the masked environment secret
   `AWS_BUDGET_NOTIFICATION_EMAIL`.

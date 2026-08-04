@@ -76,3 +76,15 @@ jobs:
           fi
       - working-directory: mobile
         run: flutter build ios --no-codesign --debug
+      - name: Locate Swift package resolution
+        if: always()
+        shell: bash
+        run: find mobile/ios -name Package.resolved -type f -print
+      - name: Retain Swift package resolution
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ios-package-resolution-${{ github.sha }}
+          path: mobile/ios/**/Package.resolved
+          if-no-files-found: ignore
+          retention-days: 7

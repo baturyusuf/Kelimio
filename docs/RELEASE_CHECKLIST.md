@@ -15,7 +15,7 @@ This is an evidence checklist, not a statement of completion. Check an item only
 ## Reproducible source and builds
 
 - [ ] Java, Spring Boot, Gradle, Kotlin, Flutter/Dart, Android/iOS, Node/Next.js, and Terraform match `docs/VERSIONS.md` or a superseding ADR.
-- [ ] Gradle wrapper files, Flutter/FVM configuration, application lockfiles, CocoaPods lockfile, and Terraform lockfile are committed.
+- [ ] Gradle wrapper files, Flutter/FVM configuration, application lockfiles, the accepted iOS dependency-resolution artifacts (SwiftPM under ADR-019, or CocoaPods Podfile.lock if reintroduced), and Terraform lockfile are committed.
 - [ ] Clean-clone backend, Android, iOS, admin web, public web, contract generation, and Terraform validation builds pass in CI.
 - [ ] Generated OpenAPI clients are reproducible and generated-code drift/breaking changes fail CI.
 - [ ] Release artifacts include provenance, checksum/signature, dependency inventory, and SBOM.
