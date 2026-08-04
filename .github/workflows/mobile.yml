@@ -76,10 +76,16 @@ jobs:
           fi
       - working-directory: mobile
         run: flutter build ios --no-codesign --debug
-      - name: Locate Swift package resolution
-        if: always()
+      - name: Reject Swift package resolution drift
         shell: bash
-        run: find mobile/ios -name Package.resolved -type f -print
+        run: |
+          resolved="$(find mobile/ios -name Package.resolved -type f -print)"
+          printf '%s\n' "$resolved"
+          drift="$(git status --porcelain --untracked-files=all -- mobile/ios/**/Package.resolved)"
+          if [[ -n "$drift" ]]; then
+            printf '%s\n' "$drift"
+            exit 1
+          fi
       - name: Retain Swift package resolution
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

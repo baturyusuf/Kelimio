@@ -30,11 +30,13 @@ lockfile.
 - Remove the stale `mobile/ios/Podfile`; do not generate Pods or a
   `Podfile.lock` while every selected plugin supports SwiftPM.
 - Keep the checked-in Xcode project and shared scheme as the authoritative
-  SwiftPM integration artifacts. Dart packages remain pinned by
-  `mobile/pubspec.lock`.
+  SwiftPM integration artifacts. Commit both Xcode-generated
+  `Package.resolved` files so AppAuth-iOS's exact version and revision are
+  reproducible. Dart packages remain pinned by `mobile/pubspec.lock`.
 - The macOS CI build is the reproducibility gate. It must run
-  `flutter pub get --enforce-lockfile`, reject generated dependency drift, and
-  complete an unsigned iOS build.
+  `flutter pub get --enforce-lockfile`, complete an unsigned iOS build, reject
+  generated dependency-resolution drift, and retain the resolution files as
+  short-lived build evidence.
 - If a future required plugin lacks SwiftPM support, adding a CocoaPods fallback
   requires a superseding ADR, a committed Podfile and Podfile.lock, and a clean
   macOS compatibility build. CocoaPods must not be reintroduced silently.
