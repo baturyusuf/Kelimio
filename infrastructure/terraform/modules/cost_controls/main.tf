@@ -30,6 +30,7 @@ resource "aws_sns_topic" "operations" {
   name              = "${var.name_prefix}-cost-operations"
   display_name      = "Kelimio production cost controls"
   signature_version = 2
+  kms_master_key_id = var.kms_key_arn
   tags              = var.tags
 }
 
@@ -38,6 +39,7 @@ resource "aws_sns_topic" "control" {
 
   name              = "${var.name_prefix}-cost-${each.key}"
   signature_version = 2
+  kms_master_key_id = var.kms_key_arn
   tags              = var.tags
 }
 
@@ -75,6 +77,33 @@ data "aws_iam_policy_document" "budget_topic" {
       test     = "StringEquals"
       variable = "aws:SourceAccount"
       values   = [data.aws_caller_identity.current.account_id]
+    }
+  }
+
+  dynamic "statement" {
+    for_each = each.key == "operations" ? [1] : []
+
+    content {
+      sid       = "AllowProductionAlarmsPublish"
+      actions   = ["sns:Publish"]
+      resources = [each.value]
+
+      principals {
+        type        = "Service"
+        identifiers = ["cloudwatch.amazonaws.com"]
+      }
+
+      condition {
+        test     = "StringEquals"
+        variable = "aws:SourceAccount"
+        values   = [data.aws_caller_identity.current.account_id]
+      }
+
+      condition {
+        test     = "ArnLike"
+        variable = "aws:SourceArn"
+        values   = ["arn:${data.aws_partition.current.partition}:cloudwatch:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:alarm:${var.name_prefix}-*"]
+      }
     }
   }
 }
@@ -120,8 +149,32 @@ data "aws_iam_policy_document" "governor" {
 
   statement {
     sid       = "DescribeSuspendibleCompute"
-    actions   = ["ec2:DescribeInstances", "rds:DescribeDBInstances"]
+    actions   = ["ec2:DescribeInstances", "ecs:DescribeServices", "rds:DescribeDBInstances"]
     resources = ["*"]
+  }
+
+  statement {
+    sid       = "StopTaggedEcsServices"
+    actions   = ["ecs:UpdateService"]
+    resources = [for item in var.suspendible_ecs_services : "arn:${data.aws_partition.current.partition}:ecs:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:service/${item.cluster}/${item.service}"]
+
+    condition {
+      test     = "StringEquals"
+      variable = "aws:ResourceTag/Project"
+      values   = ["kelimio"]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "aws:ResourceTag/Environment"
+      values   = [var.environment]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "aws:ResourceTag/AutoSuspend"
+      values   = ["true"]
+    }
   }
 
   statement {
@@ -207,6 +260,7 @@ resource "aws_lambda_function" "governor" {
       CONTROL_TOPIC_MODES      = jsonencode({ for name, topic in aws_sns_topic.control : topic.arn => local.control_modes[name] })
       OPERATING_MODE_PARAMETER = aws_ssm_parameter.operating_mode.name
       EC2_INSTANCE_IDS         = jsonencode(var.suspendible_ec2_instance_ids)
+      ECS_SERVICES             = jsonencode(var.suspendible_ecs_services)
       RDS_INSTANCE_IDENTIFIERS = jsonencode(var.suspendible_rds_instance_identifiers)
     }
   }
@@ -217,6 +271,54 @@ resource "aws_lambda_function" "governor" {
   ]
 
   tags = var.tags
+}
+
+resource "aws_cloudwatch_event_rule" "suspension_recheck" {
+  name                = "${var.name_prefix}-suspension-recheck"
+  description         = "Reasserts suspended compute state after provider auto-restarts"
+  schedule_expression = "rate(6 hours)"
+  tags                = var.tags
+}
+
+resource "aws_lambda_permission" "events" {
+  statement_id  = "AllowScheduledSuspensionRecheck"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.governor.function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.suspension_recheck.arn
+}
+
+resource "aws_cloudwatch_event_target" "suspension_recheck" {
+  rule      = aws_cloudwatch_event_rule.suspension_recheck.name
+  target_id = "cost-governor"
+  arn       = aws_lambda_function.governor.arn
+  input     = jsonencode({ source = "aws.events", action = "reassert-suspension" })
+
+  depends_on = [aws_lambda_permission.events]
+}
+
+resource "aws_cloudwatch_event_rule" "monthly_reset" {
+  name                = "${var.name_prefix}-cost-monthly-reset"
+  description         = "Returns the application mode to normal at the start of a new AWS budget month; stopped compute stays stopped"
+  schedule_expression = "cron(15 1 1 * ? *)"
+  tags                = var.tags
+}
+
+resource "aws_lambda_permission" "monthly_reset" {
+  statement_id  = "AllowMonthlyCostModeReset"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.governor.function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.monthly_reset.arn
+}
+
+resource "aws_cloudwatch_event_target" "monthly_reset" {
+  rule      = aws_cloudwatch_event_rule.monthly_reset.name
+  target_id = "cost-governor"
+  arn       = aws_lambda_function.governor.arn
+  input     = jsonencode({ source = "aws.events", action = "reset-new-budget-month" })
+
+  depends_on = [aws_lambda_permission.monthly_reset]
 }
 
 resource "aws_lambda_permission" "sns" {

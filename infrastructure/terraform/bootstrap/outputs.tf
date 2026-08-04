@@ -13,3 +13,7 @@ output "github_oidc_provider_arn" {
 output "github_production_plan_role_arn" {
   value = aws_iam_role.github_production_plan.arn
 }
+
+output "github_production_deploy_role_arn" {
+  value = aws_iam_role.github_production_deploy.arn
+}

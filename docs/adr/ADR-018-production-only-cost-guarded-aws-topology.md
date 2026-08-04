@@ -44,10 +44,18 @@ durability, authorization, audit, or release controls would be unacceptable.
 ### Initial cost-constrained topology
 
 - Do not provision NAT Gateway, ALB, an always-on import worker, ElastiCache,
-  Kubernetes, or a second Availability Zone in the initial footprint.
-- Run the stateless API on one small, replaceable compute node with a public
-  address, no inbound administration port, Systems Manager access, encrypted
-  root storage, and HTTPS-only origin access restricted to the approved edge.
+  Kubernetes, or billable standby compute/database capacity in a second
+  Availability Zone in the initial footprint. RDS requires every DB subnet
+  group, including a Single-AZ deployment, to contain subnets in at least two
+  Availability Zones. Terraform therefore creates empty public/private subnet
+  shells in two AZs while the API task and database each remain single-instance;
+  this requirement does not authorize a Multi-AZ database or a second API task.
+- Run the stateless API as one small, replaceable Fargate task in a public subnet
+  with a public address only for outbound dependency access. Its security group
+  accepts no public ingress. API Gateway terminates public HTTPS and reaches the
+  task's private address through a VPC link and Cloud Map SRV discovery; no SSH,
+  public container port, NAT Gateway, or ALB is created. ECS Exec, when enabled,
+  is KMS-encrypted, IAM-controlled, and logged.
 - Use one Single-AZ RDS PostgreSQL instance as the durable source of truth with
   encryption, automated backups, point-in-time recovery, deletion protection,
   and a restore rehearsal. Availability is intentionally lower than ADR-001;
@@ -60,6 +68,18 @@ durability, authorization, audit, or release controls would be unacceptable.
 - Use Cognito or an explicitly approved managed OIDC service for app-branded
   email/password and Google sign-in. The broker, not the application, owns
   verified-identity linking under ADR-005.
+- The initial broker is Cognito. API clients use Authorization Code + PKCE and
+  the backend accepts Cognito access tokens only after signature, issuer,
+  `token_use=access`, and app-client `client_id` validation. A Google identity
+  can link only through a pre-sign-up broker trigger with a provider-verified
+  email: it reuses one verified native destination, creates a suppressed native
+  destination after Google proves a new address, and rejects ambiguous or
+  unverified matches. The Google client secret remains in Secrets Manager and a
+  narrow configurator reads it at apply time; neither Terraform input nor
+  application state contains the value.
+- Cognito's default sender may be used only for a bounded pre-traffic canary.
+  Public registration remains blocked until the owner approves a sender/domain
+  and SES production delivery, templates, bounce/complaint handling and quotas.
 - Use CloudFront's flat-rate/free edge plan where supported for public delivery
   and WAF/DDoS containment. Unsupported origin, compute, database, storage,
   messaging, email, key, log, domain, tax, and support charges remain normal

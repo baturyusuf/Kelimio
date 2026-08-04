@@ -6,6 +6,10 @@ variable "environment" {
   type = string
 }
 
+variable "kms_key_arn" {
+  type = string
+}
+
 variable "monthly_budget_usd" {
   type    = number
   default = 50
@@ -38,6 +42,14 @@ variable "suspendible_ec2_instance_ids" {
 
 variable "suspendible_rds_instance_identifiers" {
   type    = list(string)
+  default = []
+}
+
+variable "suspendible_ecs_services" {
+  type = list(object({
+    cluster = string
+    service = string
+  }))
   default = []
 }
 

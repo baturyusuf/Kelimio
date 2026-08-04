@@ -59,6 +59,30 @@ data "aws_iam_policy_document" "application_kms" {
       values   = ["logs.${data.aws_region.current.region}.${data.aws_partition.current.dns_suffix}"]
     }
   }
+
+  statement {
+    sid = "AllowCostNotifications"
+    actions = [
+      "kms:Decrypt",
+      "kms:GenerateDataKey*"
+    ]
+    resources = ["*"]
+
+    principals {
+      type = "Service"
+      identifiers = [
+        "budgets.amazonaws.com",
+        "cloudwatch.amazonaws.com",
+        "sns.amazonaws.com"
+      ]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "aws:SourceAccount"
+      values   = [data.aws_caller_identity.current.account_id]
+    }
+  }
 }
 
 resource "aws_kms_key" "application" {

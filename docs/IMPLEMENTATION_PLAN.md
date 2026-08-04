@@ -48,7 +48,7 @@ pre-traffic exit gate is not met.
 
 Implemented so far: JWT/OIDC resource-server validation, mobile Authorization Code + PKCE, a server-enforced provisional-user gate, profile/language/time-zone setup, catalog/detail/enrollment, and authoritative Type-A/B/C/D attempts. Type D exposes independently ordered sides, accepts one complete bijection, and grades all-or-nothing under the attempt's pinned support language. Its durable fact retains no submitted mapping or correct-pair count; replay uses a random salt and versioned externally keyed HMAC with constant-time comparison. Authored answer relationships remain in immutable content and the staging/production keyring remains external to PostgreSQL and source.
 
-Persistent idempotency, authoritative scoring/energy/outbox, privacy-safe recovery, owner-scoped lost-response reconciliation, rebuildable release-aware progress, stored capability gates, and real-PostgreSQL evidence are present. The local starter release contains five Type-A, one Type-B, the reviewed-workbook Type-C row, and one four-pair Type-D question without seeding users or learning results. The backend passes 39 suites and 189/189 tests; generated contract checks pass for the current OpenAPI consumers; and Flutter analysis plus 134/134 tests pass, including accessible Type-D, resumable teacher, secure editor recovery, ETag conflict/reapply, and localized cost-mode coverage. The isolated Android journey passes learning, reviewed-workbook initial publication, secure editor recovery, a real stale-ETag conflict, explicit reapply, and revision-3 publication against Flyway V13. AWS replay-key custody, production pre-traffic acceptance, general profile editing, legal consent, physical-device evidence, production telemetry, production authoring, and native Custom Tab/deep-link acceptance remain open.
+Persistent idempotency, authoritative scoring/energy/outbox, privacy-safe recovery, owner-scoped lost-response reconciliation, rebuildable release-aware progress, stored capability gates, and real-PostgreSQL evidence are present. The local starter release contains five Type-A, one Type-B, the reviewed-workbook Type-C row, and one four-pair Type-D question without seeding users or learning results. The backend passes 41 suites and 193/193 tests; generated contract checks pass for the current OpenAPI consumers; and Flutter analysis plus 134/134 tests pass, including accessible Type-D, resumable teacher, secure editor recovery, ETag conflict/reapply, and localized cost-mode coverage. Cognito email/Google brokering, verified-email account linking, access-token validation, and initial Secrets Manager replay-key injection are code-defined but not applied. The isolated Android journey passes learning, reviewed-workbook initial publication, secure editor recovery, a real stale-ETag conflict, explicit reapply, and revision-3 publication against Flyway V13. Production pre-traffic acceptance, general profile editing, legal consent, physical-device evidence, production telemetry, production authoring, replay-key rotation, and native Custom Tab/deep-link acceptance remain open.
 
 Deliverables:
 
@@ -72,9 +72,9 @@ production artifact.
 
 ## Phase 2 — Student learning product
 
-Status: in progress; all four question types, the 133-test Flutter suite, the isolated combined learning/publication Android E2E, and the repository-managed API 24/30/36 emulator smoke matrix run locally, while supported physical-device/performance coverage and the remaining student product are open.
+Status: in progress; all four question types, the 134-test Flutter suite, the isolated combined learning/publication Android E2E, and the repository-managed API 24/30/36 emulator smoke matrix run locally, while supported physical-device/performance coverage and the remaining student product are open.
 
-Implemented foundation: the Type-D domain/controller/UI path provides an accessible two-stage non-drag interaction with RTL, focus, screen-reader, narrow-layout, and text-scale coverage. It never grades locally, retains no submitted or correct mapping in durable recovery or diagnostics, and rebuilds an empty board after restart unless ownership-scoped no-store reconciliation returns committed feedback. The mobile transport centrally advertises `question.matching.v1`; Flutter analysis and all 133 tests pass, including Type-D, resumable teacher, secure editor recovery/conflict, and capability-header coverage. The combined learning, reviewed-workbook publication, and conflict-safe revision-3 authoring Android E2E passes against a fresh Flyway V13 stack using a per-run random replay key; and API 24/Nexus 5, API 30/Pixel 3a, and API 36/Pixel 7 smoke checks pass 15/15. Emulator evidence does not replace supported physical-device, native OIDC, update/migration, accessibility-audit, or performance gates.
+Implemented foundation: the Type-D domain/controller/UI path provides an accessible two-stage non-drag interaction with RTL, focus, screen-reader, narrow-layout, and text-scale coverage. It never grades locally, retains no submitted or correct mapping in durable recovery or diagnostics, and rebuilds an empty board after restart unless ownership-scoped no-store reconciliation returns committed feedback. The mobile transport centrally advertises `question.matching.v1`; Flutter analysis and all 134 tests pass, including Type-D, resumable teacher, secure editor recovery/conflict, and capability-header coverage. The combined learning, reviewed-workbook publication, and conflict-safe revision-3 authoring Android E2E passes against a fresh Flyway V13 stack using a per-run random replay key; and API 24/Nexus 5, API 30/Pixel 3a, and API 36/Pixel 7 smoke checks pass 15/15. Emulator evidence does not replace supported physical-device, native OIDC, update/migration, accessibility-audit, or performance gates.
 
 Deliverables:
 
@@ -134,11 +134,14 @@ Official store sandboxes prove purchase, duplicate delivery, restore, refund/rev
 ## Phase 5 — Administration, production infrastructure, and operations
 
 Status: in progress. ADR-018 records the production-only account, region, cost
-and availability trade-offs. The account-guarded no-NAT Terraform root,
-immutable-import retention input, USD 50 budget topics/Lambda/SSM modes, backend
-enforcement, localized mobile handling, and protected GitHub OIDC plan role and
-workflow are implemented and validated locally. Compute, database, identity,
-edge/TLS, runtime roles, restore proof, apply role and every real AWS apply remain
+and availability trade-offs. The account-guarded no-NAT Terraform root now
+defines Cognito email/Google brokering, one private-ingress ARM64 Fargate API,
+Single-AZ RDS PostgreSQL, generated write-only secrets, separate migration and
+runtime roles, API Gateway HTTPS, alarms, monotonic budget/Lambda/SSM brakes,
+and exact GitHub OIDC plan/deploy roles. Backend enforcement, localized mobile
+handling, digest-specific image scanning/SBOM, migration-before-promotion, and
+the deployment runbook are validated locally. Every real AWS apply, provider
+canary, restore proof, custom DNS/WAF, and the production import worker remain
 open.
 
 Deliverables:

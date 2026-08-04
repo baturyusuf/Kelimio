@@ -29,6 +29,7 @@ class SecurityConfig {
         @Value("\${KELIMIO_OIDC_ISSUER}") issuer: String,
         @Value("\${KELIMIO_OIDC_AUDIENCE}") audience: String,
         @Value("\${KELIMIO_OIDC_JWK_SET_URI:}") jwkSetUri: String,
+        @Value("\${KELIMIO_OIDC_TOKEN_PROFILE:oidc}") tokenProfile: String,
     ): JwtDecoder {
         OidcEndpointPolicy.validate(environment, issuer, jwkSetUri, audience)
         val decoder = if (jwkSetUri.isBlank()) {
@@ -36,15 +37,7 @@ class SecurityConfig {
         } else {
             NimbusJwtDecoder.withJwkSetUri(jwkSetUri).build()
         }
-        val audienceValidator = OAuth2TokenValidator<Jwt> { jwt ->
-            if (jwt.audience.contains(audience)) {
-                OAuth2TokenValidatorResult.success()
-            } else {
-                OAuth2TokenValidatorResult.failure(
-                    OAuth2Error("invalid_token", "Required audience is missing.", null),
-                )
-            }
-        }
+        val audienceValidator = OidcTokenProfile.parse(tokenProfile).validator(audience)
         decoder.setJwtValidator(
             DelegatingOAuth2TokenValidator(
                 JwtValidators.createDefaultWithIssuer(issuer),
@@ -77,4 +70,37 @@ class SecurityConfig {
                 it.jwt(withDefaults())
             }
             .build()
+}
+
+enum class OidcTokenProfile {
+    OIDC,
+    COGNITO_ACCESS,
+    ;
+
+    fun validator(expectedAudience: String): OAuth2TokenValidator<Jwt> =
+        OAuth2TokenValidator<Jwt> { jwt ->
+            val valid = when (this) {
+                OIDC -> jwt.audience.contains(expectedAudience)
+                COGNITO_ACCESS ->
+                    jwt.getClaimAsString("token_use") == "access" &&
+                        jwt.getClaimAsString("client_id") == expectedAudience
+            }
+            if (valid) {
+                OAuth2TokenValidatorResult.success()
+            } else {
+                OAuth2TokenValidatorResult.failure(
+                    OAuth2Error("invalid_token", "Token is not valid for this API client.", null),
+                )
+            }
+        }
+
+    companion object {
+        fun parse(value: String): OidcTokenProfile = when (value.trim().lowercase()) {
+            "oidc" -> OIDC
+            "cognito-access" -> COGNITO_ACCESS
+            else -> throw IllegalArgumentException(
+                "KELIMIO_OIDC_TOKEN_PROFILE must be oidc or cognito-access.",
+            )
+        }
+    }
 }

@@ -25,3 +25,15 @@ output "import_dlq_url" {
 output "ecr_repository_urls" {
   value = { for name, repository in aws_ecr_repository.service : name => repository.repository_url }
 }
+
+output "ecr_repository_arns" {
+  value = { for name, repository in aws_ecr_repository.service : name => repository.arn }
+}
+
+output "log_group_names" {
+  value = { for name, log_group in aws_cloudwatch_log_group.service : name => log_group.name }
+}
+
+output "log_group_arns" {
+  value = { for name, log_group in aws_cloudwatch_log_group.service : name => log_group.arn }
+}

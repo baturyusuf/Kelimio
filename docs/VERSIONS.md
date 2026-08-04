@@ -21,6 +21,7 @@ These versions are owner-approved starting pins. Scaffold and CI must enforce th
 | Node.js | 24.18.0 LTS | Root `.node-version`, package engines, and CI | Used by Next.js applications and contract tooling. |
 | Next.js | stable 16.2.x line | Web `package.json` and committed lockfile | Pin the exact stable 16.2 patch selected during scaffold; no floating caret for the framework baseline. |
 | Terraform | 1.15.8 | `required_version`, CI setup, and lockfile | Commit `.terraform.lock.hcl`; never commit state or secret-bearing tfvars. |
+| Terraform providers | AWS 6.57.1; Archive 2.8.0; Random 3.9.0 | Committed production `.terraform.lock.hcl` | Random passwords/bytes use Terraform ephemeral values and AWS write-only secret arguments so generated values are not retained in state. |
 
 ## Reproducibility policy
 

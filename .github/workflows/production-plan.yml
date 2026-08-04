@@ -46,6 +46,8 @@ jobs:
         env:
           TF_VAR_budget_notification_email: ${{ vars.AWS_BUDGET_NOTIFICATION_EMAIL }}
           TF_VAR_import_archive_retention_days: ${{ vars.AWS_IMPORT_ARCHIVE_RETENTION_DAYS }}
+          TF_VAR_api_image_digest: ${{ vars.AWS_API_IMAGE_DIGEST || 'sha256:0000000000000000000000000000000000000000000000000000000000000000' }}
+          TF_VAR_build_revision: ${{ github.sha }}
         run: |
           set +e
           terraform plan -input=false -lock-timeout=5m -detailed-exitcode

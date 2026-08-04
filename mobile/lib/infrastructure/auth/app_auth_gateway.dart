@@ -36,7 +36,6 @@ final class AppAuthGateway implements AuthRepository, AccessTokenProvider {
     'openid',
     'profile',
     'email',
-    'offline_access',
   ];
 
   @override

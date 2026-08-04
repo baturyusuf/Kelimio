@@ -12,7 +12,8 @@ class CostGovernorTest(unittest.TestCase):
         self.ssm = Mock()
         self.ec2 = Mock()
         self.rds = Mock()
-        clients = {"ssm": self.ssm, "ec2": self.ec2, "rds": self.rds}
+        self.ecs = Mock()
+        clients = {"ssm": self.ssm, "ec2": self.ec2, "rds": self.rds, "ecs": self.ecs}
         fake_boto3 = types.ModuleType("boto3")
         fake_boto3.client = lambda service: clients[service]
         sys.modules["boto3"] = fake_boto3
@@ -28,6 +29,7 @@ class CostGovernorTest(unittest.TestCase):
         )
         os.environ["OPERATING_MODE_PARAMETER"] = "/kelimio/production/operating-mode"
         os.environ["EC2_INSTANCE_IDS"] = "[]"
+        os.environ["ECS_SERVICES"] = "[]"
         os.environ["RDS_INSTANCE_IDENTIFIERS"] = "[]"
 
     def tearDown(self):
@@ -57,10 +59,58 @@ class CostGovernorTest(unittest.TestCase):
         self.assertFalse(result["changed"])
 
     def test_unknown_topic_fails_closed_without_writing(self):
+        self.ssm.get_parameter.return_value = {"Parameter": {"Value": "NORMAL"}}
         with self.assertRaisesRegex(ValueError, "unrecognized topic"):
             self.module.handler(self.event("arn:unknown"), None)
 
-        self.ssm.get_parameter.assert_not_called()
+        self.ssm.get_parameter.assert_called_once_with(
+            Name="/kelimio/production/operating-mode"
+        )
+        self.ssm.put_parameter.assert_not_called()
+
+    def test_schedule_reasserts_suspension_and_scales_service_to_zero(self):
+        self.ssm.get_parameter.return_value = {"Parameter": {"Value": "SUSPENDED"}}
+        os.environ["ECS_SERVICES"] = '[{"cluster":"cluster","service":"api"}]'
+        self.ecs.describe_services.return_value = {"services": [{"desiredCount": 1}]}
+
+        result = self.module.handler(
+            {"source": "aws.events", "action": "reassert-suspension"}, None
+        )
+
+        self.ecs.update_service.assert_called_once_with(
+            cluster="cluster",
+            service="api",
+            desiredCount=0,
+        )
+        self.assertEqual(["cluster/api"], result["stopped"]["ecs"])
+
+    def test_new_budget_month_resets_mode_without_restarting_compute(self):
+        self.ssm.get_parameter.return_value = {"Parameter": {"Value": "SUSPENDED"}}
+        os.environ["ECS_SERVICES"] = '[{"cluster":"cluster","service":"api"}]'
+
+        result = self.module.handler(
+            {"source": "aws.events", "action": "reset-new-budget-month"}, None
+        )
+
+        self.ssm.put_parameter.assert_called_once_with(
+            Name="/kelimio/production/operating-mode",
+            Value="NORMAL",
+            Type="String",
+            Overwrite=True,
+        )
+        self.ecs.describe_services.assert_not_called()
+        self.ecs.update_service.assert_not_called()
+        self.assertEqual("NORMAL", result["mode"])
+        self.assertTrue(result["changed"])
+
+    def test_unknown_scheduled_action_fails_closed(self):
+        self.ssm.get_parameter.return_value = {"Parameter": {"Value": "NORMAL"}}
+
+        with self.assertRaisesRegex(ValueError, "unrecognized scheduled action"):
+            self.module.handler(
+                {"source": "aws.events", "action": "unexpected"}, None
+            )
+
         self.ssm.put_parameter.assert_not_called()
 
     @staticmethod
