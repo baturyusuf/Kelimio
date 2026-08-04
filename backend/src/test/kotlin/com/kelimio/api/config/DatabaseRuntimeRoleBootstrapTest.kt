@@ -63,6 +63,15 @@ class DatabaseRuntimeRoleBootstrapTest {
                     }
                 }
             }
+
+            admin.connection.use { connection ->
+                connection.createStatement().use {
+                    it.execute("alter role kelimio_runtime with superuser")
+                }
+            }
+            assertThatThrownBy {
+                bootstrap(admin, "A-production-runtime-password-0003!")
+            }.hasMessageContaining("unsafe attributes")
         }
     }
 
