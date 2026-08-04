@@ -13,6 +13,20 @@ jsonSchemaDialect: https://json-schema.org/draft/2020-12/schema
 servers:
   - url: /
     description: Base URL supplied by the environment-specific client configuration.
+x-kelimio-operating-modes:
+  source: server-authoritative
+  modes:
+    NORMAL:
+      effect: All otherwise-authorized operations are available.
+    CONSERVE:
+      effect: Course import, authoring, and release mutations return a no-store 503 problem.
+      problemType: cost-conservation
+    READ_ONLY:
+      effect: Unsafe HTTP methods return a no-store 503 problem before any domain mutation.
+      problemType: cost-read-only
+    SUSPENDED:
+      effect: Every /v1 operation returns a no-store 503 problem; health remains available while compute is draining.
+      problemType: cost-suspended
 tags:
   - name: Profile
     description: Authenticated profile and language preferences.

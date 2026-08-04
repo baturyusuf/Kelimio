@@ -60,6 +60,14 @@ final class DioFailureMapper {
         cause: error,
       );
     }
+    final operatingMode = _operatingModeCodes[normalizedCode];
+    if (status == 503 && operatingMode != null) {
+      return OperatingModeFailure(
+        mode: operatingMode,
+        requestId: requestId,
+        cause: error,
+      );
+    }
     if (status == 409) {
       return ConflictFailure(
         code: problem.code,
@@ -91,6 +99,11 @@ final class DioFailureMapper {
     'QUESTION_REVISION_MISMATCH',
   };
   static const _energyCodes = {'ENERGY_DEPLETED', 'INSUFFICIENT_ENERGY'};
+  static const _operatingModeCodes = {
+    'COST_CONSERVATION': ServiceOperatingMode.conserve,
+    'COST_READ_ONLY': ServiceOperatingMode.readOnly,
+    'COST_SUSPENDED': ServiceOperatingMode.suspended,
+  };
 }
 
 ({String? code, String? detail, String? requestId}) _problem(Object? data) {

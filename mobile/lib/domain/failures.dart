@@ -64,6 +64,21 @@ final class ServerFailure extends AppFailure {
   bool get isRetryable => status >= 500 || status == 429;
 }
 
+enum ServiceOperatingMode { conserve, readOnly, suspended }
+
+final class OperatingModeFailure extends AppFailure {
+  const OperatingModeFailure({
+    required this.mode,
+    super.requestId,
+    super.cause,
+  });
+
+  final ServiceOperatingMode mode;
+
+  @override
+  bool get isRetryable => true;
+}
+
 final class ValidationFailure extends AppFailure {
   const ValidationFailure({
     this.code,

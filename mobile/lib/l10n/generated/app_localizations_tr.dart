@@ -70,6 +70,18 @@ class AppLocalizationsTr extends AppLocalizations {
       'Bu derlemede zorunlu üretim ayarları eksik.';
 
   @override
+  String get costConservationMessage =>
+      'Harcama güvenliği için kurs oluşturma ve içe aktarma geçici olarak durduruldu. Öğrenmeye devam edebilirsiniz.';
+
+  @override
+  String get costReadOnlyMessage =>
+      'Hizmet geçici olarak yalnızca görüntüleme modunda. İşleminiz kaydedilmedi.';
+
+  @override
+  String get costSuspendedMessage =>
+      'Hizmet harcama güvenliği nedeniyle geçici olarak durduruldu. Lütfen daha sonra tekrar deneyin.';
+
+  @override
   String get signInTitle => 'Doğrulanmış ilerlemeyle öğren';
 
   @override

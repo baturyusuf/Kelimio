@@ -56,14 +56,14 @@ reprojection proof that preserves lifetime score. The narrow local editor also
 proves strong ETag/If-Match, secure unsaved recovery, and explicit
 old/mine/latest conflict handling, including a guarded real-service Android
 run through competing and rebased subsequent publications. Every item below remains unchecked until
-production-equivalent staging and the complete authoring/release path pass.
+the ADR-018 production pre-traffic canary and the complete authoring/release path pass.
 
 - [ ] Only `.xlsx` is accepted; file type, size, checksum, malware, zip bomb, XML/path, formula, external-link, Unicode, and resource limits are enforced in an isolated worker.
 - [ ] Production import proves checksum-bound multipart upload, exact object-version acceptance and lost-response recovery, queue/DLQ/lease/retry behavior, private malware scanning, immutable quarantine/archive/report provenance, owner-scoped no-store reads, and digest-bound approval.
 - [ ] API and worker use separate least-privilege IAM and database identities; the worker has no HTTP/OIDC/replay/cursor secrets or Flyway authority, the API cannot read workbook bytes or reach the scanner, and production KMS/Object Lock/retention/legal-hold/scanner-freshness policy is evidenced.
 - [ ] Language-code normalization and test-mode inheritance match ADR-000/ADR-003 and workbook regression fixtures.
 - [ ] Deterministic fixed/automatic test allocation passes every required edge case without loss or duplication.
-- [ ] Local/test evidence already proves deterministic matching-group composition, exact source lineage, and stored incompatible-client filtering/rejection; the same controls must pass in production/staging and publication must remain enforced by the stored capability manifest.
+- [ ] Local/test evidence already proves deterministic matching-group composition, exact source lineage, and stored incompatible-client filtering/rejection; the same controls must pass in the production pre-traffic canary and publication must remain enforced by the stored capability manifest.
 - [ ] Upload, preview/error report, approval, and original-file archive are idempotent, immutable, ownership-safe, and auditable.
 - [ ] One idempotent import commit creates a course exactly once; a second Excel import cannot update that course, and lost/conflicting commit responses cannot create duplicate revisions or releases.
 - [ ] Mobile teacher edits use ETag/If-Match, show conflicts/diffs, and never silently apply last-write-wins.
@@ -105,8 +105,9 @@ production-equivalent staging and the complete authoring/release path pass.
 
 ## Infrastructure, security, and operations
 
-- [ ] Dev, staging, and production are isolated and reproducible through reviewed Terraform with protected state and drift detection.
-- [ ] Production uses TLS, WAF/CDN, managed Multi-AZ PostgreSQL, Redis, S3 protections/versioning, SQS/DLQ, KMS, Secrets Manager, least-privilege IAM, CloudTrail, and approved network boundaries. The Type-D replay keyring is injected from AWS Secrets Manager with an explicit active version, least-privilege access, audited rotation/rollback, and retention of every historical verification key while its facts remain replayable.
+- [ ] Under ADR-018, the isolated local real-service environment and the sole AWS production environment are reproducible through reviewed configuration/Terraform with protected state and drift detection; no local identity, data, endpoint, or credential is reachable from production.
+- [ ] Production uses TLS, flat-rate edge/WAF where supported, Single-AZ PostgreSQL with accepted lower availability plus PITR/deletion protection/restore evidence, no Redis until measured, S3 protections/versioning, SQS/DLQ, KMS, Secrets Manager, least-privilege IAM, CloudTrail, and approved network boundaries. The Type-D replay keyring is injected from AWS Secrets Manager with an explicit active version, least-privilege access, audited rotation/rollback, and retention of every historical verification key while its facts remain replayable.
+- [ ] The USD 50 account budget, 50%/forecast-70%/actual-70%/80%/90% notifications, application conservation/read-only modes, compute suspension, request/upload/download quotas, log/image retention, and recovery-at-new-period behavior pass without deleting durable data. Evidence acknowledges that AWS billing delay prevents a hard cap.
 - [ ] GitHub Actions deploys through OIDC short-lived roles and protected environments; no long-lived cloud key or production secret exists in source, logs, artifacts, or mobile binaries.
 - [ ] OpenTelemetry traces, metrics, and redacted structured logs correlate critical paths; SLO dashboards, synthetic checks, alarms, on-call, and runbooks are exercised.
 - [ ] Secret, SAST, dependency, license, container/IaC, API authorization, ASVS/MASVS, and penetration checks have no open critical/high finding.
@@ -117,7 +118,7 @@ production-equivalent staging and the complete authoring/release path pass.
 
 - [ ] Unit/property, architecture, real-service integration, contract, widget/component, golden, accessibility, end-to-end, malicious-input, concurrency, webhook replay, migration, load, soak, and disaster-recovery suites pass.
 - [ ] No critical/high defect, security issue, data-integrity discrepancy, unreconciled payment, or unresolved migration risk remains.
-- [ ] Development, staging, and production configuration validation fails closed when mandatory provider configuration is absent; Type-D replay startup rejects absent, malformed, duplicate, wrong-length, or unknown-active-version key configuration, and replay fails closed when a stored historical key version is unavailable.
+- [ ] Local/test and production configuration validation fails closed when mandatory provider configuration is absent; Type-D replay startup rejects absent, malformed, duplicate, wrong-length, or unknown-active-version key configuration, and replay fails closed when a stored historical key version is unavailable.
 - [ ] Feature flags are not used as authorization; kill switches, canary/blue-green backend release, staged mobile rollout, automatic halt thresholds, rollback/fix-forward, and support communication are rehearsed.
 - [ ] Store metadata, privacy/data-safety declarations, age/content rating, reviewer notes/accounts, export compliance, IAP review, signed AAB, and TestFlight archive are accepted or ready for submission.
 - [ ] The release owner reviews all evidence, confirms every launch blocker closed, and records the final go/no-go decision.

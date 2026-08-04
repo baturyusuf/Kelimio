@@ -92,6 +92,7 @@ This selects the transaction-specific feedback requirement over a literal readin
 | --- | --- | --- |
 | PDFs make Flutter conditional; master requires Flutter production mobile. | Flutter is the default Android/iOS implementation. | ADR-001 |
 | PDFs treat AWS as one equivalent; master sets AWS as default. | AWS is the production default until an owner-approved superseding ADR. | ADR-001 |
+| The baseline assumes persistent cloud development/staging plus Multi-AZ production, while the owner selected one cost-guarded production environment for the initial low-traffic release. | Keep development and real-service acceptance local; use one explicitly guarded AWS production environment with lower availability but unchanged integrity, privacy, audit, and recovery rules. | ADR-018 |
 | Master requires Spring Boot stable 3.x/Java 21 while Boot 4 exists upstream. | Pin Spring Boot 3.5.16 and Java 21. | ADR-001 and `docs/VERSIONS.md` |
 | Answer flow writes score in the request transaction, while an event table implies an asynchronous Scoring consumer. | Durable score/energy facts are synchronous; projections and downstream effects are asynchronous. | ADR-002 |
 | `ContentChanged`, revisions, change sets, and course releases are not fully unified in the PDFs. | Publish an immutable course release from a validated change set and activate it atomically. | ADR-003 |

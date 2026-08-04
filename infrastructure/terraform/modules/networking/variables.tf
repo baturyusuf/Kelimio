@@ -11,8 +11,8 @@ variable "availability_zone_count" {
   default = 2
 
   validation {
-    condition     = var.availability_zone_count >= 2 && var.availability_zone_count <= 3
-    error_message = "Use two or three availability zones."
+    condition     = var.availability_zone_count >= 1 && var.availability_zone_count <= 3
+    error_message = "Use one to three availability zones. ADR-018 permits one only for the initial cost-guarded production topology."
   }
 }
 

@@ -70,6 +70,18 @@ class AppLocalizationsAr extends AppLocalizations {
       'يفتقد هذا الإصدار إعدادات الإنتاج المطلوبة.';
 
   @override
+  String get costConservationMessage =>
+      'تم إيقاف إنشاء الدورات واستيرادها مؤقتًا لحماية حد الإنفاق. يمكنك متابعة التعلّم.';
+
+  @override
+  String get costReadOnlyMessage =>
+      'الخدمة في وضع العرض فقط مؤقتًا. لم يتم حفظ الإجراء.';
+
+  @override
+  String get costSuspendedMessage =>
+      'تم تعليق الخدمة مؤقتًا لحماية حد الإنفاق. يُرجى المحاولة لاحقًا.';
+
+  @override
   String get signInTitle => 'تعلّم بتقدّم موثوق';
 
   @override

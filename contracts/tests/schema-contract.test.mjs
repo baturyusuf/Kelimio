@@ -22,6 +22,22 @@ const getRecordedAnswerOperation =
 const submitAnswerSchema = contract.components.schemas.SubmitAnswerRequest;
 const answerRecordedSchema = contract.components.schemas.AnswerRecordedResponse;
 const matchingSelectionSchema = contract.components.schemas.MatchingSelection;
+const operatingModes = contract["x-kelimio-operating-modes"];
+assert.equal(
+  operatingModes.source,
+  "server-authoritative",
+  "cost operating mode must remain controlled by the backend",
+);
+assert.deepEqual(
+  Object.keys(operatingModes.modes),
+  ["NORMAL", "CONSERVE", "READ_ONLY", "SUSPENDED"],
+  "cost modes must keep their ordered degradation boundary",
+);
+assert.equal(
+  operatingModes.modes.READ_ONLY.problemType,
+  "cost-read-only",
+  "read-only mode needs a stable typed problem",
+);
 assert.equal(
   submitAnswerSchema["x-kelimio-redacted-to-string"],
   true,

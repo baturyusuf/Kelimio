@@ -33,6 +33,7 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     implementation("software.amazon.awssdk:s3")
     implementation("software.amazon.awssdk:sqs")
+    implementation("software.amazon.awssdk:ssm")
     implementation("software.amazon.awssdk:url-connection-client")
 
     runtimeOnly("org.postgresql:postgresql")

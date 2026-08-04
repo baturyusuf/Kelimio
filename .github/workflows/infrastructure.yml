@@ -20,10 +20,15 @@ jobs:
       - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
         with:
           terraform_version: 1.15.8
+      - name: Test cost governor
+        run: python3 -m unittest discover -s infrastructure/terraform/modules/cost_controls/tests -v
       - run: terraform fmt -check -recursive infrastructure/terraform
       - name: Validate state bootstrap
         working-directory: infrastructure/terraform/bootstrap
         run: terraform init -backend=false && terraform validate
       - name: Validate development root
         working-directory: infrastructure/terraform/environments/development
+        run: terraform init -backend=false && terraform validate
+      - name: Validate production root
+        working-directory: infrastructure/terraform/environments/production
         run: terraform init -backend=false && terraform validate

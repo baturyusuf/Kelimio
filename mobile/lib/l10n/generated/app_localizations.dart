@@ -214,6 +214,24 @@ abstract class AppLocalizations {
   /// **'This build is missing required production settings.'**
   String get configurationErrorBody;
 
+  /// No description provided for @costConservationMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Course creation and import are temporarily paused to protect the spending limit. You can continue learning.'**
+  String get costConservationMessage;
+
+  /// No description provided for @costReadOnlyMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'The service is temporarily view-only. Your action was not recorded.'**
+  String get costReadOnlyMessage;
+
+  /// No description provided for @costSuspendedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'The service is temporarily suspended to protect the spending limit. Please try again later.'**
+  String get costSuspendedMessage;
+
   /// No description provided for @signInTitle.
   ///
   /// In en, this message translates to:

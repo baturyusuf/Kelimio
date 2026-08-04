@@ -5,3 +5,11 @@ output "state_bucket_name" {
 output "state_kms_key_arn" {
   value = aws_kms_key.terraform_state.arn
 }
+
+output "github_oidc_provider_arn" {
+  value = aws_iam_openid_connect_provider.github_actions.arn
+}
+
+output "github_production_plan_role_arn" {
+  value = aws_iam_role.github_production_plan.arn
+}

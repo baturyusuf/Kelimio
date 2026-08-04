@@ -13,6 +13,12 @@ final class AsyncErrorView extends StatelessWidget {
   Widget build(BuildContext context) {
     final message = switch (error) {
       NetworkFailure() || TimeoutFailure() => context.l10n.networkError,
+      OperatingModeFailure(mode: ServiceOperatingMode.conserve) =>
+        context.l10n.costConservationMessage,
+      OperatingModeFailure(mode: ServiceOperatingMode.readOnly) =>
+        context.l10n.costReadOnlyMessage,
+      OperatingModeFailure(mode: ServiceOperatingMode.suspended) =>
+        context.l10n.costSuspendedMessage,
       _ => context.l10n.genericError,
     };
     return Center(

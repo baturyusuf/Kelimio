@@ -70,6 +70,18 @@ class AppLocalizationsEn extends AppLocalizations {
       'This build is missing required production settings.';
 
   @override
+  String get costConservationMessage =>
+      'Course creation and import are temporarily paused to protect the spending limit. You can continue learning.';
+
+  @override
+  String get costReadOnlyMessage =>
+      'The service is temporarily view-only. Your action was not recorded.';
+
+  @override
+  String get costSuspendedMessage =>
+      'The service is temporarily suspended to protect the spending limit. Please try again later.';
+
+  @override
   String get signInTitle => 'Learn with verified progress';
 
   @override

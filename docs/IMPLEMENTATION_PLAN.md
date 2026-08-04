@@ -10,6 +10,9 @@ This plan turns the production requirements into vertically verifiable increment
 - Use real local services and official provider sandboxes during development; production release requires production configuration.
 - Preserve append-only facts and rebuildable projections from the first migration.
 - Keep every environment reproducible through committed wrappers, lockfiles, migrations, and infrastructure code.
+- Under ADR-018, persistent cloud development/staging environments are omitted;
+  the isolated local real-service stack and one protected production environment
+  are the reproducible environment boundary for the initial release.
 
 ## Phase 0 — Foundation and technical proof
 
@@ -40,11 +43,12 @@ Exit gate:
 
 ## Phase 1 — Real auth-to-answer vertical slice
 
-Status: in progress; the local code path exists, but the staging exit gate is not met.
+Status: in progress; the local code path exists, but the ADR-018 production
+pre-traffic exit gate is not met.
 
 Implemented so far: JWT/OIDC resource-server validation, mobile Authorization Code + PKCE, a server-enforced provisional-user gate, profile/language/time-zone setup, catalog/detail/enrollment, and authoritative Type-A/B/C/D attempts. Type D exposes independently ordered sides, accepts one complete bijection, and grades all-or-nothing under the attempt's pinned support language. Its durable fact retains no submitted mapping or correct-pair count; replay uses a random salt and versioned externally keyed HMAC with constant-time comparison. Authored answer relationships remain in immutable content and the staging/production keyring remains external to PostgreSQL and source.
 
-Persistent idempotency, authoritative scoring/energy/outbox, privacy-safe recovery, owner-scoped lost-response reconciliation, rebuildable release-aware progress, stored capability gates, and real-PostgreSQL evidence are present. The local starter release contains five Type-A, one Type-B, the reviewed-workbook Type-C row, and one four-pair Type-D question without seeding users or learning results. The backend passes 38 suites and 180/180 tests; generated contracts pass 342/342 Dart client tests plus TypeScript consumers; and Flutter analysis plus 133/133 tests pass, including accessible Type-D, resumable teacher, secure editor recovery, and ETag conflict/reapply coverage. The isolated Android journey passes learning, reviewed-workbook initial publication, secure editor recovery, a real stale-ETag conflict, explicit reapply, and revision-3 publication against Flyway V13. AWS replay-key custody, staging, general profile editing, legal consent, physical-device evidence, production telemetry, production authoring, and native Custom Tab/deep-link acceptance remain open.
+Persistent idempotency, authoritative scoring/energy/outbox, privacy-safe recovery, owner-scoped lost-response reconciliation, rebuildable release-aware progress, stored capability gates, and real-PostgreSQL evidence are present. The local starter release contains five Type-A, one Type-B, the reviewed-workbook Type-C row, and one four-pair Type-D question without seeding users or learning results. The backend passes 39 suites and 189/189 tests; generated contract checks pass for the current OpenAPI consumers; and Flutter analysis plus 134/134 tests pass, including accessible Type-D, resumable teacher, secure editor recovery, ETag conflict/reapply, and localized cost-mode coverage. The isolated Android journey passes learning, reviewed-workbook initial publication, secure editor recovery, a real stale-ETag conflict, explicit reapply, and revision-3 publication against Flyway V13. AWS replay-key custody, production pre-traffic acceptance, general profile editing, legal consent, physical-device evidence, production telemetry, production authoring, and native Custom Tab/deep-link acceptance remain open.
 
 Deliverables:
 
@@ -60,7 +64,11 @@ Deliverables:
 
 Exit gate:
 
-A registered staging user signs in, enrolls, answers a real question against the real backend, and sees backend-calculated score and energy. Repeating the same submission cannot create a second score or energy change. No fake repository is reachable in staging or production builds.
+A registered production-canary user signs in before public traffic, enrolls,
+answers a real question against the protected production backend, and sees
+backend-calculated score and energy. Repeating the same submission cannot create
+a second score or energy change. No fake repository is reachable in any
+production artifact.
 
 ## Phase 2 — Student learning product
 
@@ -84,7 +92,7 @@ Public/private/free student journeys, every question type, retry/idempotency, sc
 
 ## Phase 3 — Teacher import, authoring, and release
 
-Status: in progress; local/test intake, approval, deterministic Type-D composition, stored client-capability enforcement, unpublished-draft commit, impact-bound release activation/rollback services, paged release-aware reprojection, the ADR-014/ADR-015 resumable Flutter intake-to-publication operator, the ADR-016 subsequent-release proof boundary, and the ADR-017 one-Type-C-question editor are implemented. The editor uses strong ETag/If-Match, secure unsaved recovery, explicit old/mine/latest conflict handling, and a separate impact acknowledgement. Real-service Android E2E now proves initial publication, import state-loss recovery, secure editor recovery, a competing revision-2 publication, stale-ETag rejection/reapply, and revision-3 publication. A real-PostgreSQL later-release publication/rollback scenario separately proves non-empty active-score reprojection with unchanged lifetime score; production enablement, the complete course-tree editor, large-page retry/dead reconciliation, eligibility/consent/moderation, and staging operations remain open.
+Status: in progress; local/test intake, approval, deterministic Type-D composition, stored client-capability enforcement, unpublished-draft commit, impact-bound release activation/rollback services, paged release-aware reprojection, the ADR-014/ADR-015 resumable Flutter intake-to-publication operator, the ADR-016 subsequent-release proof boundary, and the ADR-017 one-Type-C-question editor are implemented. The editor uses strong ETag/If-Match, secure unsaved recovery, explicit old/mine/latest conflict handling, and a separate impact acknowledgement. Real-service Android E2E now proves initial publication, import state-loss recovery, secure editor recovery, a competing revision-2 publication, stale-ETag rejection/reapply, and revision-3 publication. A real-PostgreSQL later-release publication/rollback scenario separately proves non-empty active-score reprojection with unchanged lifetime score; production enablement, the complete course-tree editor, large-page retry/dead reconciliation, eligibility/consent/moderation, and production pre-traffic operations remain open.
 
 Foundation evidence: under ADR-010, ADR-011, and ADR-012, the API exposes local/test-only create, status, upload-completion, preview, issues, approval, and commit operations. It binds a canonical multipart plan and checksums to one owner, reconciles the exact versioned S3 object, appends dispatch through the transactional outbox/SQS, and uses bounded worker leases/retries plus a private ClamAV network. The worker retains immutable quarantine/archive/report and scanner/parser provenance, runs the bounded streaming parser/planner, exposes HMAC-bound paged results, and accepts approval only for one exact digest/provenance tuple. Approval itself creates nothing. `xlsx-v2` performs allocation first, then composes only complete two-to-six-row matching groups that remain within one test and have unique target/support labels. A separate idempotent transaction consumes `import-content-v2`, creates one inactive immutable draft hierarchy/change set, stores exact source lineage, runtime options, option localizations, and derived release capabilities, and emits an identifiers-and-counts-only draft event. It creates no enrollment, entitlement, active release, catalog result, or publication, and import enablement still fails outside `local`/`test`. Under ADR-013, owner-scoped impact and activation operations use an exact optimistic binding to atomically switch immutable releases, append an activation fact/outbox event, and schedule paged idempotent reprojection. Active score counts only exact revisions in the active release; lifetime score remains append-only. Release enablement also fails outside `local`/`test`. Under ADR-016, a separate owner-scoped, idempotent local/test API creates a deterministic changed Type-C question/test revision and later immutable draft, records generic append-only source-change bindings, emits identifiers only, rejects stale bases or a second open draft, and remains unavailable in production. Catalog listing filters releases with unsupported capabilities and direct course/enrollment/learning access returns `client-upgrade-required` behind the applicable visibility/ownership boundary; the current Flutter client advertises `question.matching.v1` centrally.
 
@@ -92,13 +100,13 @@ The isolated import acceptance runner passes the reviewed valid workbook through
 
 Deliverables:
 
-- complete the production form of the locally proven presigned S3 upload, completion callback, isolated scanner/parser worker, and immutable original archive with separate least-privilege identities, retention/Object Lock/KMS, author eligibility/consent, and staging evidence;
+- complete the production form of the locally proven presigned S3 upload, completion callback, isolated scanner/parser worker, and immutable original archive with separate least-privilege identities, retention/Object Lock/KMS, author eligibility/consent, and production pre-traffic evidence;
 - extend the locally proven workbook normalization, test-mode inheritance, deterministic allocation, paged preview, immutable report, and digest-bound approval into the production authoring boundary;
-- carry the locally proven Type-D matching-group composition and stored release-capability gate into production/staging with least-privilege identities and retained evidence;
+- carry the locally proven Type-D matching-group composition and stored release-capability gate into production with least-privilege identities and retained pre-traffic evidence;
 - extend the locally proven single idempotent initial-course commit and impact-bound publication into production controls while permanently forbidding Excel updates to an existing course;
 - extend the now-resumable local mobile operator and one-question ETag/conflict/recovery proof into complete teacher tree/editor validation and multi-entity changes;
-- extend the proven non-Excel local/test subsequent-release boundary into the production tree editor with eligibility, consent, moderation, and staging evidence; never use Excel to update an existing course;
-- retain staging evidence for paged idempotent reprojection with larger non-empty enrollment snapshots, retry, dead-job reconciliation, and cache invalidation;
+- extend the proven non-Excel local/test subsequent-release boundary into the production tree editor with eligibility, consent, moderation, and production pre-traffic evidence; never use Excel to update an existing course;
+- retain production pre-traffic evidence for paged idempotent reprojection with larger non-empty enrollment snapshots, retry, dead-job reconciliation, and cache invalidation;
 - teacher analytics and mobile “view as student” behavior.
 
 Exit gate:
@@ -125,20 +133,37 @@ Official store sandboxes prove purchase, duplicate delivery, restore, refund/rev
 
 ## Phase 5 — Administration, production infrastructure, and operations
 
-Status: not started.
+Status: in progress. ADR-018 records the production-only account, region, cost
+and availability trade-offs. The account-guarded no-NAT Terraform root,
+immutable-import retention input, USD 50 budget topics/Lambda/SSM modes, backend
+enforcement, localized mobile handling, and protected GitHub OIDC plan role and
+workflow are implemented and validated locally. Compute, database, identity,
+edge/TLS, runtime roles, restore proof, apply role and every real AWS apply remain
+open.
 
 Deliverables:
 
 - internal admin with MFA, strong RBAC, just-in-time access, audit, moderation, support, entitlement, import/DLQ, reprojection, payout, and fraud tools;
 - public privacy, terms, support, community rules, copyright, and account-deletion pages;
 - UGC reporting, blocking, moderation states, appeals, child-safety escalation, and takedown workflows;
-- AWS dev/staging/production infrastructure through Terraform: network, ECS API/worker, ALB, WAF/CloudFront, RDS/Aurora, ElastiCache, S3, SQS/DLQ, EventBridge, Cognito/approved OIDC, SES, KMS, Secrets Manager, ECR, DNS/TLS, logging, alarms, and audit; inject the Type-D HMAC keyring from Secrets Manager with least-privilege access, an explicit active version, audited rotation/rollback, retention of every old verification key while its facts remain replayable, and fail-closed missing or unknown-version behavior;
+- ADR-018 production-only infrastructure through Terraform: no NAT/ALB or
+  persistent staging; one replaceable small API node behind approved HTTPS edge,
+  Single-AZ RDS PostgreSQL with PITR/deletion protection, on-demand isolated
+  API/worker roles, S3, SQS/DLQ, Cognito/approved OIDC, SES, KMS, Secrets Manager,
+  ECR, DNS/TLS, logs/alarms/audit, and USD 50 cost controls; inject the Type-D
+  HMAC keyring from Secrets Manager with least-privilege access, an explicit
+  active version, audited rotation/rollback, retention of every old verification
+  key while its facts remain replayable, and fail-closed missing or unknown-version behavior;
 - GitHub Actions OIDC with short-lived roles, protected environments, approval gates, artifact signing, and staged deployment;
 - PITR, immutable/cross-account backups where selected, ledger export, restore automation, runbooks, and incident ownership.
 
 Exit gate:
 
-Production-equivalent staging is reproducible from infrastructure code, access is auditable, operational dashboards and alerts cover critical paths, moderation/support workflows operate end to end, and a documented restore exercise meets the current RPO/RTO target.
+The production environment is reproducible from infrastructure code, access is
+auditable, the complete local real-service suite and no-public-traffic production
+canary pass, operational dashboards and cost/safety alerts cover critical paths,
+moderation/support workflows operate end to end, and a documented restore
+exercise meets the approved RPO/RTO target.
 
 ## Phase 6 — Hardening and release
 

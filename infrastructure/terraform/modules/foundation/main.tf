@@ -77,8 +77,9 @@ resource "aws_kms_alias" "application" {
 resource "aws_s3_bucket" "private" {
   for_each = local.bucket_names
 
-  bucket = "${local.bucket_prefix}-${each.key}"
-  tags   = merge(var.tags, { DataClass = each.key })
+  bucket              = "${local.bucket_prefix}-${each.key}"
+  object_lock_enabled = each.key == "import-archive" && var.import_archive_retention_days != null
+  tags                = merge(var.tags, { DataClass = each.key })
 }
 
 resource "aws_s3_bucket_public_access_block" "private" {
@@ -98,6 +99,21 @@ resource "aws_s3_bucket_versioning" "private" {
   versioning_configuration {
     status = "Enabled"
   }
+}
+
+resource "aws_s3_bucket_object_lock_configuration" "import_archive" {
+  count = var.import_archive_retention_days == null ? 0 : 1
+
+  bucket = aws_s3_bucket.private["import-archive"].id
+
+  rule {
+    default_retention {
+      mode = "COMPLIANCE"
+      days = var.import_archive_retention_days
+    }
+  }
+
+  depends_on = [aws_s3_bucket_versioning.private]
 }
 
 resource "aws_s3_bucket_server_side_encryption_configuration" "private" {
@@ -236,7 +252,7 @@ resource "aws_ecr_lifecycle_policy" "service" {
       selection = {
         tagStatus   = "any"
         countType   = "imageCountMoreThan"
-        countNumber = 50
+        countNumber = var.ecr_image_retention_count
       }
       action = { type = "expire" }
     }]

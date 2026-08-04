@@ -2,6 +2,8 @@
 
 - Status: Accepted
 - Date: 2026-07-21
+- Partially superseded by: ADR-018 for the initial production-only,
+  cost-guarded AWS deployment topology
 
 ## Context
 

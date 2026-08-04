@@ -29,6 +29,22 @@ void main() {
 
     expect(failure, isA<ValidationFailure>());
   });
+
+  test('maps server-authoritative cost suspension distinctly', () {
+    final failure = mapper.map(
+      _responseError(
+        503,
+        data: {'code': 'COST_SUSPENDED', 'detail': 'Not recorded.'},
+      ),
+    );
+
+    expect(failure, isA<OperatingModeFailure>());
+    expect(
+      (failure as OperatingModeFailure).mode,
+      ServiceOperatingMode.suspended,
+    );
+    expect(failure.isRetryable, isTrue);
+  });
 }
 
 DioException _responseError(int status, {Object? data}) {
