@@ -55,11 +55,12 @@ removing any local state copy.
 
 ## Plan and first inactive deployment
 
-Before dispatch, `aws freetier get-account-plan-state` must report `PAID` and
-`aws lambda get-account-settings` must report concurrency above the ten
-executions AWS requires to remain unreserved. Do not reduce RDS backup retention
-or remove the cost-governor serialization to work around a Free-plan account.
-The workflow enforces both checks before opening Terraform state.
+Before dispatch, `aws freetier get-account-plan-state` must report `PAID`. Do
+not reduce RDS backup retention to work around a Free-plan account. The workflow
+enforces this check before opening Terraform state. Cost-governor serialization
+does not depend on account concurrency quota: verify that its DynamoDB lease
+table uses on-demand billing, KMS encryption, TTL, conditional acquisition, and
+owner-conditional release.
 
 Run **Production Terraform Plan** and review every create/change/delete. Then run
 **Production Deploy** with `activate_api=false`.
