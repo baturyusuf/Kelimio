@@ -14,12 +14,14 @@ class CostGovernorTest(unittest.TestCase):
         self.rds = Mock()
         self.ecs = Mock()
         self.dynamodb = Mock()
+        self.sns = Mock()
         clients = {
             "ssm": self.ssm,
             "ec2": self.ec2,
             "rds": self.rds,
             "ecs": self.ecs,
             "dynamodb": self.dynamodb,
+            "sns": self.sns,
         }
         fake_boto3 = types.ModuleType("boto3")
         fake_boto3.client = lambda service: clients[service]
@@ -36,6 +38,7 @@ class CostGovernorTest(unittest.TestCase):
         )
         os.environ["GOVERNOR_LOCK_TABLE"] = "kelimio-production-cost-governor-lock"
         os.environ["OPERATING_MODE_PARAMETER"] = "/kelimio/production/operating-mode"
+        os.environ["OPERATIONS_TOPIC_ARN"] = "arn:operations"
         os.environ["EC2_INSTANCE_IDS"] = "[]"
         os.environ["ECS_SERVICES"] = "[]"
         os.environ["RDS_INSTANCE_IDENTIFIERS"] = "[]"
@@ -56,6 +59,14 @@ class CostGovernorTest(unittest.TestCase):
         )
         self.assertEqual("READ_ONLY", result["mode"])
         self.assertTrue(result["changed"])
+        self.sns.publish.assert_called_once_with(
+            TopicArn="arn:operations",
+            Subject="Kelimio cost governor",
+            Message=(
+                '{"changed": true, "mode": "READ_ONLY", '
+                '"stopped": {"ec2": [], "ecs": [], "rds": []}}'
+            ),
+        )
 
     def test_delayed_lower_threshold_cannot_relax_suspended_mode(self):
         self.ssm.get_parameter.return_value = {"Parameter": {"Value": "SUSPENDED"}}
@@ -110,6 +121,7 @@ class CostGovernorTest(unittest.TestCase):
         self.ecs.update_service.assert_not_called()
         self.assertEqual("NORMAL", result["mode"])
         self.assertTrue(result["changed"])
+        self.sns.publish.assert_not_called()
 
     def test_unknown_scheduled_action_fails_closed(self):
         self.ssm.get_parameter.return_value = {"Parameter": {"Value": "NORMAL"}}
