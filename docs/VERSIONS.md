@@ -19,7 +19,7 @@ These versions are owner-approved starting pins. Scaffold and CI must enforce th
 | Android build | Gradle 8.11.1; Android Gradle Plugin 8.9.1; Kotlin Android 2.1.10 | Flutter-generated Android wrapper and plugin settings | Kept distinct from backend Gradle/Kotlin and compatible with the pinned Flutter scaffold; change only with a native Android build matrix. |
 | iOS | deployment target 15.0 | Xcode project/Podfile and CI | A change requires plugin, device reach, and product analysis plus an ADR. |
 | Node.js | 24.18.0 LTS | Root `.node-version`, package engines, and CI | Used by Next.js applications and contract tooling. |
-| Next.js | stable 16.2.x line | Web `package.json` and committed lockfile | Pin the exact stable 16.2 patch selected during scaffold; no floating caret for the framework baseline. |
+| Next.js | 16.2.11 | Web `package.json` and committed lockfile | Exact security-patched 16.2 pin; no floating caret for the framework baseline. |
 | Terraform | 1.15.8 | `required_version`, CI setup, and lockfile | Commit `.terraform.lock.hcl`; never commit state or secret-bearing tfvars. |
 | Terraform providers | AWS 6.57.1; Archive 2.8.0; Random 3.9.0 | Committed production `.terraform.lock.hcl` | Random passwords/bytes use Terraform ephemeral values and AWS write-only secret arguments so generated values are not retained in state. |
 
