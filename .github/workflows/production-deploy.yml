@@ -48,6 +48,23 @@ jobs:
           aws-region: eu-central-1
           allowed-account-ids: "923300948109"
           role-session-name: kelimio-deploy-${{ github.run_id }}
+      - name: Require production-capable AWS account limits
+        run: |
+          account_plan="$(aws freetier get-account-plan-state \
+            --region us-east-1 \
+            --query accountPlanType \
+            --output text)"
+          if [ "$account_plan" != "PAID" ]; then
+            echo "Production requires the PAID account plan; Free-plan RDS backup restrictions are not accepted" >&2
+            exit 1
+          fi
+          lambda_concurrency="$(aws lambda get-account-settings \
+            --query AccountLimit.ConcurrentExecutions \
+            --output text)"
+          if [ "$lambda_concurrency" -lt 11 ]; then
+            echo "Production requires Lambda concurrency above the mandatory 10 unreserved executions" >&2
+            exit 1
+          fi
       - name: Initialize protected production state
         working-directory: infrastructure/terraform/environments/production
         run: >-
