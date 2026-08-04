@@ -31,6 +31,11 @@ durability, authorization, audit, or release controls would be unacceptable.
 
 - AWS has one environment named `production`. The account ID and region are
   explicit Terraform inputs and the provider rejects any other account.
+- The AWS account must use the paid account plan before production apply. The
+  Free plan's RDS backup-retention and Lambda concurrency restrictions may not
+  be used to weaken PITR or serialize cost controls. Upgrading the account plan
+  does not change the USD 50 budget or early suspension policy; remaining AWS
+  promotional credits continue to offset eligible charges.
 - Developer machines use the local Docker/Android acceptance stack. Local data,
   credentials, identities, and endpoints are never reused by production.
 - There is no persistent cloud staging environment. Before real traffic, every

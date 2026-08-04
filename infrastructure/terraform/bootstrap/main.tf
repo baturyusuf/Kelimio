@@ -203,6 +203,8 @@ data "aws_iam_policy_document" "github_production_deploy" {
       "apigateway:PATCH",
       "apigateway:POST",
       "apigateway:PUT",
+      "apigateway:TagResource",
+      "apigateway:UntagResource",
       "cloudwatch:DeleteAlarms",
       "cloudwatch:PutMetricAlarm",
       "cloudwatch:TagResource",
@@ -291,6 +293,7 @@ data "aws_iam_policy_document" "github_production_deploy" {
       "kms:CreateKey",
       "kms:DeleteAlias",
       "kms:Decrypt",
+      "kms:DescribeKey",
       "kms:DisableKey",
       "kms:EnableKey",
       "kms:EnableKeyRotation",
@@ -381,6 +384,22 @@ data "aws_iam_policy_document" "github_production_deploy" {
       variable = "aws:RequestedRegion"
       values   = [var.aws_region]
     }
+  }
+
+  statement {
+    sid = "ManagePrivateServiceDiscoveryZone"
+    actions = [
+      "route53:ChangeResourceRecordSets",
+      "route53:ChangeTagsForResource",
+      "route53:CreateHostedZone",
+      "route53:DeleteHostedZone",
+      "route53:GetChange",
+      "route53:GetHostedZone",
+      "route53:ListHostedZonesByName",
+      "route53:ListResourceRecordSets",
+      "route53:ListTagsForResource"
+    ]
+    resources = ["*"]
   }
 
   statement {

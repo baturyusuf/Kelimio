@@ -53,8 +53,20 @@ data "aws_iam_policy_document" "budget_topic" {
   for_each = local.budget_topics
 
   statement {
-    sid       = "OwnerControl"
-    actions   = ["sns:*"]
+    sid = "OwnerControl"
+    actions = [
+      "sns:AddPermission",
+      "sns:DeleteTopic",
+      "sns:GetDataProtectionPolicy",
+      "sns:GetTopicAttributes",
+      "sns:ListSubscriptionsByTopic",
+      "sns:ListTagsForResource",
+      "sns:Publish",
+      "sns:PutDataProtectionPolicy",
+      "sns:RemovePermission",
+      "sns:SetTopicAttributes",
+      "sns:Subscribe"
+    ]
     resources = [each.value]
 
     principals {
