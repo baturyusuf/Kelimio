@@ -144,8 +144,10 @@ immutable image passed scan/SBOM gates, the one-shot Flyway V13 migration exited
 successfully, a live cost-governor canary passed, ECS remains at desired count
 zero, the operations notification subscription is confirmed, and the
 post-deployment plan reports no drift. Google/SES, provider/pre-traffic canaries,
-independent GitHub approval, restore proof, custom DNS/WAF, and the production
-import worker remain open.
+independent GitHub approval, isolated backup custody/ledger export, custom
+DNS/WAF, and the production import worker remain open. The same-account PITR
+exercise now proves a 5m06s RPO lag and 1h05m42s end-to-end application RTO;
+`docs/evidence/production-database-restore-2026-08-04.md` retains the evidence.
 
 Deliverables:
 
