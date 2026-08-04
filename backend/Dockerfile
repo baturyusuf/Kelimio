@@ -16,13 +16,20 @@ RUN apk add --no-cache --upgrade \
         p11-kit=0.26.2-r0 \
         p11-kit-trust=0.26.2-r0 \
     && addgroup -S kelimio \
-    && adduser -S kelimio -G kelimio
+    && adduser -S kelimio -G kelimio \
+    && chown kelimio:kelimio /tmp \
+    && chmod 0700 /tmp
 WORKDIR /app
 ARG AWS_RDS_GLOBAL_BUNDLE_SHA256=e5bb2084ccf45087bda1c9bffdea0eb15ee67f0b91646106e466714f9de3c7e3
 RUN wget -q https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem -O /app/rds-global-bundle.pem \
     && echo "${AWS_RDS_GLOBAL_BUNDLE_SHA256}  /app/rds-global-bundle.pem" | sha256sum -c - \
     && chmod 0444 /app/rds-global-bundle.pem
 COPY --from=build /workspace/build/libs/kelimio-api-*.jar /app/kelimio-api.jar
+# Fargate bind volumes otherwise default to root:root/0755. Declaring the same
+# path as a Docker volume tells the ECS data plane to copy the image ownership
+# and mode, keeping the root filesystem read-only while Tomcat can create its
+# private temporary directory as the unprivileged kelimio user.
+VOLUME ["/tmp"]
 USER kelimio
 EXPOSE 8080
 ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75", "-jar", "/app/kelimio-api.jar"]
