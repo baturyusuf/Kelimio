@@ -41,6 +41,17 @@ variable "github_repository" {
   }
 }
 
+variable "github_oidc_subject_prefix" {
+  description = "GitHub immutable OIDC repository subject prefix including owner and repository IDs."
+  type        = string
+  default     = "repo:baturyusuf@75681771/Kelimio@1307479021"
+
+  validation {
+    condition     = var.github_oidc_subject_prefix == "repo:baturyusuf@75681771/Kelimio@1307479021"
+    error_message = "The production trust must use the immutable owner/repository IDs returned by GitHub for baturyusuf/Kelimio."
+  }
+}
+
 variable "github_environment" {
   description = "Protected GitHub Environment encoded into the OIDC subject."
   type        = string

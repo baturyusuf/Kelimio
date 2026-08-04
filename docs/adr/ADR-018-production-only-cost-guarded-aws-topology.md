@@ -120,6 +120,11 @@ durability, authorization, audit, or release controls would be unacceptable.
   trusts only the `baturyusuf/Kelimio` repository's protected `production`
   environment and receives only the permissions required to plan/deploy the
   reviewed infrastructure and immutable artifacts.
+- GitHub created this repository after its July 2026 immutable-subject rollout.
+  IAM therefore matches the owner-ID/repository-ID-bound subject prefix
+  `repo:baturyusuf@75681771/Kelimio@1307479021` plus the exact `production`
+  environment. The legacy name-only subject is not trusted, so later namespace
+  reuse, repository transfer, or recreation cannot inherit production access.
 - Runtime API and import-worker identities remain separate from the deployment
   role and from each other. Database roles and secret access are also separate.
 - Initial account bootstrap is a one-time owner-controlled action. Subsequent

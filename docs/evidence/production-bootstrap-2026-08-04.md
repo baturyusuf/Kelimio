@@ -23,7 +23,15 @@ claim that the Kelimio application runtime is deployed or publish-ready.
 - Created repository/environment-bound OIDC provider and roles:
   `KelimioProductionPlan` and `KelimioProductionDeploy`.
 - Trust is limited to audience `sts.amazonaws.com` and subject
-  `repo:baturyusuf/Kelimio:environment:production`.
+  `repo:baturyusuf@75681771/Kelimio@1307479021:environment:production`.
+- The first GitHub plan proved that this post-July-2026 repository uses GitHub's
+  immutable owner/repository-ID subject prefix. AWS rejected the legacy
+  name-only subject without granting a session or touching Terraform state;
+  the two role trust policies were then updated from the protected bootstrap
+  state before the plan was retried.
+- The correction plan was **0 add, 2 in-place change, 0 destroy**. Apply changed
+  only the two role trust documents, and a refresh plan immediately afterward
+  returned **no changes**.
 
 ## State and post-apply verification
 
@@ -33,6 +41,8 @@ claim that the Kelimio application runtime is deployed or publish-ready.
 - The bucket has versioning, KMS default encryption, TLS-only policy, and all
   four S3 public-access blocks. Terraform prevents bucket destruction.
 - A post-migration refresh plan returned **no changes**.
+- A second refresh plan after the immutable-subject correction also returned
+  **no changes**.
 - A local recovery copy is retained outside the repository until remote-state
   recovery evidence is complete; all Terraform state/plan files remain ignored.
 
