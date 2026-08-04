@@ -1,0 +1,17 @@
+# kelimio_api_client.model.SubmitAnswerRequest
+
+## Load the model package
+```dart
+import 'package:kelimio_api_client/api.dart';
+```
+
+## Properties
+Name | Type | Description | Notes
+------------ | ------------- | ------------- | -------------
+**submissionId** | **String** |  |
+**questionRevisionId** | **String** |  |
+**selectedOptionId** | **String** |  | [optional]
+**typedAnswer** | **String** |  | [optional]
+**matches** | [**List&lt;MatchingSelection&gt;**](MatchingSelection.md) |  | [optional]
+
+[[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

@@ -1,0 +1,122 @@
+//
+// AUTO-GENERATED FILE, DO NOT MODIFY!
+//
+
+// ignore_for_file: unused_element
+import 'package:json_annotation/json_annotation.dart';
+
+part 'course_summary.g.dart';
+
+@JsonSerializable(
+  checked: true,
+  createToJson: true,
+  disallowUnrecognizedKeys: false,
+  explicitToJson: true,
+)
+class CourseSummary {
+  /// Returns a new [CourseSummary] instance.
+  CourseSummary({
+    required this.id,
+
+    required this.name,
+
+    this.description,
+
+    required this.targetLanguage,
+
+    required this.supportLanguages,
+
+    required this.accessType,
+
+    required this.visibility,
+
+    required this.enrolled,
+  });
+
+  @JsonKey(name: r'id', required: true, includeIfNull: false)
+  final String id;
+
+  @JsonKey(name: r'name', required: true, includeIfNull: false)
+  final String name;
+
+  @JsonKey(name: r'description', required: false, includeIfNull: false)
+  final String? description;
+
+  /// Canonically cased BCP 47 subset: lowercase primary language, optional title-case script, uppercase region, and lowercase variants. Extensions and private-use subtags are outside the initial API contract.
+  @JsonKey(name: r'targetLanguage', required: true, includeIfNull: false)
+  final String targetLanguage;
+
+  @JsonKey(name: r'supportLanguages', required: true, includeIfNull: false)
+  final Set<String> supportLanguages;
+
+  @JsonKey(name: r'accessType', required: true, includeIfNull: false)
+  final CourseSummaryAccessTypeEnum accessType;
+
+  @JsonKey(name: r'visibility', required: true, includeIfNull: false)
+  final CourseSummaryVisibilityEnum visibility;
+
+  @JsonKey(name: r'enrolled', required: true, includeIfNull: false)
+  final bool enrolled;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CourseSummary &&
+          other.id == id &&
+          other.name == name &&
+          other.description == description &&
+          other.targetLanguage == targetLanguage &&
+          other.supportLanguages == supportLanguages &&
+          other.accessType == accessType &&
+          other.visibility == visibility &&
+          other.enrolled == enrolled;
+
+  @override
+  int get hashCode =>
+      id.hashCode +
+      name.hashCode +
+      (description == null ? 0 : description.hashCode) +
+      targetLanguage.hashCode +
+      supportLanguages.hashCode +
+      accessType.hashCode +
+      visibility.hashCode +
+      enrolled.hashCode;
+
+  factory CourseSummary.fromJson(Map<String, dynamic> json) =>
+      _$CourseSummaryFromJson(json);
+
+  Map<String, dynamic> toJson() => _$CourseSummaryToJson(this);
+
+  @override
+  String toString() {
+    return toJson().toString();
+  }
+}
+
+enum CourseSummaryAccessTypeEnum {
+  @JsonValue(r'FREE')
+  FREE(r'FREE'),
+  @JsonValue(r'PAID')
+  PAID(r'PAID');
+
+  const CourseSummaryAccessTypeEnum(this.value);
+
+  final String value;
+
+  @override
+  String toString() => value;
+}
+
+enum CourseSummaryVisibilityEnum {
+  @JsonValue(r'PUBLIC')
+  PUBLIC(r'PUBLIC'),
+  @JsonValue(r'PRIVATE')
+  PRIVATE(r'PRIVATE');
+
+  const CourseSummaryVisibilityEnum(this.value);
+
+  final String value;
+
+  @override
+  String toString() => value;
+}

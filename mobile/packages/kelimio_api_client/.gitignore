@@ -1,0 +1,30 @@
+# See https://dart.dev/guides/libraries/private-files
+
+# Files and directories created by pub
+.dart_tool/
+.buildlog
+.packages
+.project
+.pub/
+build/
+**/packages/
+
+# Files created by dart2js
+*.dart.js
+*.part.js
+*.js.deps
+*.js.map
+*.info.json
+
+# Directory created by dartdoc
+doc/api/
+
+# IDE and operating-system files
+*.iml
+*.ipr
+*.iws
+.idea/
+.DS_Store
+
+# pubspec.lock is intentionally committed and enforced by the repository's
+# generated-client workflow.

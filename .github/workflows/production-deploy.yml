@@ -1,0 +1,205 @@
+name: Production Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      activate_api:
+        description: Promote the migrated image to the one-task public API service
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      AWS_REGION: eu-central-1
+      AWS_ACCOUNT_ID: "923300948109"
+      ECR_REPOSITORY: kelimio-production-api
+      TF_VAR_budget_notification_email: ${{ secrets.AWS_BUDGET_NOTIFICATION_EMAIL }}
+      TF_VAR_import_archive_retention_days: ${{ vars.AWS_IMPORT_ARCHIVE_RETENTION_DAYS }}
+      TF_VAR_build_revision: ${{ github.sha }}
+      TF_VAR_google_identity_enabled: ${{ vars.GOOGLE_IDENTITY_ENABLED || 'false' }}
+      TF_VAR_google_identity_configuration_version: ${{ vars.GOOGLE_IDENTITY_CONFIGURATION_VERSION || 'not-configured' }}
+      TF_VAR_database_secret_version: ${{ vars.DATABASE_SECRET_VERSION || '1' }}
+      TF_VAR_matching_secret_version: "1"
+      TF_VAR_api_desired_count: "0"
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
+        with:
+          terraform_version: 1.15.8
+      - uses: aws-actions/configure-aws-credentials@acca2b1b2070338fb9fd1ca27ecee81d687e58e5 # v6.1.2
+        with:
+          role-to-assume: ${{ vars.AWS_PRODUCTION_DEPLOY_ROLE_ARN }}
+          aws-region: eu-central-1
+          allowed-account-ids: "923300948109"
+          role-session-name: kelimio-deploy-${{ github.run_id }}
+      - name: Initialize protected production state
+        working-directory: infrastructure/terraform/environments/production
+        run: >-
+          terraform init -input=false
+          -backend-config="bucket=${{ vars.AWS_TERRAFORM_STATE_BUCKET }}"
+          -backend-config="key=kelimio/production.tfstate"
+          -backend-config="region=eu-central-1"
+          -backend-config="encrypt=true"
+          -backend-config="kms_key_id=${{ vars.AWS_TERRAFORM_STATE_KMS_KEY_ARN }}"
+          -backend-config="use_lockfile=true"
+      - name: Create inactive foundation on first deployment
+        working-directory: infrastructure/terraform/environments/production
+        run: |
+          if terraform output -json runtime >/dev/null 2>&1; then
+            exit 0
+          fi
+          export TF_VAR_api_image_digest="sha256:0000000000000000000000000000000000000000000000000000000000000000"
+          terraform apply -input=false -lock-timeout=5m -auto-approve
+      - name: Build and push immutable ARM64 API image
+        id: image
+        working-directory: backend
+        run: |
+          aws ecr get-login-password --region "$AWS_REGION" |
+            docker login --username AWS --password-stdin "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com"
+          docker buildx create --name kelimio-production --driver docker-container --use
+          docker buildx build \
+            --platform linux/arm64 \
+            --provenance=false \
+            --sbom=false \
+            --tag "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:${GITHUB_SHA}" \
+            --push \
+            .
+          digest="$(aws ecr describe-images \
+            --repository-name "$ECR_REPOSITORY" \
+            --image-ids "imageTag=${GITHUB_SHA}" \
+            --query 'imageDetails[0].imageDigest' \
+            --output text)"
+          case "$digest" in
+            sha256:[0-9a-f][0-9a-f]*) ;;
+            *) echo "ECR did not return an immutable digest" >&2; exit 1 ;;
+          esac
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+      - name: Gate the exact production image with Trivy
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          version: v0.72.0
+          scan-type: image
+          image-ref: ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }}@${{ steps.image.outputs.digest }}
+          format: table
+          severity: CRITICAL,HIGH
+          ignore-unfixed: false
+          exit-code: "1"
+      - name: Generate the exact production image SBOM
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          version: v0.72.0
+          scan-type: image
+          image-ref: ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }}@${{ steps.image.outputs.digest }}
+          format: cyclonedx
+          output: kelimio-production-api.cdx.json
+          exit-code: "0"
+      - name: Retain the exact production image SBOM
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: kelimio-production-api-sbom-${{ github.sha }}
+          path: kelimio-production-api.cdx.json
+          if-no-files-found: error
+          retention-days: 90
+      - name: Require a clean ECR critical-vulnerability scan
+        run: |
+          aws ecr wait image-scan-complete \
+            --repository-name "$ECR_REPOSITORY" \
+            --image-id "imageDigest=${{ steps.image.outputs.digest }}"
+          critical="$(aws ecr describe-image-scan-findings \
+            --repository-name "$ECR_REPOSITORY" \
+            --image-id "imageDigest=${{ steps.image.outputs.digest }}" \
+            --query 'imageScanFindings.findingSeverityCounts.CRITICAL' \
+            --output text)"
+          if [ "$critical" != "None" ] && [ "${critical:-0}" -gt 0 ]; then
+            echo "Critical image findings block production deployment" >&2
+            exit 1
+          fi
+      - name: Apply the immutable task definitions without promoting them
+        working-directory: infrastructure/terraform/environments/production
+        env:
+          TF_VAR_api_image_digest: ${{ steps.image.outputs.digest }}
+        run: terraform apply -input=false -lock-timeout=5m -auto-approve
+      - name: Run and verify the one-shot database migration task
+        working-directory: infrastructure/terraform/environments/production
+        run: |
+          cluster="$(terraform output -json runtime | jq -r .ecs_cluster_name)"
+          task_definition="$(terraform output -json runtime | jq -r .migration_task_definition_arn)"
+          subnet="$(terraform output -json runtime | jq -r .migration_subnet_id)"
+          security_group="$(terraform output -json runtime | jq -r .task_security_group_id)"
+          task="$(aws ecs run-task \
+            --cluster "$cluster" \
+            --task-definition "$task_definition" \
+            --launch-type FARGATE \
+            --platform-version 1.4.0 \
+            --network-configuration "awsvpcConfiguration={subnets=[$subnet],securityGroups=[$security_group],assignPublicIp=ENABLED}" \
+            --count 1 \
+            --query 'tasks[0].taskArn' \
+            --output text)"
+          if [ -z "$task" ] || [ "$task" = "None" ]; then
+            echo "Migration task did not start" >&2
+            exit 1
+          fi
+          aws ecs wait tasks-stopped --cluster "$cluster" --tasks "$task"
+          exit_code="$(aws ecs describe-tasks \
+            --cluster "$cluster" \
+            --tasks "$task" \
+            --query 'tasks[0].containers[?name==`migration`].exitCode | [0]' \
+            --output text)"
+          if [ "$exit_code" != "0" ]; then
+            aws ecs describe-tasks \
+              --cluster "$cluster" \
+              --tasks "$task" \
+              --query 'tasks[0].{stopCode:stopCode,stoppedReason:stoppedReason,containerReason:containers[0].reason}'
+            exit 1
+          fi
+      - name: Promote migrated image
+        if: ${{ inputs.activate_api }}
+        working-directory: infrastructure/terraform/environments/production
+        run: |
+          operating_mode="$(aws ssm get-parameter \
+            --name /kelimio/production/operating-mode \
+            --query 'Parameter.Value' \
+            --output text)"
+          if [ "$operating_mode" = "SUSPENDED" ]; then
+            echo "Production cost controls are suspended; activation is blocked" >&2
+            exit 1
+          fi
+          cluster="$(terraform output -json runtime | jq -r .ecs_cluster_name)"
+          service="$(terraform output -json runtime | jq -r .api_service_name)"
+          task_definition="$(terraform output -json runtime | jq -r .api_task_definition_arn)"
+          aws ecs update-service \
+            --cluster "$cluster" \
+            --service "$service" \
+            --task-definition "$task_definition" \
+            --desired-count 1 \
+            --force-new-deployment >/dev/null
+          aws ecs wait services-stable --cluster "$cluster" --services "$service"
+      - name: Verify production readiness endpoint
+        if: ${{ inputs.activate_api }}
+        working-directory: infrastructure/terraform/environments/production
+        run: |
+          endpoint="$(terraform output -json runtime | jq -r .api_endpoint)"
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent --show-error "$endpoint/actuator/health/readiness" | jq -e '.status == "UP"' >/dev/null; then
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "Production readiness endpoint did not become healthy" >&2
+          exit 1

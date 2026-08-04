@@ -1,0 +1,36 @@
+name: Infrastructure
+
+on:
+  pull_request:
+    paths: ["infrastructure/terraform/**", ".github/workflows/infrastructure.yml"]
+  push:
+    branches: [main]
+    paths: ["infrastructure/terraform/**", ".github/workflows/infrastructure.yml"]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
+        with:
+          terraform_version: 1.15.8
+      - name: Test cost governor
+        run: python3 -m unittest discover -s infrastructure/terraform/modules/cost_controls/tests -v
+      - name: Test identity controls
+        run: python3 -m unittest discover -s infrastructure/terraform/modules/identity/tests -v
+      - run: terraform fmt -check -recursive infrastructure/terraform
+      - name: Validate state bootstrap
+        working-directory: infrastructure/terraform/bootstrap
+        run: terraform init -backend=false && terraform validate
+      - name: Validate development root
+        working-directory: infrastructure/terraform/environments/development
+        run: terraform init -backend=false && terraform validate
+      - name: Validate production root
+        working-directory: infrastructure/terraform/environments/production
+        run: terraform init -backend=false && terraform validate

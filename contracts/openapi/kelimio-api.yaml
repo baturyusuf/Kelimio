@@ -1,0 +1,2813 @@
+openapi: 3.1.0
+info:
+  title: Kelimio API
+  version: 0.1.0
+  license:
+    name: Proprietary
+    identifier: LicenseRef-Proprietary
+  description: >-
+    Versioned contract for the Kelimio mobile and administrative clients. Server
+    state is authoritative for identity, answers, score, energy, progress, and
+    entitlements.
+jsonSchemaDialect: https://json-schema.org/draft/2020-12/schema
+servers:
+  - url: /
+    description: Base URL supplied by the environment-specific client configuration.
+x-kelimio-operating-modes:
+  source: server-authoritative
+  modes:
+    NORMAL:
+      effect: All otherwise-authorized operations are available.
+    CONSERVE:
+      effect: Course import, authoring, and release mutations return a no-store 503 problem.
+      problemType: cost-conservation
+    READ_ONLY:
+      effect: Unsafe HTTP methods return a no-store 503 problem before any domain mutation.
+      problemType: cost-read-only
+    SUSPENDED:
+      effect: Every /v1 operation returns a no-store 503 problem; health remains available while compute is draining.
+      problemType: cost-suspended
+tags:
+  - name: Profile
+    description: Authenticated profile and language preferences.
+  - name: Catalog
+    description: Published course discovery and details.
+  - name: Enrollment
+    description: Contextual learner access to courses.
+  - name: Learning
+    description: Authoritative online attempts and answer evaluation.
+  - name: Energy
+    description: Free-course energy state managed by the server.
+  - name: Course Import
+    description: Owner-scoped XLSX intake, isolated validation preview, and provenance-bound approval.
+  - name: Course Release
+    description: Owner-scoped impact review, publication, and rollback of immutable course releases.
+  - name: Development
+    description: Explicit local/test utilities that are unavailable outside enabled non-production environments.
+security:
+  - bearerAuth: []
+paths:
+  /v1/me:
+    get:
+      operationId: getMe
+      tags: [Profile]
+      summary: Return the authenticated user's profile and language preferences
+      responses:
+        "200":
+          description: Authenticated profile
+          headers:
+            X-Request-Id:
+              $ref: "#/components/headers/RequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MeResponse"
+        "401":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/me/profile-setup:
+    post:
+      operationId: completeProfileSetup
+      tags: [Profile]
+      summary: Complete the authenticated user's first-login profile setup
+      description: >-
+        Completes the provisional subject-bound profile exactly once. Repeating
+        the same Idempotency-Key and canonical request returns the original
+        result without duplicate facts. This is not legal-terms acceptance,
+        and identity-provider subject, email, and username are neither accepted
+        by this command nor exposed by the profile response.
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProfileSetupRequest"
+      responses:
+        "200":
+          description: Completed authenticated profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MeResponse"
+        "400":
+          $ref: "#/components/responses/Problem"
+        "401":
+          $ref: "#/components/responses/Problem"
+        "409":
+          $ref: "#/components/responses/Problem"
+        "422":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/catalog/courses:
+    get:
+      operationId: listCatalogCourses
+      tags: [Catalog]
+      summary: List public, published courses
+      parameters:
+        - $ref: "#/components/parameters/ClientCapabilities"
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+        - name: targetLanguage
+          in: query
+          schema:
+            $ref: "#/components/schemas/LanguageTag"
+        - name: supportLanguage
+          in: query
+          schema:
+            $ref: "#/components/schemas/LanguageTag"
+      responses:
+        "200":
+          description: A cursor page of courses
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CoursePage"
+        "401":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/courses/{courseId}:
+    get:
+      operationId: getCourse
+      tags: [Catalog]
+      summary: Return course details visible to the authenticated user
+      parameters:
+        - $ref: "#/components/parameters/CourseId"
+        - $ref: "#/components/parameters/ClientCapabilities"
+      responses:
+        "200":
+          description: Course details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CourseDetail"
+        "401":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/courses/{courseId}/progress:
+    get:
+      operationId: getCourseProgress
+      tags: [Learning]
+      summary: Return the authenticated learner's rebuildable course progress projection
+      description: >-
+        Counts and scores are projected only from server-authoritative PostgreSQL
+        facts. When updating is true, the last completed projection is returned
+        while unresolved outbox facts remain, including a delivery awaiting
+        operational replay after exhausting worker retries. Clients must use
+        bounded polling and expose a retry state instead of an endless spinner.
+      parameters:
+        - $ref: "#/components/parameters/CourseId"
+      responses:
+        "200":
+          description: Current course progress projection
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CourseProgressResponse"
+        "401":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/courses/{courseId}/enrollments:
+    post:
+      operationId: enrollInCourse
+      tags: [Enrollment]
+      summary: Enroll the authenticated user in a free public course
+      parameters:
+        - $ref: "#/components/parameters/CourseId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/ClientCapabilities"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateEnrollmentRequest"
+      responses:
+        "201":
+          description: Enrollment created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnrollmentResponse"
+        "200":
+          description: Existing enrollment returned for an idempotent retry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnrollmentResponse"
+        "401":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/tests/{testId}/attempts:
+    post:
+      operationId: startAttempt
+      tags: [Learning]
+      summary: Start an online attempt for the current test revision
+      parameters:
+        - name: testId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/Id"
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/ClientCapabilities"
+      responses:
+        "201":
+          description: Attempt created; answer keys are deliberately absent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AttemptResponse"
+        "401":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/attempts/{attemptId}/answers:
+    post:
+      operationId: submitAnswer
+      tags: [Learning]
+      summary: Record and evaluate one online answer exactly once
+      description: >-
+        Reusing submissionId returns the previously committed response and never
+        creates a second attempt fact, score event, energy event, or outbox event.
+        The complete request body is limited to 8192 bytes and is rejected before
+        JSON allocation or transactional command handling when that limit is exceeded.
+      x-kelimio-max-request-body-bytes: 8192
+      parameters:
+        - $ref: "#/components/parameters/AttemptId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/ClientCapabilities"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubmitAnswerRequest"
+      responses:
+        "200":
+          description: Authoritative evaluation and resulting server state
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnswerRecordedResponse"
+        "401":
+          $ref: "#/components/responses/Problem"
+        "413":
+          description: Request body exceeds the answer-submission byte limit
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/attempts/{attemptId}/answers/{submissionId}:
+    get:
+      operationId: getRecordedAnswer
+      tags: [Learning]
+      summary: Reconcile one previously committed answer owned by the current user
+      description: >-
+        Returns the immutable committed result only when both the attempt and
+        submission belong to the authenticated user. Missing or non-owned
+        records are indistinguishable and return not found.
+      parameters:
+        - $ref: "#/components/parameters/AttemptId"
+        - name: submissionId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/Id"
+        - $ref: "#/components/parameters/ClientCapabilities"
+      responses:
+        "200":
+          description: Previously committed authoritative answer result
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnswerRecordedResponse"
+        "401":
+          $ref: "#/components/responses/Problem"
+        "404":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/attempts/{attemptId}/finish:
+    post:
+      operationId: finishAttempt
+      tags: [Learning]
+      summary: Finish an attempt after all planned questions are answered
+      parameters:
+        - $ref: "#/components/parameters/AttemptId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/ClientCapabilities"
+      responses:
+        "200":
+          description: Final attempt result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FinishAttemptResponse"
+        "401":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/energy:
+    get:
+      operationId: getEnergy
+      tags: [Energy]
+      summary: Return the lazily regenerated free-course energy account
+      responses:
+        "200":
+          description: Current energy state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnergyResponse"
+        "401":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/courses/imports:
+    get:
+      operationId: listCourseImports
+      tags: [Course Import]
+      summary: Page through the current user's import sessions
+      description: >-
+        Returns newest-first owner-scoped import states for process-death
+        discovery. The HMAC-bound cursor contains no workbook content or
+        storage identity. Missing and non-owned imports remain undisclosed.
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+      responses:
+        "200":
+          description: One newest-first page of owner import states
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CourseImportStatusPage"
+        "400":
+          $ref: "#/components/responses/Problem"
+        "401":
+          $ref: "#/components/responses/Problem"
+        "404":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+    post:
+      operationId: createCourseImport
+      x-kelimio-max-request-body-bytes: 8192
+      tags: [Course Import]
+      summary: Create an owner-scoped resumable XLSX upload session
+      description: >-
+        Creates one bounded S3 multipart upload for an untrusted XLSX. The API
+        never receives or parses workbook bytes. The whole-file and per-part
+        digests are client assertions that the isolated worker recomputes or
+        verifies before any scan, preview, archive, or approval can succeed.
+        The JSON command body is rejected before parsing when it exceeds 8192
+        bytes; workbook bytes travel only through the bounded direct upload.
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCourseImportRequest"
+      responses:
+        "201":
+          description: Import and resumable upload instructions created
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CourseImportUploadSessionResponse"
+        "200":
+          description: Existing import returned for an idempotent retry
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CourseImportUploadSessionResponse"
+        "400":
+          $ref: "#/components/responses/Problem"
+        "401":
+          $ref: "#/components/responses/Problem"
+        "413":
+          $ref: "#/components/responses/Problem"
+        "409":
+          $ref: "#/components/responses/Problem"
+        "422":
+          $ref: "#/components/responses/Problem"
+        "429":
+          $ref: "#/components/responses/Problem"
+        "503":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/courses/imports/{importId}:
+    get:
+      operationId: getCourseImport
+      tags: [Course Import]
+      summary: Return the current owner-scoped import state
+      description: >-
+        Missing and non-owned imports are indistinguishable. Storage keys,
+        object versions, upload IDs, scanner internals, and raw failures are
+        deliberately absent.
+      parameters:
+        - $ref: "#/components/parameters/ImportId"
+      responses:
+        "200":
+          description: Current import state and immutable preview summary, when available
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CourseImportStatusResponse"
+        "400":
+          $ref: "#/components/responses/Problem"
+        "401":
+          $ref: "#/components/responses/Problem"
+        "404":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/courses/imports/{importId}/complete:
+    post:
+      operationId: completeCourseImportUpload
+      x-kelimio-max-request-body-bytes: 8192
+      tags: [Course Import]
+      summary: Complete the exact multipart object and queue isolated processing
+      description: >-
+        Completes only the server-created multipart upload with its exact
+        consecutive part list. A successful command records one non-null S3
+        VersionId and transactional outbox event. It does not claim that the
+        workbook is clean, valid, archived, approved, or committed.
+        The JSON completion command is rejected before parsing when it exceeds
+        8192 bytes.
+      parameters:
+        - $ref: "#/components/parameters/ImportId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CompleteCourseImportUploadRequest"
+      responses:
+        "202":
+          description: Exact object version accepted and processing queued
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CourseImportStatusResponse"
+        "200":
+          description: Existing queued or later result returned for an idempotent retry
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CourseImportStatusResponse"
+        "400":
+          $ref: "#/components/responses/Problem"
+        "401":
+          $ref: "#/components/responses/Problem"
+        "413":
+          $ref: "#/components/responses/Problem"
+        "404":
+          $ref: "#/components/responses/Problem"
+        "409":
+          $ref: "#/components/responses/Problem"
+        "422":
+          $ref: "#/components/responses/Problem"
+        "503":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/courses/imports/{importId}/preview:
+    get:
+      operationId: listCourseImportPreviewRows
+      tags: [Course Import]
+      summary: Page through the immutable normalized owner preview
+      parameters:
+        - $ref: "#/components/parameters/ImportId"
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: One immutable page from the isolated parser result
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CourseImportPreviewPage"
+        "400":
+          $ref: "#/components/responses/Problem"
+        "401":
+          $ref: "#/components/responses/Problem"
+        "404":
+          $ref: "#/components/responses/Problem"
+        "409":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/courses/imports/{importId}/issues:
+    get:
+      operationId: listCourseImportValidationIssues
+      tags: [Course Import]
+      summary: Page through the immutable owner-scoped validation report
+      parameters:
+        - $ref: "#/components/parameters/ImportId"
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: One immutable validation-report page
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CourseImportIssuePage"
+        "400":
+          $ref: "#/components/responses/Problem"
+        "401":
+          $ref: "#/components/responses/Problem"
+        "404":
+          $ref: "#/components/responses/Problem"
+        "409":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/courses/imports/{importId}/approve:
+    post:
+      operationId: approveCourseImport
+      x-kelimio-max-request-body-bytes: 8192
+      tags: [Course Import]
+      summary: Approve one exact immutable preview and provenance tuple
+      description: >-
+        Appends owner approval only when the supplied binding digest matches the
+        current PREVIEW_READY fact. Approval creates no course, revision,
+        release, entitlement, or publication side effect.
+        The JSON approval command is rejected before parsing when it exceeds
+        8192 bytes.
+      parameters:
+        - $ref: "#/components/parameters/ImportId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApproveCourseImportRequest"
+      responses:
+        "201":
+          description: Approval fact appended
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CourseImportApprovalResponse"
+        "200":
+          description: Existing approval returned for an idempotent retry
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CourseImportApprovalResponse"
+        "400":
+          $ref: "#/components/responses/Problem"
+        "401":
+          $ref: "#/components/responses/Problem"
+        "413":
+          $ref: "#/components/responses/Problem"
+        "404":
+          $ref: "#/components/responses/Problem"
+        "409":
+          $ref: "#/components/responses/Problem"
+        "422":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/courses/imports/{importId}/commit:
+    post:
+      operationId: commitCourseImport
+      x-kelimio-max-request-body-bytes: 8192
+      tags: [Course Import]
+      summary: Commit one approved preview as an unpublished immutable course draft
+      description: >-
+        Commits only the exact approved import provenance and versioned
+        import-content-v1 preview. The transaction creates a DRAFT course with
+        no active release, one committed content change set, and one immutable
+        DRAFT release hierarchy. It does not activate or publish a release,
+        expose the course in the catalog, enroll a learner, or grant an
+        entitlement. Legacy approvals without the versioned settings payload
+        remain approval-only. The JSON command body is rejected before parsing
+        when it exceeds 8192 bytes.
+      parameters:
+        - $ref: "#/components/parameters/ImportId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CommitCourseImportRequest"
+      responses:
+        "201":
+          description: Unpublished immutable draft created
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CourseImportCommitResponse"
+        "200":
+          description: Existing draft result returned for an idempotent retry
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CourseImportCommitResponse"
+        "400":
+          $ref: "#/components/responses/Problem"
+        "401":
+          $ref: "#/components/responses/Problem"
+        "413":
+          $ref: "#/components/responses/Problem"
+        "404":
+          $ref: "#/components/responses/Problem"
+        "409":
+          $ref: "#/components/responses/Problem"
+        "422":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/courses/{courseId}/releases/{releaseId}/impact:
+    get:
+      operationId: getCourseReleaseImpact
+      tags: [Course Release]
+      summary: Review the exact owner-scoped impact of activating an immutable release
+      description: >-
+        Returns a canonical binding digest over the locked release manifests and
+        current active release. The enrollment count is advisory and deliberately
+        excluded from the binding because projection membership is cutoff-bound at activation.
+      parameters:
+        - $ref: "#/components/parameters/CourseId"
+        - $ref: "#/components/parameters/ReleaseId"
+      responses:
+        "200":
+          description: Release activation impact
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CourseReleaseImpactResponse"
+        "401":
+          $ref: "#/components/responses/Problem"
+        "404":
+          $ref: "#/components/responses/Problem"
+        "409":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/courses/{courseId}/releases/{releaseId}/activate:
+    post:
+      operationId: activateCourseRelease
+      tags: [Course Release]
+      summary: Publish or roll back to an exact reviewed immutable release
+      description: >-
+        Atomically activates the reviewed release, appends the activation and
+        outbox facts, and creates a cutoff-bound progress reprojection job.
+        This endpoint is fail-closed outside explicitly enabled local/test environments.
+      parameters:
+        - $ref: "#/components/parameters/CourseId"
+        - $ref: "#/components/parameters/ReleaseId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ActivateCourseReleaseRequest"
+      responses:
+        "201":
+          description: Release activation created
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CourseReleaseActivationResponse"
+        "200":
+          description: Existing activation returned for an idempotent retry
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CourseReleaseActivationResponse"
+        "400":
+          $ref: "#/components/responses/Problem"
+        "401":
+          $ref: "#/components/responses/Problem"
+        "404":
+          $ref: "#/components/responses/Problem"
+        "409":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/development/starter-course:
+    post:
+      operationId: installLocalStarterCourse
+      tags: [Development]
+      summary: Install the authenticated owner's local starter course idempotently
+      description: >-
+        Available only when the backend is explicitly running in the local
+        environment with starter-course installation enabled. It creates one
+        immutable Type-A/Type-B/Type-C English-support release derived from the
+        reviewed workbook subset and never creates users or learning results.
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "201":
+          description: Starter course created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LocalStarterCourseResponse"
+        "200":
+          description: Existing starter course returned for an idempotent retry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LocalStarterCourseResponse"
+        "401":
+          $ref: "#/components/responses/Problem"
+        "404":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/development/courses/{courseId}/revisions:
+    post:
+      operationId: createLocalCourseRevision
+      tags: [Development]
+      summary: Create one subsequent immutable course release for local verification
+      description: >-
+        Available only in explicitly enabled local/test environments. The owner
+        creates one real MOBILE_AUTHORING change set from the exact active release,
+        revises one eligible typed-cloze prompt without returning authored text or
+        answer material, and receives an unpublished immutable release. Publication
+        and rollback still require the separate impact-bound release operations.
+      parameters:
+        - $ref: "#/components/parameters/CourseId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateLocalCourseRevisionRequest"
+      responses:
+        "201":
+          description: Subsequent authored release created
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubsequentCourseDraftResult"
+        "200":
+          description: Existing authored release returned for an idempotent retry
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubsequentCourseDraftResult"
+        "400":
+          $ref: "#/components/responses/Problem"
+        "401":
+          $ref: "#/components/responses/Problem"
+        "404":
+          $ref: "#/components/responses/Problem"
+        "409":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/development/courses/{courseId}/editor:
+    get:
+      operationId: getLocalCourseEditor
+      tags: [Development]
+      summary: Read the owner-scoped local course editor document
+      description: >-
+        Returns the first eligible typed-cloze prompt and its immutable hierarchy
+        from the exact active release. The response is owner-scoped, no-store,
+        answer-key-free, and carries the strong ETag required by draft creation.
+        It is unavailable outside explicitly enabled local/test environments.
+      parameters:
+        - $ref: "#/components/parameters/CourseId"
+      responses:
+        "200":
+          description: Current editable document
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+            ETag:
+              description: Strong opaque version of the active release and editable question revision.
+              schema:
+                type: string
+                pattern: '^"[0-9a-f]{64}"$'
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LocalCourseEditorSnapshot"
+        "401":
+          $ref: "#/components/responses/Problem"
+        "404":
+          $ref: "#/components/responses/Problem"
+        "409":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/development/courses/{courseId}/editor/drafts:
+    post:
+      operationId: createLocalCourseEditorDraft
+      tags: [Development]
+      summary: Save one ETag-bound immutable local editor draft
+      description: >-
+        Creates a committed MOBILE_AUTHORING change set and an unpublished
+        immutable release only when If-Match still names the current owner-scoped
+        editor document. It accepts a changed typed-cloze prompt but no answer,
+        score, entitlement, ownership, or publication assertion. Publication
+        remains a separate impact-bound operation.
+      parameters:
+        - $ref: "#/components/parameters/CourseId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/IfMatch"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateLocalCourseEditorDraftRequest"
+      responses:
+        "201":
+          description: Editor draft created
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubsequentCourseDraftResult"
+        "200":
+          description: Existing editor draft returned for an idempotent retry
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubsequentCourseDraftResult"
+        "400":
+          $ref: "#/components/responses/Problem"
+        "401":
+          $ref: "#/components/responses/Problem"
+        "404":
+          $ref: "#/components/responses/Problem"
+        "409":
+          $ref: "#/components/responses/Problem"
+        "422":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: OIDC access token obtained with Authorization Code and PKCE.
+  headers:
+    RequestId:
+      description: Correlation identifier generated or accepted by the API edge.
+      schema:
+        type: string
+        format: uuid
+    NoStore:
+      description: Prevents sensitive answer feedback and owner-scoped import data from being cached.
+      schema:
+        type: string
+        const: no-store
+  parameters:
+    CourseId:
+      name: courseId
+      in: path
+      required: true
+      schema:
+        $ref: "#/components/schemas/Id"
+    AttemptId:
+      name: attemptId
+      in: path
+      required: true
+      schema:
+        $ref: "#/components/schemas/Id"
+    ImportId:
+      name: importId
+      in: path
+      required: true
+      schema:
+        $ref: "#/components/schemas/Id"
+    ReleaseId:
+      name: releaseId
+      in: path
+      required: true
+      schema:
+        $ref: "#/components/schemas/Id"
+    IfMatch:
+      name: If-Match
+      in: header
+      required: true
+      description: Strong ETag returned by the current owner-scoped editor document.
+      schema:
+        type: string
+        pattern: '^"[0-9a-f]{64}"$'
+    Cursor:
+      name: cursor
+      in: query
+      description: >-
+        Opaque tamper-evident cursor bound to the authenticated owner, import,
+        immutable preview/report identity, and position. It contains no
+        workbook text or storage coordinates.
+      schema:
+        type: string
+        maxLength: 512
+    Limit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: Stable UUID generated once for the logical command.
+      schema:
+        type: string
+        format: uuid
+    ClientCapabilities:
+      name: X-Kelimio-Client-Capabilities
+      in: header
+      required: false
+      description: >-
+        Comma-separated bounded capability tokens implemented by the client.
+        Missing means the empty set; this is a compatibility signal, not authorization.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 1040
+        pattern: "^[a-z][a-z0-9]*(?:\\.[a-z][a-z0-9]*)+(?:, ?[a-z][a-z0-9]*(?:\\.[a-z][a-z0-9]*)+)*$"
+  responses:
+    Problem:
+      description: RFC 9457 problem details
+      headers:
+        Cache-Control:
+          $ref: "#/components/headers/NoStore"
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+  schemas:
+    Id:
+      type: string
+      format: uuid
+    MatchingItemId:
+      type: string
+      format: uuid
+      pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+      description: >-
+        Independently generated random UUIDv4 for one public matching-side
+        item. It is unrelated to text, authored pair identity, insertion
+        order, the opposite-side item ID, or any shared namespace.
+    QuestionPrompt:
+      type: [string, "null"]
+      description: >-
+        Required question prompt value. MATCHING carries an explicit null;
+        every other question type carries nonblank target-language text.
+    LanguageTag:
+      type: string
+      description: >-
+        Canonically cased BCP 47 subset: lowercase primary language, optional
+        title-case script, uppercase region, and lowercase variants. Extensions
+        and private-use subtags are outside the initial API contract.
+      minLength: 2
+      maxLength: 35
+      pattern: "^[a-z]{2,8}(?:-[A-Z][a-z]{3})?(?:-(?:[A-Z]{2}|[0-9]{3}))?(?:-(?:[a-z0-9]{5,8}|[0-9][a-z0-9]{3}))*$"
+      examples: [tr, en, ar, fr, pt-BR, zh-Hant]
+    ClientCapability:
+      type: string
+      minLength: 3
+      maxLength: 64
+      pattern: "^[a-z][a-z0-9]*(?:\\.[a-z][a-z0-9]*)+$"
+      examples: [question.matching.v1]
+    MeResponse:
+      type: object
+      additionalProperties: false
+      x-kelimio-cross-field-invariants:
+        - REQUIRED means profileVersion is 0 and preferredSupportLanguage is absent or null.
+        - COMPLETE means profileVersion is at least 1 and preferredSupportLanguage is non-null.
+      required:
+        - id
+        - displayName
+        - appLocale
+        - activeTargetLanguage
+        - timeZone
+        - profileVersion
+        - profileSetupStatus
+      properties:
+        id:
+          $ref: "#/components/schemas/Id"
+        displayName:
+          type: string
+          minLength: 1
+          maxLength: 80
+        appLocale:
+          $ref: "#/components/schemas/LanguageTag"
+        activeTargetLanguage:
+          $ref: "#/components/schemas/LanguageTag"
+        preferredSupportLanguage:
+          type: [string, "null"]
+          description: Absent or null until first-login profile setup is complete.
+          minLength: 2
+          maxLength: 35
+          pattern: "^[a-z]{2,8}(?:-[A-Z][a-z]{3})?(?:-(?:[A-Z]{2}|[0-9]{3}))?(?:-(?:[a-z0-9]{5,8}|[0-9][a-z0-9]{3}))*$"
+        timeZone:
+          $ref: "#/components/schemas/TimeZoneId"
+        profileVersion:
+          type: integer
+          format: int64
+          minimum: 0
+        profileSetupStatus:
+          type: string
+          description: >-
+            REQUIRED pairs with profileVersion 0 and no support language;
+            COMPLETE pairs with profileVersion at least 1 and a support language.
+          enum: [REQUIRED, COMPLETE]
+    ProfileSetupRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - displayName
+        - appLocale
+        - activeTargetLanguage
+        - preferredSupportLanguage
+        - timeZone
+      properties:
+        displayName:
+          type: string
+          minLength: 1
+          maxLength: 80
+        appLocale:
+          type: string
+          enum: [tr, en, ar]
+        activeTargetLanguage:
+          $ref: "#/components/schemas/LanguageTag"
+        preferredSupportLanguage:
+          $ref: "#/components/schemas/LanguageTag"
+        timeZone:
+          $ref: "#/components/schemas/TimeZoneId"
+    TimeZoneId:
+      type: string
+      description: >-
+        Named IANA time-zone identifier accepted by the backend runtime, or UTC.
+        Raw numeric offsets and GMT-prefixed fixed offsets are rejected.
+      minLength: 1
+      maxLength: 64
+      examples: [Europe/Istanbul, UTC]
+    CourseSummary:
+      type: object
+      additionalProperties: false
+      required:
+        [id, name, targetLanguage, supportLanguages, accessType, visibility, enrolled]
+      properties:
+        id:
+          $ref: "#/components/schemas/Id"
+        name:
+          type: string
+          minLength: 1
+          maxLength: 160
+        description:
+          type: [string, "null"]
+          maxLength: 2000
+        targetLanguage:
+          $ref: "#/components/schemas/LanguageTag"
+        supportLanguages:
+          type: array
+          uniqueItems: true
+          items:
+            $ref: "#/components/schemas/LanguageTag"
+        accessType:
+          type: string
+          enum: [FREE, PAID]
+        visibility:
+          type: string
+          enum: [PUBLIC, PRIVATE]
+        enrolled:
+          type: boolean
+    CourseDetail:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - name
+        - targetLanguage
+        - supportLanguages
+        - accessType
+        - visibility
+        - enrolled
+        - ownerDisplayName
+        - releaseId
+        - tests
+      properties:
+        id:
+          $ref: "#/components/schemas/Id"
+        name:
+          type: string
+          minLength: 1
+          maxLength: 160
+        description:
+          type: [string, "null"]
+          maxLength: 2000
+        targetLanguage:
+          $ref: "#/components/schemas/LanguageTag"
+        supportLanguages:
+          type: array
+          uniqueItems: true
+          items:
+            $ref: "#/components/schemas/LanguageTag"
+        accessType:
+          type: string
+          enum: [FREE, PAID]
+        visibility:
+          type: string
+          enum: [PUBLIC, PRIVATE]
+        enrolled:
+          type: boolean
+        ownerDisplayName:
+          type: string
+          maxLength: 80
+        releaseId:
+          $ref: "#/components/schemas/Id"
+        tests:
+          type: array
+          items:
+            $ref: "#/components/schemas/TestSummary"
+    CourseProgressResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - courseId
+        - courseReleaseId
+        - answeredQuestions
+        - correctAnswers
+        - completedAttempts
+        - passedAttempts
+        - activeScore
+        - lifetimeScore
+        - projectionVersion
+        - updating
+        - updatedAt
+      properties:
+        courseId:
+          $ref: "#/components/schemas/Id"
+        courseReleaseId:
+          $ref: "#/components/schemas/Id"
+        answeredQuestions:
+          type: integer
+          minimum: 0
+        correctAnswers:
+          type: integer
+          minimum: 0
+        completedAttempts:
+          type: integer
+          minimum: 0
+        passedAttempts:
+          type: integer
+          minimum: 0
+        activeScore:
+          type: integer
+          format: int64
+          minimum: 0
+        lifetimeScore:
+          type: integer
+          format: int64
+          minimum: 0
+        projectionVersion:
+          type: integer
+          format: int64
+          minimum: 0
+        updating:
+          type: boolean
+        updatedAt:
+          type: [string, "null"]
+          format: date-time
+    TestSummary:
+      type: object
+      additionalProperties: false
+      required: [id, revisionId, name, position, questionCount]
+      properties:
+        id:
+          $ref: "#/components/schemas/Id"
+        revisionId:
+          $ref: "#/components/schemas/Id"
+        name:
+          type: string
+          maxLength: 160
+        position:
+          type: integer
+          minimum: 1
+        questionCount:
+          type: integer
+          minimum: 1
+    CoursePage:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/CourseSummary"
+        nextCursor:
+          type: [string, "null"]
+    CreateEnrollmentRequest:
+      type: object
+      additionalProperties: false
+      required: [supportLanguage]
+      properties:
+        supportLanguage:
+          $ref: "#/components/schemas/LanguageTag"
+    EnrollmentResponse:
+      type: object
+      additionalProperties: false
+      required: [id, courseId, supportLanguage, status, enrolledAt]
+      properties:
+        id:
+          $ref: "#/components/schemas/Id"
+        courseId:
+          $ref: "#/components/schemas/Id"
+        supportLanguage:
+          $ref: "#/components/schemas/LanguageTag"
+        status:
+          type: string
+          enum: [ACTIVE]
+        enrolledAt:
+          type: string
+          format: date-time
+    AttemptResponse:
+      type: object
+      additionalProperties: false
+      required: [id, testId, testRevisionId, supportLanguage, state, questions, startedAt]
+      properties:
+        id:
+          $ref: "#/components/schemas/Id"
+        testId:
+          $ref: "#/components/schemas/Id"
+        testRevisionId:
+          $ref: "#/components/schemas/Id"
+        supportLanguage:
+          $ref: "#/components/schemas/LanguageTag"
+        state:
+          $ref: "#/components/schemas/AttemptState"
+        questions:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/QuestionPayload"
+        startedAt:
+          type: string
+          format: date-time
+    QuestionPayload:
+      type: object
+      additionalProperties: false
+      x-kelimio-test-nullable-matching-prompt: true
+      description: >-
+        Answer-key-free online question payload. MULTIPLE_CHOICE_CLOZE and
+        TYPED_CLOZE carry a raw target-language sentence and exactly one literal
+        ASCII --- marker; the client renders that marker as an accessible
+        visual blank. MATCHING has a null prompt, no options, and independently
+        ordered target/support item arrays with no field linking the two sides.
+      x-kelimio-cross-field-invariants:
+        - MULTIPLE_CHOICE_CLOZE and TYPED_CLOZE prompts contain exactly one literal ASCII ---; overlapping occurrences count.
+        - WORD_MULTIPLE_CHOICE and MULTIPLE_CHOICE_CLOZE contain exactly four options; TYPED_CLOZE and MATCHING contain none.
+        - MATCHING contains two through six target items and the same number of support items; all item IDs are unique per side and the two ID sets are disjoint.
+        - Non-MATCHING questions contain no target or support items.
+      required: [questionId, questionRevisionId, type, position, prompt, options, targetItems, supportItems]
+      allOf:
+        - if:
+            properties:
+              type:
+                enum: [MULTIPLE_CHOICE_CLOZE, TYPED_CLOZE]
+            required: [type]
+          then:
+            properties:
+              prompt:
+                pattern: '^(?![\s\S]*----)(?![\s\S]*---[\s\S]*---)[\s\S]*---[\s\S]*$'
+        - if:
+            properties:
+              type:
+                enum: [WORD_MULTIPLE_CHOICE, MULTIPLE_CHOICE_CLOZE]
+            required: [type]
+          then:
+            properties:
+              options:
+                minItems: 4
+                maxItems: 4
+          else:
+            properties:
+              options:
+                maxItems: 0
+        - if:
+            properties:
+              type:
+                const: MATCHING
+            required: [type]
+          then:
+            allOf:
+              - properties:
+                  prompt:
+                    type: "null"
+              - oneOf:
+                  - properties:
+                      targetItems: { minItems: 2, maxItems: 2 }
+                      supportItems: { minItems: 2, maxItems: 2 }
+                  - properties:
+                      targetItems: { minItems: 3, maxItems: 3 }
+                      supportItems: { minItems: 3, maxItems: 3 }
+                  - properties:
+                      targetItems: { minItems: 4, maxItems: 4 }
+                      supportItems: { minItems: 4, maxItems: 4 }
+                  - properties:
+                      targetItems: { minItems: 5, maxItems: 5 }
+                      supportItems: { minItems: 5, maxItems: 5 }
+                  - properties:
+                      targetItems: { minItems: 6, maxItems: 6 }
+                      supportItems: { minItems: 6, maxItems: 6 }
+          else:
+            properties:
+              prompt:
+                type: string
+                minLength: 1
+                maxLength: 1000
+              targetItems:
+                maxItems: 0
+              supportItems:
+                maxItems: 0
+      properties:
+        questionId:
+          $ref: "#/components/schemas/Id"
+        questionRevisionId:
+          $ref: "#/components/schemas/Id"
+        type:
+          type: string
+          enum: [WORD_MULTIPLE_CHOICE, MULTIPLE_CHOICE_CLOZE, TYPED_CLOZE, MATCHING]
+        position:
+          type: integer
+          minimum: 1
+        prompt:
+          $ref: "#/components/schemas/QuestionPrompt"
+          x-kelimio-required-nullable: true
+        options:
+          type: array
+          items:
+            $ref: "#/components/schemas/AnswerOption"
+        targetItems:
+          type: array
+          items:
+            $ref: "#/components/schemas/MatchingItem"
+        supportItems:
+          type: array
+          items:
+            $ref: "#/components/schemas/MatchingItem"
+    AnswerOption:
+      type: object
+      additionalProperties: false
+      required: [id, text]
+      properties:
+        id:
+          $ref: "#/components/schemas/Id"
+        text:
+          type: string
+          minLength: 1
+          maxLength: 500
+    MatchingItem:
+      type: object
+      additionalProperties: false
+      required: [id, text]
+      properties:
+        id:
+          $ref: "#/components/schemas/MatchingItemId"
+        text:
+          type: string
+          minLength: 1
+          maxLength: 500
+    MatchingSelection:
+      type: object
+      additionalProperties: false
+      x-kelimio-redacted-to-string: true
+      x-kelimio-redaction-test-matching-selection: true
+      required: [targetItemId, supportItemId]
+      properties:
+        targetItemId:
+          x-kelimio-sensitive: true
+          allOf:
+            - $ref: "#/components/schemas/MatchingItemId"
+        supportItemId:
+          x-kelimio-sensitive: true
+          allOf:
+            - $ref: "#/components/schemas/MatchingItemId"
+    SubmitAnswerRequest:
+      type: object
+      additionalProperties: false
+      description: >-
+        Carries exactly one answer form. typedAnswer and matches are sensitive,
+        are evaluated only by the server, and must never be logged or emitted
+        to analytics or outbox events.
+      x-kelimio-cross-field-invariants:
+        - Exactly one of selectedOptionId, typedAnswer, and matches is present.
+        - matches is a complete bijection over the server-issued matching item IDs, with no duplicate target or support ID.
+      x-kelimio-redacted-to-string: true
+      x-kelimio-redaction-test-submit-answer-request: true
+      required: [submissionId, questionRevisionId]
+      oneOf:
+        - required: [selectedOptionId]
+          not:
+            anyOf:
+              - required: [typedAnswer]
+              - required: [matches]
+        - required: [typedAnswer]
+          not:
+            anyOf:
+              - required: [selectedOptionId]
+              - required: [matches]
+        - required: [matches]
+          not:
+            anyOf:
+              - required: [selectedOptionId]
+              - required: [typedAnswer]
+      properties:
+        submissionId:
+          $ref: "#/components/schemas/Id"
+        questionRevisionId:
+          $ref: "#/components/schemas/Id"
+        selectedOptionId:
+          $ref: "#/components/schemas/Id"
+        typedAnswer:
+          type: string
+          minLength: 1
+          maxLength: 500
+          writeOnly: true
+          x-kelimio-sensitive: true
+        matches:
+          type: array
+          minItems: 2
+          maxItems: 6
+          items:
+            $ref: "#/components/schemas/MatchingSelection"
+          writeOnly: true
+          x-kelimio-sensitive: true
+    AnswerRecordedResponse:
+      type: object
+      additionalProperties: false
+      description: >-
+        Post-commit feedback for exactly one submitted question. Multiple-choice
+        responses contain correctOptionId; typed-cloze responses contain only
+        the primary authored correctAnswerText; matching responses contain the
+        complete correctMatches mapping. None appears before commit.
+      x-kelimio-cross-field-invariants:
+        - Exactly one of correctOptionId, correctAnswerText, and correctMatches is present.
+        - correctMatches exactly covers the target and support item IDs issued for the submitted matching question.
+      x-kelimio-redacted-to-string: true
+      x-kelimio-redaction-test-answer-recorded-response: true
+      required:
+        - submissionId
+        - correct
+        - activeScoreDelta
+        - lifetimeScoreDelta
+        - activeQuestionScore
+        - lifetimeScore
+        - energy
+        - attemptState
+      oneOf:
+        - required: [correctOptionId]
+          not:
+            anyOf:
+              - required: [correctAnswerText]
+              - required: [correctMatches]
+        - required: [correctAnswerText]
+          not:
+            anyOf:
+              - required: [correctOptionId]
+              - required: [correctMatches]
+        - required: [correctMatches]
+          not:
+            anyOf:
+              - required: [correctOptionId]
+              - required: [correctAnswerText]
+      properties:
+        submissionId:
+          $ref: "#/components/schemas/Id"
+        correct:
+          type: boolean
+        correctOptionId:
+          x-kelimio-sensitive: true
+          allOf:
+            - $ref: "#/components/schemas/Id"
+        correctAnswerText:
+          type: string
+          minLength: 1
+          maxLength: 500
+          x-kelimio-sensitive: true
+        correctMatches:
+          type: array
+          minItems: 2
+          maxItems: 6
+          items:
+            $ref: "#/components/schemas/MatchingSelection"
+          x-kelimio-sensitive: true
+        activeScoreDelta:
+          type: integer
+          minimum: 0
+          maximum: 60
+        lifetimeScoreDelta:
+          type: integer
+          minimum: 0
+          maximum: 60
+        activeQuestionScore:
+          type: integer
+          minimum: 0
+          maximum: 60
+        lifetimeScore:
+          type: integer
+          minimum: 0
+        energy:
+          $ref: "#/components/schemas/EnergyResponse"
+        attemptState:
+          $ref: "#/components/schemas/AttemptState"
+    FinishAttemptResponse:
+      type: object
+      additionalProperties: false
+      required: [attemptId, state, correctCount, questionCount, correctRatio, completedAt]
+      properties:
+        attemptId:
+          $ref: "#/components/schemas/Id"
+        state:
+          $ref: "#/components/schemas/AttemptState"
+        correctCount:
+          type: integer
+          minimum: 0
+        questionCount:
+          type: integer
+          minimum: 1
+        correctRatio:
+          type: number
+          minimum: 0
+          maximum: 1
+        completedAt:
+          type: string
+          format: date-time
+    AttemptState:
+      type: string
+      enum: [IN_PROGRESS, COMPLETED_PASS, COMPLETED_FAIL, INTERRUPTED_ENERGY]
+    EnergyResponse:
+      type: object
+      additionalProperties: false
+      required: [balance, maximum, unlimited, asOf]
+      properties:
+        balance:
+          type: integer
+          minimum: 0
+          maximum: 5
+        maximum:
+          type: integer
+          const: 5
+        unlimited:
+          type: boolean
+        nextRegenerationAt:
+          type: [string, "null"]
+          format: date-time
+        asOf:
+          type: string
+          format: date-time
+    Sha256Hex:
+      type: string
+      pattern: "^[0-9a-f]{64}$"
+    Sha256Base64:
+      type: string
+      minLength: 44
+      maxLength: 44
+      pattern: "^[A-Za-z0-9+/]{43}=$"
+    CreateCourseImportRequest:
+      type: object
+      additionalProperties: false
+      x-kelimio-redacted-to-string: true
+      x-kelimio-redacted-field-names: [originalFileName, sourceSha256, parts]
+      x-kelimio-redaction-test-course-import: true
+      description: >-
+        The part declarations must be consecutive from one, sum exactly to
+        fileSizeBytes, use 5 MiB for every non-final part, and contain no more
+        than five parts. The server initiates S3 multipart upload with SHA-256
+        checksum validation selected. Each digest is computed before upload so
+        its presigned part request and final multipart completion can bind the
+        same checksum.
+      x-kelimio-cross-field-invariants:
+        - parts use consecutive partNumber values beginning at 1.
+        - every non-final part has sizeBytes 5242880 and the final part has sizeBytes from 1 through 5242880.
+        - the sum of part sizeBytes equals the top-level fileSizeBytes.
+      required: [originalFileName, declaredMediaType, fileSizeBytes, sourceSha256, parts]
+      properties:
+        originalFileName:
+          type: string
+          x-kelimio-sensitive: true
+          x-kelimio-normalization: NFC
+          x-kelimio-reject-default-ignorable-code-points: true
+          minLength: 6
+          maxLength: 255
+          pattern: '^(?!.*[\p{Cf}\u034f\u115f-\u1160\u17b4-\u17b5\u180b-\u180f\u2060-\u206f\u3164\ufe00-\ufe0f\uffa0\ufff0-\ufff8\u{1bca0}-\u{1bca3}\u{1d173}-\u{1d17a}\u{e0000}-\u{e0fff}])(?=\S)[^/:\\\u0000-\u001f\u007f-\u009f]{1,250}\.[xX][lL][sS][xX]$'
+        declaredMediaType:
+          type: string
+          const: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+        fileSizeBytes:
+          type: integer
+          format: int64
+          minimum: 1
+          maximum: 26214400
+        sourceSha256:
+          $ref: "#/components/schemas/Sha256Hex"
+          x-kelimio-sensitive: true
+        parts:
+          type: array
+          x-kelimio-sensitive: true
+          minItems: 1
+          maxItems: 5
+          items:
+            $ref: "#/components/schemas/CourseImportPartDeclaration"
+    CourseImportPartDeclaration:
+      type: object
+      additionalProperties: false
+      x-kelimio-redacted-to-string: true
+      x-kelimio-redacted-field-names: [sha256]
+      required: [partNumber, sizeBytes, sha256]
+      properties:
+        partNumber:
+          type: integer
+          minimum: 1
+          maximum: 5
+        sizeBytes:
+          type: integer
+          format: int64
+          minimum: 1
+          maximum: 5242880
+        sha256:
+          $ref: "#/components/schemas/Sha256Base64"
+          x-kelimio-sensitive: true
+    CourseImportUploadSessionResponse:
+      type: object
+      additionalProperties: false
+      x-kelimio-redacted-to-string: true
+      x-kelimio-redacted-field-names: [import, upload]
+      required: [created, import, upload]
+      properties:
+        created:
+          type: boolean
+        import:
+          $ref: "#/components/schemas/CourseImportStatusResponse"
+          x-kelimio-sensitive: true
+        upload:
+          x-kelimio-sensitive: true
+          oneOf:
+            - $ref: "#/components/schemas/CourseImportUploadInstructions"
+            - type: "null"
+          description: >-
+            Present only while the import remains UPLOADING and the server
+            can safely issue URLs for the original multipart upload.
+    CourseImportUploadInstructions:
+      type: object
+      additionalProperties: false
+      x-kelimio-redacted-to-string: true
+      x-kelimio-redacted-field-names: [parts]
+      required: [expiresAt, parts]
+      properties:
+        expiresAt:
+          type: string
+          format: date-time
+          description: >-
+            Earliest exact expiry among the signed part-upload URLs in this
+            response; no URL in the response remains valid after this instant.
+            This can be earlier than the import session's uploadExpiresAt value.
+        parts:
+          type: array
+          x-kelimio-sensitive: true
+          minItems: 1
+          maxItems: 5
+          items:
+            $ref: "#/components/schemas/CourseImportPresignedPart"
+    CourseImportPresignedPart:
+      type: object
+      additionalProperties: false
+      x-kelimio-redacted-to-string: true
+      x-kelimio-redacted-field-names: [url, requiredHeaders]
+      required: [partNumber, sizeBytes, url, requiredHeaders]
+      properties:
+        partNumber:
+          type: integer
+          minimum: 1
+          maximum: 5
+        sizeBytes:
+          type: integer
+          format: int64
+          minimum: 1
+          maximum: 5242880
+        url:
+          type: string
+          x-kelimio-sensitive: true
+          format: uri
+          maxLength: 8192
+        requiredHeaders:
+          $ref: "#/components/schemas/CourseImportPartHeaders"
+          x-kelimio-sensitive: true
+    CourseImportPartHeaders:
+      type: object
+      additionalProperties: false
+      x-kelimio-redacted-to-string: true
+      x-kelimio-redacted-field-names: [sha256]
+      required: [contentLength, sha256]
+      properties:
+        contentLength:
+          type: string
+          pattern: "^[1-9][0-9]{0,7}$"
+          description: Exact decimal Content-Length header value.
+        sha256:
+          $ref: "#/components/schemas/Sha256Base64"
+          x-kelimio-sensitive: true
+          description: Exact x-amz-checksum-sha256 header value.
+    CompleteCourseImportUploadRequest:
+      type: object
+      additionalProperties: false
+      x-kelimio-redacted-to-string: true
+      x-kelimio-redacted-field-names: [sourceSha256, parts]
+      description: >-
+        The whole-file digest, part numbers, and part checksums must match the
+        immutable create command. Part sizes and total size are reloaded from
+        that command and verified against S3. ETags are opaque S3 values and
+        are never interpreted as content hashes.
+      required: [sourceSha256, parts]
+      properties:
+        sourceSha256:
+          $ref: "#/components/schemas/Sha256Hex"
+          x-kelimio-sensitive: true
+        parts:
+          type: array
+          x-kelimio-sensitive: true
+          minItems: 1
+          maxItems: 5
+          items:
+            $ref: "#/components/schemas/CompletedCourseImportPart"
+    CompletedCourseImportPart:
+      type: object
+      additionalProperties: false
+      x-kelimio-redacted-to-string: true
+      x-kelimio-redacted-field-names: [eTag, sha256]
+      required: [partNumber, eTag, sha256]
+      properties:
+        partNumber:
+          type: integer
+          minimum: 1
+          maximum: 5
+        eTag:
+          type: string
+          x-kelimio-sensitive: true
+          minLength: 1
+          maxLength: 256
+          pattern: "^[!-~]{1,256}$"
+        sha256:
+          $ref: "#/components/schemas/Sha256Base64"
+          x-kelimio-sensitive: true
+    CourseImportStatus:
+      type: string
+      enum:
+        - UPLOADING
+        - QUEUED
+        - PROCESSING
+        - PREVIEW_READY
+        - VALIDATION_FAILED
+        - MALWARE_REJECTED
+        - PROCESSING_FAILED
+        - EXPIRED
+        - APPROVED
+        - COMMITTED
+    CourseImportStatusResponse:
+      type: object
+      additionalProperties: false
+      x-kelimio-redacted-to-string: true
+      x-kelimio-redacted-field-names: [originalFileName, preview, approvalBindingSha256, activation]
+      required:
+        - id
+        - status
+        - originalFileName
+        - declaredMediaType
+        - fileSizeBytes
+        - rulesVersion
+        - processingAttempts
+        - createdAt
+        - updatedAt
+        - uploadExpiresAt
+        - preview
+        - approvalBindingSha256
+        - approvedAt
+        - commit
+        - activation
+        - failureCode
+      properties:
+        id:
+          $ref: "#/components/schemas/Id"
+        status:
+          $ref: "#/components/schemas/CourseImportStatus"
+        originalFileName:
+          type: string
+          x-kelimio-sensitive: true
+          minLength: 6
+          maxLength: 255
+        declaredMediaType:
+          type: string
+          const: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+        fileSizeBytes:
+          type: integer
+          format: int64
+          minimum: 1
+          maximum: 26214400
+        rulesVersion:
+          type: string
+          enum: [xlsx-v1, xlsx-v2]
+        processingAttempts:
+          type: integer
+          minimum: 0
+          maximum: 5
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        uploadExpiresAt:
+          type: string
+          format: date-time
+        preview:
+          x-kelimio-sensitive: true
+          oneOf:
+            - $ref: "#/components/schemas/CourseImportPreviewSummary"
+            - type: "null"
+        approvalBindingSha256:
+          type: [string, "null"]
+          x-kelimio-sensitive: true
+          pattern: "^[0-9a-f]{64}$"
+        approvedAt:
+          type: [string, "null"]
+          format: date-time
+        commit:
+          oneOf:
+            - $ref: "#/components/schemas/CourseImportCommitSummary"
+            - type: "null"
+          description: >-
+            Present only after the approved preview has been committed as an
+            unpublished draft. This is not publication or entitlement proof.
+        activation:
+          x-kelimio-sensitive: true
+          oneOf:
+            - $ref: "#/components/schemas/CourseImportActivationSummary"
+            - type: "null"
+          description: >-
+            Present when the committed draft release was already activated by
+            the course-publication authority. This is recovery evidence for
+            the owner UI, not entitlement proof.
+        failureCode:
+          type: [string, "null"]
+          pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+          maxLength: 80
+    CourseImportStatusPage:
+      type: object
+      additionalProperties: false
+      x-kelimio-redacted-to-string: true
+      x-kelimio-redacted-field-names: [items, nextCursor]
+      required: [items, nextCursor]
+      properties:
+        items:
+          type: array
+          x-kelimio-sensitive: true
+          maxItems: 50
+          items:
+            $ref: "#/components/schemas/CourseImportStatusResponse"
+        nextCursor:
+          type: [string, "null"]
+          x-kelimio-sensitive: true
+          minLength: 1
+          maxLength: 512
+    CourseImportPreviewSummary:
+      type: object
+      additionalProperties: false
+      x-kelimio-redacted-to-string: true
+      x-kelimio-redacted-field-names: [validationReportSha256, allocationSha256, previewSha256, settings]
+      required:
+        - isValid
+        - rowCount
+        - questionCount
+        - matchingQuestionCount
+        - requiredClientCapabilities
+        - levelCount
+        - unitCount
+        - topicCount
+        - testCount
+        - warningCount
+        - errorCount
+        - validationReportSha256
+        - allocationSha256
+        - previewSha256
+        - settings
+      properties:
+        isValid:
+          type: boolean
+        rowCount:
+          type: integer
+          minimum: 0
+          maximum: 10000
+        questionCount:
+          type: [integer, "null"]
+          minimum: 1
+          maximum: 10000
+        matchingQuestionCount:
+          type: [integer, "null"]
+          minimum: 0
+          maximum: 10000
+        requiredClientCapabilities:
+          type: [array, "null"]
+          maxItems: 16
+          uniqueItems: true
+          items:
+            $ref: "#/components/schemas/ClientCapability"
+        levelCount:
+          type: integer
+          minimum: 0
+          maximum: 64
+        unitCount:
+          type: integer
+          minimum: 0
+          maximum: 10000
+        topicCount:
+          type: integer
+          minimum: 0
+          maximum: 10000
+        testCount:
+          type: integer
+          minimum: 0
+          maximum: 10000
+        warningCount:
+          type: integer
+          minimum: 0
+          maximum: 2000
+        errorCount:
+          type: integer
+          minimum: 0
+          maximum: 2000
+        validationReportSha256:
+          $ref: "#/components/schemas/Sha256Hex"
+          x-kelimio-sensitive: true
+        allocationSha256:
+          type: [string, "null"]
+          x-kelimio-sensitive: true
+          pattern: "^[0-9a-f]{64}$"
+        previewSha256:
+          type: [string, "null"]
+          x-kelimio-sensitive: true
+          pattern: "^[0-9a-f]{64}$"
+        settings:
+          x-kelimio-sensitive: true
+          oneOf:
+            - $ref: "#/components/schemas/CourseImportPreviewSettings"
+            - type: "null"
+          description: >-
+            Present for valid import-content-v1 previews. Null on invalid
+            previews and legacy approval-only previews.
+    CourseImportPreviewSettings:
+      type: object
+      additionalProperties: false
+      x-kelimio-redacted-to-string: true
+      x-kelimio-redacted-field-names:
+        - courseName
+        - targetLanguageName
+        - supportLanguageCodes
+      required:
+        - courseName
+        - targetLanguageCode
+        - targetLanguageName
+        - supportLanguageCodes
+        - defaultSupportLanguageCode
+        - defaultTestMode
+        - visibility
+        - targetTestSize
+        - minimumLastAutomaticTestSize
+        - fillFixedTests
+        - completionThresholdPercent
+        - pricingSource
+        - maximumTypedAlternativeAnswers
+        - offlineMode
+      properties:
+        courseName:
+          type: string
+          x-kelimio-sensitive: true
+          minLength: 1
+          maxLength: 160
+        targetLanguageCode:
+          $ref: "#/components/schemas/LanguageTag"
+        targetLanguageName:
+          type: string
+          x-kelimio-sensitive: true
+          minLength: 1
+          maxLength: 160
+        supportLanguageCodes:
+          type: array
+          x-kelimio-sensitive: true
+          minItems: 1
+          maxItems: 64
+          uniqueItems: true
+          items:
+            $ref: "#/components/schemas/LanguageTag"
+        defaultSupportLanguageCode:
+          $ref: "#/components/schemas/LanguageTag"
+        defaultTestMode:
+          type: string
+          enum: [MIXED, WORD, MATCHING, MULTIPLE_CHOICE_CLOZE, TYPED_CLOZE]
+        visibility:
+          type: string
+          enum: [PUBLIC, PRIVATE]
+        targetTestSize:
+          type: integer
+          minimum: 1
+          maximum: 10000
+        minimumLastAutomaticTestSize:
+          type: integer
+          minimum: 1
+          maximum: 10000
+        fillFixedTests:
+          type: boolean
+        completionThresholdPercent:
+          type: integer
+          minimum: 50
+          maximum: 100
+        pricingSource:
+          type: string
+          const: APPLICATION
+        maximumTypedAlternativeAnswers:
+          type: integer
+          const: 1
+        offlineMode:
+          type: string
+          const: SCORELESS_PRACTICE
+    CourseImportPreviewPage:
+      type: object
+      additionalProperties: false
+      x-kelimio-redacted-to-string: true
+      x-kelimio-redacted-field-names: [items, nextCursor]
+      required: [items]
+      properties:
+        items:
+          type: array
+          x-kelimio-sensitive: true
+          maxItems: 100
+          items:
+            $ref: "#/components/schemas/CourseImportPreviewRow"
+        nextCursor:
+          type: [string, "null"]
+          x-kelimio-sensitive: true
+          maxLength: 512
+    CourseImportPreviewRow:
+      type: object
+      additionalProperties: false
+      x-kelimio-redacted-to-string: true
+      x-kelimio-cross-field-invariants:
+        - translations is non-empty for WORD and empty for MULTIPLE_CHOICE_CLOZE or TYPED_CLOZE under xlsx-v1.
+      x-kelimio-redacted-field-names:
+        - source
+        - level
+        - unit
+        - topic
+        - targetText
+        - translations
+        - sentence
+        - correctAnswer
+        - alternativeCorrectAnswer
+        - wrongAnswers
+        - matchingGroup
+        - note
+      required:
+        - ordinal
+        - questionOrdinal
+        - projectedQuestionType
+        - compositionKind
+        - groupPosition
+        - source
+        - level
+        - unit
+        - topic
+        - testNumber
+        - allocationKind
+        - allocationReason
+        - resolvedMode
+        - recordType
+        - targetText
+        - translations
+        - sentence
+        - correctAnswer
+        - alternativeCorrectAnswer
+        - wrongAnswers
+        - matchingGroup
+        - hidden
+        - note
+      properties:
+        ordinal:
+          type: integer
+          minimum: 1
+          maximum: 10000
+        questionOrdinal:
+          type: [integer, "null"]
+          minimum: 1
+          maximum: 10000
+        projectedQuestionType:
+          type: [string, "null"]
+          enum: [A, B, C, D, null]
+        compositionKind:
+          type: [string, "null"]
+          enum: [ROW, MATCHING_GROUP, null]
+        groupPosition:
+          type: [integer, "null"]
+          minimum: 1
+          maximum: 6
+        source:
+          $ref: "#/components/schemas/CourseImportSource"
+          x-kelimio-sensitive: true
+        level:
+          type: string
+          x-kelimio-sensitive: true
+          minLength: 1
+          maxLength: 160
+        unit:
+          type: string
+          x-kelimio-sensitive: true
+          minLength: 1
+          maxLength: 160
+        topic:
+          type: string
+          x-kelimio-sensitive: true
+          minLength: 1
+          maxLength: 160
+        testNumber:
+          type: integer
+          minimum: 1
+          maximum: 10000
+        allocationKind:
+          type: string
+          enum: [FIXED, AUTOMATIC]
+        allocationReason:
+          type: string
+          enum: [FIXED_DECLARATION, FIXED_TEST_FILL, AUTOMATIC]
+        resolvedMode:
+          type: string
+          enum: [MIXED, WORD, MATCHING, MULTIPLE_CHOICE_CLOZE, TYPED_CLOZE]
+        recordType:
+          type: string
+          enum: [WORD, MULTIPLE_CHOICE_CLOZE, TYPED_CLOZE]
+        targetText:
+          type: string
+          x-kelimio-sensitive: true
+          minLength: 1
+          maxLength: 2000
+        translations:
+          type: object
+          x-kelimio-sensitive: true
+          description: >-
+            Required non-empty language map for WORD rows; intentionally empty
+            for MULTIPLE_CHOICE_CLOZE and TYPED_CLOZE rows under xlsx-v1.
+          maxProperties: 64
+          additionalProperties:
+            type: string
+            minLength: 1
+            maxLength: 2000
+        sentence:
+          type: [string, "null"]
+          x-kelimio-sensitive: true
+          maxLength: 2000
+        correctAnswer:
+          type: [string, "null"]
+          x-kelimio-sensitive: true
+          maxLength: 2000
+        alternativeCorrectAnswer:
+          type: [string, "null"]
+          x-kelimio-sensitive: true
+          maxLength: 2000
+        wrongAnswers:
+          type: array
+          x-kelimio-sensitive: true
+          maxItems: 3
+          items:
+            type: string
+            minLength: 1
+            maxLength: 2000
+        matchingGroup:
+          type: [string, "null"]
+          x-kelimio-sensitive: true
+          maxLength: 160
+        hidden:
+          type: boolean
+        note:
+          type: [string, "null"]
+          x-kelimio-sensitive: true
+          maxLength: 2000
+    CourseImportSource:
+      type: object
+      additionalProperties: false
+      x-kelimio-redacted-to-string: true
+      x-kelimio-redacted-field-names: [sheetName, reference]
+      required: [sheetOrdinal, sheetName, rowNumber, columnNumber, reference]
+      properties:
+        sheetOrdinal:
+          type: integer
+          minimum: 0
+          maximum: 63
+        sheetName:
+          type: string
+          x-kelimio-sensitive: true
+          minLength: 1
+          maxLength: 31
+        rowNumber:
+          type: integer
+          minimum: 1
+          maximum: 1048576
+        columnNumber:
+          type: [integer, "null"]
+          minimum: 1
+          maximum: 64
+        reference:
+          type: [string, "null"]
+          x-kelimio-sensitive: true
+          maxLength: 16
+    CourseImportIssuePage:
+      type: object
+      additionalProperties: false
+      x-kelimio-redacted-to-string: true
+      x-kelimio-redacted-field-names: [items, nextCursor]
+      required: [items]
+      properties:
+        items:
+          type: array
+          x-kelimio-sensitive: true
+          maxItems: 100
+          items:
+            $ref: "#/components/schemas/CourseImportValidationIssue"
+        nextCursor:
+          type: [string, "null"]
+          x-kelimio-sensitive: true
+          maxLength: 512
+    CourseImportValidationIssue:
+      type: object
+      additionalProperties: false
+      x-kelimio-redacted-to-string: true
+      x-kelimio-redacted-field-names: [source, message]
+      required: [ordinal, severity, code, source, message]
+      properties:
+        ordinal:
+          type: integer
+          minimum: 1
+          maximum: 2000
+        severity:
+          type: string
+          enum: [WARNING, ERROR]
+        code:
+          type: string
+          pattern: "^[A-Z][A-Z0-9_]*$"
+          maxLength: 80
+        source:
+          x-kelimio-sensitive: true
+          oneOf:
+            - $ref: "#/components/schemas/CourseImportSource"
+            - type: "null"
+        message:
+          type: string
+          x-kelimio-sensitive: true
+          minLength: 1
+          maxLength: 500
+    ApproveCourseImportRequest:
+      type: object
+      additionalProperties: false
+      x-kelimio-redacted-to-string: true
+      x-kelimio-redacted-field-names: [approvalBindingSha256]
+      required: [approvalBindingSha256]
+      properties:
+        approvalBindingSha256:
+          $ref: "#/components/schemas/Sha256Hex"
+          x-kelimio-sensitive: true
+    CourseImportApprovalResponse:
+      type: object
+      additionalProperties: false
+      x-kelimio-redacted-to-string: true
+      x-kelimio-redacted-field-names: [approvalBindingSha256]
+      required: [importId, status, approvalBindingSha256, approvedAt, created]
+      properties:
+        importId:
+          $ref: "#/components/schemas/Id"
+        status:
+          type: string
+          const: APPROVED
+        approvalBindingSha256:
+          $ref: "#/components/schemas/Sha256Hex"
+          x-kelimio-sensitive: true
+        approvedAt:
+          type: string
+          format: date-time
+        created:
+          type: boolean
+    CommitCourseImportRequest:
+      type: object
+      additionalProperties: false
+      x-kelimio-redacted-to-string: true
+      x-kelimio-redacted-field-names: [approvalBindingSha256]
+      required: [approvalBindingSha256]
+      properties:
+        approvalBindingSha256:
+          $ref: "#/components/schemas/Sha256Hex"
+          x-kelimio-sensitive: true
+    CourseImportCommitSummary:
+      type: object
+      additionalProperties: false
+      required:
+        - courseId
+        - contentChangeSetId
+        - draftReleaseId
+        - sourceRowCount
+        - questionCount
+        - matchingQuestionCount
+        - requiredClientCapabilities
+        - committedAt
+      properties:
+        courseId:
+          $ref: "#/components/schemas/Id"
+        contentChangeSetId:
+          $ref: "#/components/schemas/Id"
+        draftReleaseId:
+          $ref: "#/components/schemas/Id"
+        sourceRowCount:
+          type: integer
+          minimum: 1
+          maximum: 10000
+        questionCount:
+          type: integer
+          minimum: 1
+          maximum: 10000
+        matchingQuestionCount:
+          type: integer
+          minimum: 0
+          maximum: 10000
+        requiredClientCapabilities:
+          type: array
+          maxItems: 16
+          uniqueItems: true
+          items:
+            $ref: "#/components/schemas/ClientCapability"
+        committedAt:
+          type: string
+          format: date-time
+    CourseImportActivationSummary:
+      type: object
+      additionalProperties: false
+      x-kelimio-redacted-to-string: true
+      x-kelimio-redacted-field-names: [releaseId]
+      required: [releaseId, operation, activatedAt, reprojectionStatus]
+      properties:
+        releaseId:
+          $ref: "#/components/schemas/Id"
+          x-kelimio-sensitive: true
+        operation:
+          $ref: "#/components/schemas/CourseReleaseOperation"
+        activatedAt:
+          type: string
+          format: date-time
+        reprojectionStatus:
+          type: string
+          enum: [PENDING, FAILED, COMPLETED, DEAD]
+    CourseImportCommitResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - importId
+        - status
+        - courseId
+        - contentChangeSetId
+        - draftReleaseId
+        - sourceRowCount
+        - questionCount
+        - matchingQuestionCount
+        - requiredClientCapabilities
+        - committedAt
+        - created
+      properties:
+        importId:
+          $ref: "#/components/schemas/Id"
+        status:
+          type: string
+          const: COMMITTED
+        courseId:
+          $ref: "#/components/schemas/Id"
+        contentChangeSetId:
+          $ref: "#/components/schemas/Id"
+        draftReleaseId:
+          $ref: "#/components/schemas/Id"
+        sourceRowCount:
+          type: integer
+          minimum: 1
+          maximum: 10000
+        questionCount:
+          type: integer
+          minimum: 1
+          maximum: 10000
+        matchingQuestionCount:
+          type: integer
+          minimum: 0
+          maximum: 10000
+        requiredClientCapabilities:
+          type: array
+          maxItems: 16
+          uniqueItems: true
+          items:
+            $ref: "#/components/schemas/ClientCapability"
+        committedAt:
+          type: string
+          format: date-time
+        created:
+          type: boolean
+    CourseReleaseOperation:
+      type: string
+      enum: [INITIAL_PUBLICATION, PUBLICATION, ROLLBACK]
+    ActivateCourseReleaseRequest:
+      type: object
+      additionalProperties: false
+      required: [expectedActiveReleaseId, impactBindingSha256]
+      properties:
+        expectedActiveReleaseId:
+          type: [string, "null"]
+          format: uuid
+        impactBindingSha256:
+          $ref: "#/components/schemas/Sha256Hex"
+    CourseReleaseImpactResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - courseId
+        - targetReleaseId
+        - expectedActiveReleaseId
+        - sourceChangeSetId
+        - operation
+        - releaseRevision
+        - targetQuestionCount
+        - unchangedQuestionCount
+        - changedQuestionCount
+        - addedQuestionCount
+        - removedQuestionCount
+        - affectedEnrollmentCount
+        - requiredClientCapabilities
+        - impactBindingSha256
+      properties:
+        courseId:
+          $ref: "#/components/schemas/Id"
+        targetReleaseId:
+          $ref: "#/components/schemas/Id"
+        expectedActiveReleaseId:
+          type: [string, "null"]
+          format: uuid
+        sourceChangeSetId:
+          $ref: "#/components/schemas/Id"
+        operation:
+          $ref: "#/components/schemas/CourseReleaseOperation"
+        releaseRevision:
+          type: integer
+          minimum: 1
+        targetQuestionCount:
+          type: integer
+          minimum: 1
+          maximum: 10000
+        unchangedQuestionCount:
+          type: integer
+          minimum: 0
+          maximum: 10000
+        changedQuestionCount:
+          type: integer
+          minimum: 0
+          maximum: 10000
+        addedQuestionCount:
+          type: integer
+          minimum: 0
+          maximum: 10000
+        removedQuestionCount:
+          type: integer
+          minimum: 0
+          maximum: 10000
+        affectedEnrollmentCount:
+          type: integer
+          minimum: 0
+        requiredClientCapabilities:
+          type: array
+          maxItems: 16
+          uniqueItems: true
+          items:
+            $ref: "#/components/schemas/ClientCapability"
+        impactBindingSha256:
+          $ref: "#/components/schemas/Sha256Hex"
+    CourseReleaseActivationResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - activationId
+        - courseId
+        - releaseId
+        - previousReleaseId
+        - sourceChangeSetId
+        - operation
+        - releaseRevision
+        - questionCount
+        - requiredClientCapabilities
+        - coursePublicationStatus
+        - reprojectionStatus
+        - activatedAt
+        - created
+      properties:
+        activationId:
+          $ref: "#/components/schemas/Id"
+        courseId:
+          $ref: "#/components/schemas/Id"
+        releaseId:
+          $ref: "#/components/schemas/Id"
+        previousReleaseId:
+          type: [string, "null"]
+          format: uuid
+        sourceChangeSetId:
+          $ref: "#/components/schemas/Id"
+        operation:
+          $ref: "#/components/schemas/CourseReleaseOperation"
+        releaseRevision:
+          type: integer
+          minimum: 1
+        questionCount:
+          type: integer
+          minimum: 1
+          maximum: 10000
+        requiredClientCapabilities:
+          type: array
+          maxItems: 16
+          uniqueItems: true
+          items:
+            $ref: "#/components/schemas/ClientCapability"
+        coursePublicationStatus:
+          type: string
+          enum: [PUBLISHED, HIDDEN]
+        reprojectionStatus:
+          type: string
+          enum: [PENDING, FAILED, COMPLETED, DEAD]
+        activatedAt:
+          type: string
+          format: date-time
+        created:
+          type: boolean
+    LocalStarterCourseResponse:
+      type: object
+      additionalProperties: false
+      required: [courseId, created, sourceWorkbookSha256]
+      properties:
+        courseId:
+          $ref: "#/components/schemas/Id"
+        created:
+          type: boolean
+        sourceWorkbookSha256:
+          type: string
+          pattern: "^[0-9a-f]{64}$"
+    CreateLocalCourseRevisionRequest:
+      type: object
+      additionalProperties: false
+      required: [baseReleaseId]
+      properties:
+        baseReleaseId:
+          $ref: "#/components/schemas/Id"
+    CreateLocalCourseEditorDraftRequest:
+      type: object
+      additionalProperties: false
+      x-kelimio-redacted-to-string: true
+      x-kelimio-redacted-field-names: [editedPrompt]
+      x-kelimio-redaction-test-course-editor: true
+      required: [baseReleaseId, questionRevisionId, editedPrompt]
+      properties:
+        baseReleaseId:
+          $ref: "#/components/schemas/Id"
+        questionRevisionId:
+          $ref: "#/components/schemas/Id"
+        editedPrompt:
+          type: string
+          minLength: 1
+          maxLength: 1000
+          description: Changed typed-cloze prompt containing exactly one literal --- marker.
+    LocalCourseEditorSnapshot:
+      type: object
+      additionalProperties: false
+      x-kelimio-redacted-to-string: true
+      x-kelimio-redacted-field-names:
+        - courseName
+        - levelTitle
+        - unitTitle
+        - topicTitle
+        - testTitle
+        - prompt
+      required:
+        - courseId
+        - courseName
+        - activeReleaseId
+        - releaseRevision
+        - levelTitle
+        - unitTitle
+        - topicTitle
+        - testId
+        - testTitle
+        - questionId
+        - questionRevisionId
+        - questionRevision
+        - prompt
+      properties:
+        courseId:
+          $ref: "#/components/schemas/Id"
+        courseName:
+          type: string
+          minLength: 1
+          maxLength: 160
+        activeReleaseId:
+          $ref: "#/components/schemas/Id"
+        releaseRevision:
+          type: integer
+          minimum: 1
+        levelTitle:
+          type: string
+          minLength: 1
+          maxLength: 2000
+        unitTitle:
+          type: string
+          minLength: 1
+          maxLength: 2000
+        topicTitle:
+          type: string
+          minLength: 1
+          maxLength: 2000
+        testId:
+          $ref: "#/components/schemas/Id"
+        testTitle:
+          type: string
+          minLength: 1
+          maxLength: 160
+        questionId:
+          $ref: "#/components/schemas/Id"
+        questionRevisionId:
+          $ref: "#/components/schemas/Id"
+        questionRevision:
+          type: integer
+          minimum: 1
+        prompt:
+          type: string
+          minLength: 1
+          maxLength: 1000
+    SubsequentCourseDraftResult:
+      type: object
+      additionalProperties: false
+      required:
+        - courseId
+        - baseReleaseId
+        - contentChangeSetId
+        - draftReleaseId
+        - releaseRevision
+        - changedQuestionId
+        - previousQuestionRevisionId
+        - questionRevisionId
+        - changedTestId
+        - previousTestRevisionId
+        - testRevisionId
+        - createdAt
+        - created
+      properties:
+        courseId:
+          $ref: "#/components/schemas/Id"
+        baseReleaseId:
+          $ref: "#/components/schemas/Id"
+        contentChangeSetId:
+          $ref: "#/components/schemas/Id"
+        draftReleaseId:
+          $ref: "#/components/schemas/Id"
+        releaseRevision:
+          type: integer
+          minimum: 2
+        changedQuestionId:
+          $ref: "#/components/schemas/Id"
+        previousQuestionRevisionId:
+          $ref: "#/components/schemas/Id"
+        questionRevisionId:
+          $ref: "#/components/schemas/Id"
+        changedTestId:
+          $ref: "#/components/schemas/Id"
+        previousTestRevisionId:
+          $ref: "#/components/schemas/Id"
+        testRevisionId:
+          $ref: "#/components/schemas/Id"
+        createdAt:
+          type: string
+          format: date-time
+        created:
+          type: boolean
+    Problem:
+      type: object
+      additionalProperties: true
+      required: [type, title, status]
+      properties:
+        type:
+          type: string
+          format: uri-reference
+        title:
+          type: string
+        status:
+          type: integer
+          minimum: 400
+          maximum: 599
+        detail:
+          type: string
+        instance:
+          type: string
+          format: uri-reference
+        code:
+          type: string
+        requestId:
+          type: string

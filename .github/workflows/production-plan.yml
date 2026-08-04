@@ -1,0 +1,60 @@
+name: Production Terraform Plan
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-terraform-plan
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
+        with:
+          terraform_version: 1.15.8
+      - uses: aws-actions/configure-aws-credentials@acca2b1b2070338fb9fd1ca27ecee81d687e58e5 # v6.1.2
+        with:
+          role-to-assume: ${{ vars.AWS_PRODUCTION_PLAN_ROLE_ARN }}
+          aws-region: eu-central-1
+          allowed-account-ids: "923300948109"
+          role-session-name: kelimio-plan-${{ github.run_id }}
+      - name: Initialize protected production state
+        working-directory: infrastructure/terraform/environments/production
+        run: >-
+          terraform init -input=false
+          -backend-config="bucket=${{ vars.AWS_TERRAFORM_STATE_BUCKET }}"
+          -backend-config="key=kelimio/production.tfstate"
+          -backend-config="region=eu-central-1"
+          -backend-config="encrypt=true"
+          -backend-config="kms_key_id=${{ vars.AWS_TERRAFORM_STATE_KMS_KEY_ARN }}"
+          -backend-config="use_lockfile=true"
+      - name: Validate production configuration
+        working-directory: infrastructure/terraform/environments/production
+        run: terraform validate
+      - name: Plan production without applying
+        working-directory: infrastructure/terraform/environments/production
+        env:
+          TF_VAR_budget_notification_email: ${{ secrets.AWS_BUDGET_NOTIFICATION_EMAIL }}
+          TF_VAR_import_archive_retention_days: ${{ vars.AWS_IMPORT_ARCHIVE_RETENTION_DAYS }}
+          TF_VAR_api_image_digest: ${{ vars.AWS_API_IMAGE_DIGEST || 'sha256:0000000000000000000000000000000000000000000000000000000000000000' }}
+          TF_VAR_build_revision: ${{ github.sha }}
+        run: |
+          set +e
+          terraform plan -input=false -lock-timeout=5m -detailed-exitcode
+          plan_exit=$?
+          set -e
+          if [ "$plan_exit" -eq 1 ]; then
+            exit 1
+          fi

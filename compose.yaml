@@ -1,0 +1,266 @@
+name: kelimio
+
+x-local-only-environment: &local-only-environment
+  KELIMIO_ENVIRONMENT: local
+  KELIMIO_DB_URL: jdbc:postgresql://postgres:5432/kelimio
+  KELIMIO_DB_USER: kelimio
+  KELIMIO_DB_PASSWORD: ${KELIMIO_LOCAL_DB_PASSWORD:-kelimio_local_only}
+  KELIMIO_REDIS_URL: redis://redis:6379
+  AWS_REGION: eu-central-1
+  AWS_ACCESS_KEY_ID: localstack
+  AWS_SECRET_ACCESS_KEY: localstack
+  KELIMIO_S3_ENDPOINT: http://localstack:4566
+  KELIMIO_S3_PUBLIC_ENDPOINT: http://localhost:${KELIMIO_LOCAL_LOCALSTACK_HOST_PORT:-4566}
+  KELIMIO_SQS_ENDPOINT: http://localstack:4566
+  KELIMIO_IMPORT_ENABLED: "true"
+  KELIMIO_COURSE_RELEASE_ENABLED: "true"
+  KELIMIO_IMPORT_QUARANTINE_BUCKET: kelimio-local-import-quarantine
+  KELIMIO_IMPORT_ARCHIVE_BUCKET: kelimio-local-import-archive
+  KELIMIO_IMPORT_QUEUE_NAME: kelimio-import
+  KELIMIO_IMPORT_DLQ_NAME: kelimio-import-dlq
+  KELIMIO_CLAMAV_HOST: clamav
+  KELIMIO_CLAMAV_PORT: "3310"
+  KELIMIO_CLAMAV_MIN_ENGINE_VERSION: 1.4.0
+  KELIMIO_CLAMAV_MIN_SIGNATURE_NUMBER: "1"
+  KELIMIO_CLAMAV_MAX_DEFINITION_AGE_SECONDS: "259200"
+  KELIMIO_CLAMAV_FUTURE_SKEW_SECONDS: "86400"
+  KELIMIO_BUILD_REVISION: ${KELIMIO_BUILD_REVISION:-local-development}
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+
+services:
+  postgres:
+    image: postgres:17.5-alpine@sha256:6567bca8d7bc8c82c5922425a0baee57be8402df92bae5eacad5f01ae9544daa
+    environment:
+      POSTGRES_DB: kelimio
+      POSTGRES_USER: kelimio
+      POSTGRES_PASSWORD: ${KELIMIO_LOCAL_DB_PASSWORD:-kelimio_local_only}
+    ports:
+      - "127.0.0.1:${KELIMIO_LOCAL_POSTGRES_HOST_PORT:-5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./infrastructure/local/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kelimio -d kelimio"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: "${KELIMIO_LOCAL_RESTART_POLICY:-unless-stopped}"
+
+  redis:
+    image: redis:7.4.2-alpine@sha256:02419de7eddf55aa5bcf49efb74e88fa8d931b4d77c07eff8a6b2144472b6952
+    command: ["redis-server", "--appendonly", "yes", "--save", "60", "1"]
+    ports:
+      - "127.0.0.1:${KELIMIO_LOCAL_REDIS_HOST_PORT:-6379}:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: "${KELIMIO_LOCAL_RESTART_POLICY:-unless-stopped}"
+
+  localstack:
+    image: ${KELIMIO_LOCALSTACK_IMAGE:-kelimio-localstack:4.4.0}
+    build:
+      context: ./infrastructure/local/localstack
+    environment:
+      SERVICES: s3,sqs,eventbridge
+      AWS_DEFAULT_REGION: eu-central-1
+      DEBUG: "0"
+    ports:
+      - "127.0.0.1:${KELIMIO_LOCAL_LOCALSTACK_HOST_PORT:-4566}:4566"
+    volumes:
+      - localstack-data:/var/lib/localstack
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "test -f /tmp/kelimio-init-complete && awslocal s3api head-bucket --bucket kelimio-local-import-quarantine >/dev/null && awslocal s3api head-bucket --bucket kelimio-local-import-archive >/dev/null && awslocal s3api head-bucket --bucket kelimio-local-offline-packages >/dev/null && awslocal sqs get-queue-url --queue-name kelimio-import >/dev/null && awslocal sqs get-queue-url --queue-name kelimio-import-dlq >/dev/null",
+        ]
+      interval: 5s
+      timeout: 4s
+      retries: 30
+    restart: "${KELIMIO_LOCAL_RESTART_POLICY:-unless-stopped}"
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.2.5@sha256:4883630ef9db14031cde3e60700c9a9a8eaf1b5c24db1589d6a2d43de38ba2a9
+    command: ["start-dev", "--import-realm", "--health-enabled=true"]
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
+      KC_DB_USERNAME: kelimio
+      KC_DB_PASSWORD: ${KELIMIO_LOCAL_DB_PASSWORD:-kelimio_local_only}
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KELIMIO_LOCAL_KEYCLOAK_ADMIN:-local-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KELIMIO_LOCAL_KEYCLOAK_PASSWORD:-local-admin-change-me}
+      KC_HOSTNAME: ${KELIMIO_LOCAL_KEYCLOAK_BASE_URL:-http://localhost:8081}
+      KC_HOSTNAME_STRICT: "true"
+      KC_HTTP_ENABLED: "true"
+    ports:
+      - "127.0.0.1:${KELIMIO_LOCAL_KEYCLOAK_HOST_PORT:-8081}:8080"
+    volumes:
+      - ./infrastructure/local/keycloak:/opt/keycloak/data/import:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+    healthcheck:
+      test:
+        ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/9000; printf 'GET /health/ready HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3; grep -q '200 OK' <&3"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+    restart: "${KELIMIO_LOCAL_RESTART_POLICY:-unless-stopped}"
+
+  keycloak-config:
+    image: quay.io/keycloak/keycloak:26.2.5@sha256:4883630ef9db14031cde3e60700c9a9a8eaf1b5c24db1589d6a2d43de38ba2a9
+    entrypoint: ["/bin/sh", "-ec"]
+    command:
+      - |
+        /opt/keycloak/bin/kcadm.sh config credentials \
+          --config /tmp/kelimio-kcadm.config \
+          --server http://keycloak:8080 \
+          --realm master \
+          --user "$$KELIMIO_KEYCLOAK_ADMIN" \
+          --password "$$KELIMIO_KEYCLOAK_PASSWORD" >/dev/null 2>&1
+        /opt/keycloak/bin/kcadm.sh update realms/kelimio \
+          --config /tmp/kelimio-kcadm.config \
+          -s registrationAllowed=true \
+          -s loginWithEmailAllowed=true \
+          -s duplicateEmailsAllowed=false \
+          -s verifyEmail=true \
+          -s 'smtpServer={"host":"mailpit","port":"1025","from":"no-reply@kelimio.local","fromDisplayName":"Kelimio Local","ssl":"false","starttls":"false","auth":"false"}'
+    environment:
+      KELIMIO_KEYCLOAK_ADMIN: ${KELIMIO_LOCAL_KEYCLOAK_ADMIN:-local-admin}
+      KELIMIO_KEYCLOAK_PASSWORD: ${KELIMIO_LOCAL_KEYCLOAK_PASSWORD:-local-admin-change-me}
+    depends_on:
+      keycloak:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+    restart: "no"
+
+  mailpit:
+    image: axllent/mailpit:v1.24.1@sha256:4873e5a441ed368f1e98a832f61257a033859f5e829542cd03fb772d2282ea4e
+    ports:
+      - "127.0.0.1:${KELIMIO_LOCAL_MAILPIT_SMTP_HOST_PORT:-1025}:1025"
+      - "127.0.0.1:${KELIMIO_LOCAL_MAILPIT_HTTP_HOST_PORT:-8025}:8025"
+    restart: "${KELIMIO_LOCAL_RESTART_POLICY:-unless-stopped}"
+
+  clamav:
+    image: clamav/clamav:1.4.5@sha256:e7ead98e7e07231b151bce988e0cfb0a3b46e6e7046d9dd44fd838c0df724a03
+    environment:
+      KELIMIO_CLAMAV_MAX_DEFINITION_AGE_SECONDS: "259200"
+      KELIMIO_CLAMAV_FUTURE_SKEW_SECONDS: "86400"
+    expose:
+      - "3310"
+    volumes:
+      - type: volume
+        source: clamav-data
+        target: /var/lib/clamav
+        volume:
+          nocopy: true
+      - type: bind
+        source: ./infrastructure/local/clamav/healthcheck.sh
+        target: /usr/local/bin/kelimio-clamav-healthcheck.sh
+        read_only: true
+    networks:
+      - scanner-only
+      - scanner-egress
+    healthcheck:
+      test: ["CMD", "/bin/sh", "/usr/local/bin/kelimio-clamav-healthcheck.sh"]
+      interval: 30s
+      timeout: 10s
+      retries: 20
+      start_period: 60s
+    restart: "${KELIMIO_LOCAL_RESTART_POLICY:-unless-stopped}"
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.156.0@sha256:125bdbeb7590cc1952c5b3430ecf14063568980c2c93d5b38676cc0446ed8108
+    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    volumes:
+      - ./infrastructure/local/otel/collector.yaml:/etc/otelcol-contrib/config.yaml:ro
+    ports:
+      - "127.0.0.1:${KELIMIO_LOCAL_OTEL_GRPC_HOST_PORT:-4317}:4317"
+      - "127.0.0.1:${KELIMIO_LOCAL_OTEL_HTTP_HOST_PORT:-4318}:4318"
+      - "127.0.0.1:${KELIMIO_LOCAL_OTEL_METRICS_HOST_PORT:-8889}:8889"
+    restart: "${KELIMIO_LOCAL_RESTART_POLICY:-unless-stopped}"
+
+  api:
+    profiles: [app]
+    build:
+      context: ./backend
+      target: runtime
+    environment:
+      <<: *local-only-environment
+      KELIMIO_RUNTIME_ROLE: api
+      KELIMIO_OIDC_ISSUER: ${KELIMIO_LOCAL_OIDC_ISSUER:-http://localhost:8081/realms/kelimio}
+      KELIMIO_OIDC_JWK_SET_URI: http://keycloak:8080/realms/kelimio/protocol/openid-connect/certs
+      KELIMIO_OIDC_AUDIENCE: kelimio-api
+      # Public, local-only defaults. Production and staging must inject a secret key ring.
+      KELIMIO_MATCHING_REPLAY_ACTIVE_KEY_VERSION: ${KELIMIO_MATCHING_REPLAY_ACTIVE_KEY_VERSION:-local-v1}
+      KELIMIO_MATCHING_REPLAY_KEYS: ${KELIMIO_MATCHING_REPLAY_KEYS:-local-v1=a2VsaW1pby1sb2NhbC1vbmx5LWhtYWMta2V5LTAwMDE=}
+      KELIMIO_LOCAL_STARTER_COURSE_ENABLED: "true"
+      KELIMIO_LOCAL_COURSE_AUTHORING_ENABLED: "true"
+      KELIMIO_IMPORT_CURSOR_HMAC_KEY: ${KELIMIO_LOCAL_IMPORT_CURSOR_HMAC_KEY:-a2VsaW1pby1sb2NhbC1pbXBvcnQtY3Vyc29yLTAwMDE=}
+    ports:
+      - "127.0.0.1:${KELIMIO_LOCAL_API_HOST_PORT:-8080}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+      keycloak-config:
+        condition: service_completed_successfully
+      localstack:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/actuator/health/readiness | grep -q '\"status\":\"UP\"'"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+    restart: "${KELIMIO_LOCAL_RESTART_POLICY:-unless-stopped}"
+
+  import-worker:
+    profiles: [app]
+    build:
+      context: ./backend
+      target: runtime
+    environment:
+      <<: *local-only-environment
+      KELIMIO_RUNTIME_ROLE: worker
+      SPRING_MAIN_WEB_APPLICATION_TYPE: none
+      SPRING_FLYWAY_ENABLED: "false"
+      KELIMIO_PROJECTION_ENABLED: "false"
+      KELIMIO_LOCAL_STARTER_COURSE_ENABLED: "false"
+      KELIMIO_LOCAL_COURSE_AUTHORING_ENABLED: "false"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      localstack:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+      clamav:
+        condition: service_healthy
+    networks:
+      - default
+      - scanner-only
+    restart: "${KELIMIO_LOCAL_RESTART_POLICY:-unless-stopped}"
+
+networks:
+  scanner-only:
+    internal: true
+  scanner-egress:
+
+volumes:
+  postgres-data:
+  redis-data:
+  localstack-data:
+  clamav-data:

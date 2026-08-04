@@ -1,0 +1,6 @@
+pubName: kelimio_api_client
+pubVersion: 0.1.0
+useEnumExtension: true
+ensureUniqueParams: true
+serializationLibrary: json_serializable
+nullableFields: false

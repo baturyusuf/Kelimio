@@ -1,0 +1,161 @@
+import 'package:json_annotation/json_annotation.dart';
+{{#useEquatable}}
+import 'package:equatable/src/equatable_utils.dart';
+{{/useEquatable}}
+
+part '{{classFilename}}.g.dart';
+
+{{!
+    Classes with polymorphism or composition may generate unused imports,
+    these need to be ignored for said classes so that there are no lint errors.
+}}
+{{#parentModel}}
+// ignore_for_file: unused_import
+
+{{/parentModel}}
+
+{{#isDeprecated}}
+@Deprecated('{{{classname}}} has been deprecated')
+{{/isDeprecated}}
+@JsonSerializable(
+  checked: true,
+  createToJson: true,
+  disallowUnrecognizedKeys: false,
+  explicitToJson: true,
+)
+class {{{classname}}} {
+{{>serialization/json_serializable/dart_constructor}}
+
+{{#vars}}
+  {{#description}}
+      /// {{{description}}}
+  {{/description}}
+  {{^isEnum}}
+      {{#minimum}}
+          // minimum: {{{minimum}}}
+      {{/minimum}}
+      {{#maximum}}
+          // maximum: {{{maximum}}}
+      {{/maximum}}
+  {{/isEnum}}
+  {{#deprecated}}
+  @Deprecated('{{{name}}} has been deprecated')
+  {{/deprecated}}
+  {{^isBinary}}
+  @JsonKey(
+    {{#defaultValue}}defaultValue: {{{defaultValue}}},{{/defaultValue}}
+    name: r'{{{baseName}}}',
+    required: {{#required}}true{{/required}}{{^required}}false{{/required}},
+    includeIfNull: {{#required}}{{#vendorExtensions.x-kelimio-required-nullable}}true{{/vendorExtensions.x-kelimio-required-nullable}}{{^vendorExtensions.x-kelimio-required-nullable}}{{#isNullable}}true{{/isNullable}}{{^isNullable}}false{{/isNullable}}{{/vendorExtensions.x-kelimio-required-nullable}}{{/required}}{{^required}}false{{/required}},
+  {{#isEnumOrRef}}
+  {{#enumUnknownDefaultCase}}
+  unknownEnumValue: {{{datatypeWithEnum}}}.unknownDefaultOpenApi,
+  {{/enumUnknownDefaultCase}}
+  {{/isEnumOrRef}}
+  )
+  {{/isBinary}}
+  {{#isBinary}}
+  @JsonKey(ignore: true)
+  {{/isBinary}}
+
+
+  {{#required}}
+  {{#finalProperties}}final {{/finalProperties}}{{{datatypeWithEnum}}}{{#vendorExtensions.x-kelimio-required-nullable}}?{{/vendorExtensions.x-kelimio-required-nullable}}{{^vendorExtensions.x-kelimio-required-nullable}}{{#isNullable}}?{{/isNullable}}{{/vendorExtensions.x-kelimio-required-nullable}} {{{name}}};
+  {{/required}}
+  {{^required}}
+  {{#finalProperties}}final {{/finalProperties}}{{{datatypeWithEnum}}}? {{{name}}};
+  {{/required}}
+
+
+
+{{/vars}}
+
+  {{#useEquatable}}
+    bool operator ==(Object other) {
+      return identical(this, other) ||
+      other is {{{classname}}} &&
+      runtimeType == other.runtimeType &&
+      equals(
+        [
+          {{#vars}}
+            {{{name}}},
+          {{/vars}}
+        ],
+        [
+          {{#vars}}
+            other.{{{name}}},
+          {{/vars}}
+        ]
+      );
+    }
+  {{/useEquatable}}
+
+  {{^useEquatable}}
+    @override
+    bool operator ==(Object other) => identical(this, other) || other is {{{classname}}} &&
+    {{#vars}}
+      other.{{{name}}} == {{{name}}}{{^-last}} &&{{/-last}}{{#-last}};{{/-last}}
+    {{/vars}}
+  {{/useEquatable}}
+
+  {{#useEquatable}}
+    @override
+    int get hashCode => runtimeType.hashCode ^ mapPropsToHashCode([
+    {{#vars}}
+        {{{name}}},
+    {{/vars}}
+    ],);
+  {{/useEquatable}}
+  {{^useEquatable}}
+    @override
+    int get hashCode =>
+    {{#vars}}
+        {{#isNullable}}({{{name}}} == null ? 0 : {{{name}}}.hashCode){{/isNullable}}{{^isNullable}}{{{name}}}.hashCode{{/isNullable}}{{^-last}} +{{/-last}}{{#-last}};{{/-last}}
+    {{/vars}}
+  {{/useEquatable}}
+
+  factory {{{classname}}}.fromJson(Map<String, dynamic> json) => _${{{classname}}}FromJson(json);
+
+  Map<String, dynamic> toJson() => _${{{classname}}}ToJson(this);
+
+  @override
+  String toString() {
+  {{#vendorExtensions.x-kelimio-redacted-to-string}}
+    final json = toJson();
+    {{^vendorExtensions.x-kelimio-redacted-field-names}}
+      {{#vars}}
+      {{#vendorExtensions.x-kelimio-sensitive}}
+    if (json.containsKey(r'{{{baseName}}}')) {
+      json[r'{{{baseName}}}'] = '[REDACTED]';
+    }
+      {{/vendorExtensions.x-kelimio-sensitive}}
+      {{/vars}}
+    {{/vendorExtensions.x-kelimio-redacted-field-names}}
+    {{! OpenAPI Generator drops property vendor extensions for some composed/ref schemas. }}
+    {{#vendorExtensions.x-kelimio-redacted-field-names}}
+    if (json.containsKey(r'{{{.}}}')) {
+      json[r'{{{.}}}'] = '[REDACTED]';
+    }
+    {{/vendorExtensions.x-kelimio-redacted-field-names}}
+    return json.toString();
+  {{/vendorExtensions.x-kelimio-redacted-to-string}}
+  {{^vendorExtensions.x-kelimio-redacted-to-string}}
+    return toJson().toString();
+  {{/vendorExtensions.x-kelimio-redacted-to-string}}
+  }
+
+}
+{{#vars}}
+    {{#isEnum}}
+        {{^isContainer}}
+
+{{>serialization/json_serializable/enum_inline}}
+        {{/isContainer}}
+        {{#isContainer}}
+            {{#mostInnerItems}}
+
+{{>serialization/json_serializable/enum_inline}}
+            {{/mostInnerItems}}
+        {{/isContainer}}
+    {{/isEnum}}
+{{/vars}}
