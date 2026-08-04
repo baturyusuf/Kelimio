@@ -64,22 +64,48 @@ class DatabaseRuntimeRoleBootstrap(
     }
 
     private fun createOrHardenRole(connection: Connection) {
-        val exists = connection.prepareStatement("select 1 from pg_roles where rolname = ?").use { statement ->
-            statement.setString(1, runtimeUsername)
-            statement.executeQuery().use { it.next() }
-        }
-        val action = if (exists) "ALTER ROLE" else "CREATE ROLE"
-        val sql = connection.prepareStatement("select format('$action %I', ?)").use { statement ->
+        val existingRoleIsSafe = connection.prepareStatement(
+            """
+            select rolcanlogin,
+                   not rolsuper,
+                   not rolcreatedb,
+                   not rolcreaterole,
+                   not rolinherit,
+                   not rolreplication,
+                   not rolbypassrls
+            from pg_roles
+            where rolname = ?
+            """.trimIndent(),
+        ).use { statement ->
             statement.setString(1, runtimeUsername)
             statement.executeQuery().use { result ->
-                check(result.next())
-                result.getString(1)
+                if (!result.next()) {
+                    null
+                } else {
+                    (1..7).all { result.getBoolean(it) }
+                }
             }
         }
-        connection.createStatement().use { statement ->
-            statement.execute(
-                "$sql WITH LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOREPLICATION NOBYPASSRLS",
-            )
+        if (existingRoleIsSafe == null) {
+            val createSql = connection.prepareStatement("select format('CREATE ROLE %I', ?)").use { statement ->
+                statement.setString(1, runtimeUsername)
+                statement.executeQuery().use { result ->
+                    check(result.next())
+                    result.getString(1)
+                }
+            }
+            connection.createStatement().use { statement ->
+                // NOSUPERUSER is PostgreSQL's default. Do not mention the
+                // SUPERUSER attribute: RDS master roles may create safe roles
+                // but are intentionally forbidden from changing that bit.
+                statement.execute(
+                    "$createSql WITH LOGIN NOCREATEDB NOCREATEROLE NOINHERIT NOREPLICATION NOBYPASSRLS",
+                )
+            }
+        } else {
+            check(existingRoleIsSafe) {
+                "The runtime database role has unsafe attributes; refusing to continue."
+            }
         }
         val passwordSql = connection.prepareStatement("select format('ALTER ROLE %I PASSWORD %L', ?, ?)").use {
             it.setString(1, runtimeUsername)
