@@ -417,7 +417,10 @@ data "aws_iam_policy_document" "github_production_deploy" {
       "budgets:DeleteBudget",
       "budgets:DeleteNotification",
       "budgets:DeleteSubscriber",
+      "budgets:ListTagsForResource",
       "budgets:ModifyBudget",
+      "budgets:TagResource",
+      "budgets:UntagResource",
       "budgets:UpdateNotification",
       "budgets:UpdateSubscriber"
     ]
@@ -482,7 +485,7 @@ data "aws_iam_policy_document" "github_production_deploy" {
       test     = "StringLike"
       variable = "iam:AWSServiceName"
       values = [
-        "apigateway.amazonaws.com",
+        "ops.apigateway.amazonaws.com",
         "ecs.amazonaws.com",
         "rds.amazonaws.com",
         "servicediscovery.amazonaws.com"
