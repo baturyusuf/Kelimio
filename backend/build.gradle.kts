@@ -36,7 +36,7 @@ dependencies {
     implementation("software.amazon.awssdk:ssm")
     implementation("software.amazon.awssdk:url-connection-client")
 
-    runtimeOnly("org.postgresql:postgresql:42.7.12")
+    runtimeOnly("org.postgresql:postgresql:42.7.13")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.security:spring-security-test")
