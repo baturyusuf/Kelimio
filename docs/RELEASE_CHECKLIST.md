@@ -113,6 +113,7 @@ the ADR-018 production pre-traffic canary and the complete authoring/release pat
 - [ ] Secret, SAST, dependency, license, container/IaC, API authorization, ASVS/MASVS, and penetration checks have no open critical/high finding.
 - [ ] Rate limits, abuse detection, WAF rules, replay defenses, audit logs, admin access logs, and security incident response are tested.
 - [ ] PITR, snapshots, isolated/cross-region copies as approved, ledger exports, and a restore exercise meet RPO at most 15 minutes and RTO at most 4 hours.
+  - Evidence note: the 2026-08-04 same-account PITR component passed at 5m06s RPO lag and 1h05m42s end-to-end application RTO. This item remains unchecked until approved isolated-copy custody and ledger export also pass.
 
 ## Test and release evidence
 

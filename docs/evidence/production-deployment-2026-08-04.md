@@ -41,3 +41,10 @@ Deployed image digest: `sha256:6c683d0d8d8ec491156d3be0cee35ff7fcc679d64c0127262
 - Legal entity, child-safety/privacy/UGC policies, public legal pages, immutable Android application ID, signing custody, commerce/ads/provider configuration, and Google Play release evidence remain owner/release blockers.
 
 No credential, token, private key, secret value, notification address, or personal data is included in this evidence.
+
+## Follow-up recovery evidence
+
+The restore gate listed above was open when this inactive-deployment record was
+captured. It was subsequently exercised without enabling public traffic; see
+`docs/evidence/production-database-restore-2026-08-04.md`. Isolated/cross-region
+backup custody and ledger export remain open.

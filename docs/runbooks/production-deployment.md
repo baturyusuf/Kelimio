@@ -145,3 +145,6 @@ migration task ARN/exit code, ECS deployment event, readiness response, Cognito
 linking test identifiers with personal data redacted, CloudTrail records, budget
 subscription confirmation, backup checkpoint, and rollback decision. Production
 traffic remains blocked while any mandatory launch blocker is open.
+
+Use `docs/runbooks/production-database-restore.md` for the private PITR exercise
+and retain its measured evidence separately from ordinary deployment evidence.
