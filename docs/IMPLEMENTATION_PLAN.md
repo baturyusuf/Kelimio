@@ -142,10 +142,10 @@ PostgreSQL, generated write-only secrets, separate migration/runtime database
 roles, API Gateway HTTPS, alarms, and monotonic budget/Lambda/SSM brakes. The
 immutable image passed scan/SBOM gates, the one-shot Flyway V13 migration exited
 successfully, a live cost-governor canary passed, ECS remains at desired count
-zero, and the post-deployment plan reports no drift. Google/SES and the pending
-operations-email confirmation, provider/pre-traffic canaries, independent
-GitHub approval, restore proof, custom DNS/WAF, and the production import worker
-remain open.
+zero, the operations notification subscription is confirmed, and the
+post-deployment plan reports no drift. Google/SES, provider/pre-traffic canaries,
+independent GitHub approval, restore proof, custom DNS/WAF, and the production
+import worker remain open.
 
 Deliverables:
 
