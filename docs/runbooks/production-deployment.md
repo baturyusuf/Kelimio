@@ -46,8 +46,11 @@ secret, and add the following environment variables:
 | `DATABASE_SECRET_VERSION` | `1`; increment only during a coordinated migration-task rotation. |
 
 Do not create AWS access-key GitHub secrets. GitHub obtains a short-lived role
-session from the repository/environment-bound OIDC trust. Confirm that the
-local bootstrap state was migrated to `kelimio/bootstrap.tfstate` before
+session from the immutable owner-ID/repository-ID and environment-bound OIDC
+trust. Before applying bootstrap trust, query GitHub's repository OIDC settings
+and record the non-secret `sub_claim_prefix`; repositories created after the
+immutable-subject rollout must not use a legacy name-only subject. Confirm that
+the local bootstrap state was migrated to `kelimio/bootstrap.tfstate` before
 removing any local state copy.
 
 ## Plan and first inactive deployment

@@ -10,6 +10,10 @@ output "github_oidc_provider_arn" {
   value = aws_iam_openid_connect_provider.github_actions.arn
 }
 
+output "github_oidc_subject" {
+  value = "${var.github_oidc_subject_prefix}:environment:${var.github_environment}"
+}
+
 output "github_production_plan_role_arn" {
   value = aws_iam_role.github_production_plan.arn
 }
