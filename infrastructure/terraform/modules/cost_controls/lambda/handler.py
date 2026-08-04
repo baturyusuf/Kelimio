@@ -11,6 +11,7 @@ ec2 = boto3.client("ec2")
 rds = boto3.client("rds")
 ecs = boto3.client("ecs")
 dynamodb = boto3.client("dynamodb")
+sns = boto3.client("sns")
 
 MODE_RANK = {"NORMAL": 0, "CONSERVE": 1, "READ_ONLY": 2, "SUSPENDED": 3}
 LOCK_NAME = "cost-governor"
@@ -113,6 +114,7 @@ def _handle(event):
     parameter_name = os.environ["OPERATING_MODE_PARAMETER"]
     current_mode = ssm.get_parameter(Name=parameter_name)["Parameter"]["Value"]
     allow_monthly_reset = False
+    budget_notification = event.get("source") != "aws.events"
     if current_mode not in MODE_RANK:
         current_mode = "NORMAL"
         target_mode = "SUSPENDED"
@@ -157,6 +159,12 @@ def _handle(event):
     # payload into logs; retain only the resulting bounded control action.
     result = {"mode": effective_mode, "changed": changed, "stopped": stopped}
     print(json.dumps(result, sort_keys=True))
+    if budget_notification:
+        sns.publish(
+            TopicArn=os.environ["OPERATIONS_TOPIC_ARN"],
+            Subject="Kelimio cost governor",
+            Message=json.dumps(result, sort_keys=True),
+        )
     return result
 
 

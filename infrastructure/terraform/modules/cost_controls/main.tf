@@ -183,6 +183,12 @@ data "aws_iam_policy_document" "governor" {
   }
 
   statement {
+    sid       = "PublishCostOperations"
+    actions   = ["sns:Publish"]
+    resources = [aws_sns_topic.operations.arn]
+  }
+
+  statement {
     sid = "UseCostControlLockKey"
     actions = [
       "kms:Decrypt",
@@ -196,6 +202,18 @@ data "aws_iam_policy_document" "governor" {
       test     = "StringEquals"
       variable = "kms:ViaService"
       values   = ["dynamodb.${data.aws_region.current.region}.${data.aws_partition.current.dns_suffix}"]
+    }
+  }
+
+  statement {
+    sid       = "UseCostOperationsKey"
+    actions   = ["kms:Decrypt", "kms:GenerateDataKey*"]
+    resources = [var.kms_key_arn]
+
+    condition {
+      test     = "StringEquals"
+      variable = "kms:ViaService"
+      values   = ["sns.${data.aws_region.current.region}.${data.aws_partition.current.dns_suffix}"]
     }
   }
 
@@ -316,6 +334,7 @@ resource "aws_lambda_function" "governor" {
     variables = {
       CONTROL_TOPIC_MODES      = jsonencode({ for name, topic in aws_sns_topic.control : topic.arn => local.control_modes[name] })
       GOVERNOR_LOCK_TABLE      = aws_dynamodb_table.governor_lock.name
+      OPERATIONS_TOPIC_ARN     = aws_sns_topic.operations.arn
       OPERATING_MODE_PARAMETER = aws_ssm_parameter.operating_mode.name
       EC2_INSTANCE_IDS         = jsonencode(var.suspendible_ec2_instance_ids)
       ECS_SERVICES             = jsonencode(var.suspendible_ecs_services)
@@ -427,7 +446,7 @@ resource "aws_budgets_budget" "monthly" {
     threshold                 = 70
     threshold_type            = "PERCENTAGE"
     notification_type         = "ACTUAL"
-    subscriber_sns_topic_arns = [aws_sns_topic.operations.arn, aws_sns_topic.control["conserve"].arn]
+    subscriber_sns_topic_arns = [aws_sns_topic.control["conserve"].arn]
   }
 
   notification {
@@ -435,7 +454,7 @@ resource "aws_budgets_budget" "monthly" {
     threshold                 = 80
     threshold_type            = "PERCENTAGE"
     notification_type         = "ACTUAL"
-    subscriber_sns_topic_arns = [aws_sns_topic.operations.arn, aws_sns_topic.control["read_only"].arn]
+    subscriber_sns_topic_arns = [aws_sns_topic.control["read_only"].arn]
   }
 
   notification {
@@ -443,7 +462,7 @@ resource "aws_budgets_budget" "monthly" {
     threshold                 = 90
     threshold_type            = "PERCENTAGE"
     notification_type         = "ACTUAL"
-    subscriber_sns_topic_arns = [aws_sns_topic.operations.arn, aws_sns_topic.control["suspend"].arn]
+    subscriber_sns_topic_arns = [aws_sns_topic.control["suspend"].arn]
   }
 
   tags = var.tags

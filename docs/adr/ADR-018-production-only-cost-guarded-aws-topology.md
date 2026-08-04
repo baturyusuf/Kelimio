@@ -118,6 +118,10 @@ durability, authorization, audit, or release controls would be unacceptable.
   single traffic or import burst is bounded independently of delayed billing.
 - Automated cost actions must be idempotent, audited, alarmed, reversible at a
   new billing period, and unable to grant access or bypass authorization.
+- Each AWS Budget notification uses one SNS subscriber, matching the provider
+  limit. Enforcement thresholds publish to their dedicated control topic; only
+  the serialized cost governor can forward the bounded action result (never the
+  raw cost payload) to the owner-facing operations topic.
 - The account's initial Lambda concurrency quota leaves no capacity for a
   reserved-concurrency setting. Cost-governor invocations are instead serialized
   by one KMS-encrypted, on-demand DynamoDB conditional lease with an owner token

@@ -60,7 +60,9 @@ not reduce RDS backup retention to work around a Free-plan account. The workflow
 enforces this check before opening Terraform state. Cost-governor serialization
 does not depend on account concurrency quota: verify that its DynamoDB lease
 table uses on-demand billing, KMS encryption, TTL, conditional acquisition, and
-owner-conditional release.
+owner-conditional release. Each enforcement notification must have exactly one
+SNS subscriber; verify that the governor forwards only its bounded result to the
+operations topic after the control action.
 
 Run **Production Terraform Plan** and review every create/change/delete. Then run
 **Production Deploy** with `activate_api=false`.
