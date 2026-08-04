@@ -26,6 +26,29 @@ resource "aws_ssm_parameter" "operating_mode" {
   }
 }
 
+resource "aws_dynamodb_table" "governor_lock" {
+  name         = "${var.name_prefix}-cost-governor-lock"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "lock_name"
+
+  attribute {
+    name = "lock_name"
+    type = "S"
+  }
+
+  ttl {
+    attribute_name = "expires_at"
+    enabled        = true
+  }
+
+  server_side_encryption {
+    enabled     = true
+    kms_key_arn = var.kms_key_arn
+  }
+
+  tags = merge(var.tags, { DataClass = "ephemeral-control-lock" })
+}
+
 resource "aws_sns_topic" "operations" {
   name              = "${var.name_prefix}-cost-operations"
   display_name      = "Kelimio production cost controls"
@@ -154,6 +177,29 @@ resource "aws_iam_role" "governor" {
 
 data "aws_iam_policy_document" "governor" {
   statement {
+    sid       = "SerializeCostControl"
+    actions   = ["dynamodb:DeleteItem", "dynamodb:PutItem"]
+    resources = [aws_dynamodb_table.governor_lock.arn]
+  }
+
+  statement {
+    sid = "UseCostControlLockKey"
+    actions = [
+      "kms:Decrypt",
+      "kms:DescribeKey",
+      "kms:Encrypt",
+      "kms:GenerateDataKey*"
+    ]
+    resources = [var.kms_key_arn]
+
+    condition {
+      test     = "StringEquals"
+      variable = "kms:ViaService"
+      values   = ["dynamodb.${data.aws_region.current.region}.${data.aws_partition.current.dns_suffix}"]
+    }
+  }
+
+  statement {
     sid       = "WriteOperatingMode"
     actions   = ["ssm:GetParameter", "ssm:PutParameter"]
     resources = [aws_ssm_parameter.operating_mode.arn]
@@ -257,19 +303,19 @@ resource "aws_cloudwatch_log_group" "governor" {
 }
 
 resource "aws_lambda_function" "governor" {
-  function_name                  = "${var.name_prefix}-cost-governor"
-  role                           = aws_iam_role.governor.arn
-  handler                        = "handler.handler"
-  runtime                        = "python3.13"
-  filename                       = data.archive_file.governor.output_path
-  source_code_hash               = data.archive_file.governor.output_base64sha256
-  timeout                        = 30
-  memory_size                    = 128
-  reserved_concurrent_executions = 1
+  function_name    = "${var.name_prefix}-cost-governor"
+  role             = aws_iam_role.governor.arn
+  handler          = "handler.handler"
+  runtime          = "python3.13"
+  filename         = data.archive_file.governor.output_path
+  source_code_hash = data.archive_file.governor.output_base64sha256
+  timeout          = 30
+  memory_size      = 128
 
   environment {
     variables = {
       CONTROL_TOPIC_MODES      = jsonencode({ for name, topic in aws_sns_topic.control : topic.arn => local.control_modes[name] })
+      GOVERNOR_LOCK_TABLE      = aws_dynamodb_table.governor_lock.name
       OPERATING_MODE_PARAMETER = aws_ssm_parameter.operating_mode.name
       EC2_INSTANCE_IDS         = jsonencode(var.suspendible_ec2_instance_ids)
       ECS_SERVICES             = jsonencode(var.suspendible_ecs_services)

@@ -13,7 +13,14 @@ class CostGovernorTest(unittest.TestCase):
         self.ec2 = Mock()
         self.rds = Mock()
         self.ecs = Mock()
-        clients = {"ssm": self.ssm, "ec2": self.ec2, "rds": self.rds, "ecs": self.ecs}
+        self.dynamodb = Mock()
+        clients = {
+            "ssm": self.ssm,
+            "ec2": self.ec2,
+            "rds": self.rds,
+            "ecs": self.ecs,
+            "dynamodb": self.dynamodb,
+        }
         fake_boto3 = types.ModuleType("boto3")
         fake_boto3.client = lambda service: clients[service]
         sys.modules["boto3"] = fake_boto3
@@ -27,6 +34,7 @@ class CostGovernorTest(unittest.TestCase):
             '{"arn:conserve":"CONSERVE","arn:read-only":"READ_ONLY",'
             '"arn:suspend":"SUSPENDED"}'
         )
+        os.environ["GOVERNOR_LOCK_TABLE"] = "kelimio-production-cost-governor-lock"
         os.environ["OPERATING_MODE_PARAMETER"] = "/kelimio/production/operating-mode"
         os.environ["EC2_INSTANCE_IDS"] = "[]"
         os.environ["ECS_SERVICES"] = "[]"
@@ -112,6 +120,19 @@ class CostGovernorTest(unittest.TestCase):
             )
 
         self.ssm.put_parameter.assert_not_called()
+
+    def test_concurrent_invocation_fails_before_reading_or_writing_mode(self):
+        class ConditionalFailure(Exception):
+            response = {"Error": {"Code": "ConditionalCheckFailedException"}}
+
+        self.dynamodb.put_item.side_effect = ConditionalFailure()
+
+        with self.assertRaisesRegex(RuntimeError, "serialization lease is busy"):
+            self.module.handler(self.event("arn:suspend"), None)
+
+        self.ssm.get_parameter.assert_not_called()
+        self.ssm.put_parameter.assert_not_called()
+        self.dynamodb.delete_item.assert_not_called()
 
     @staticmethod
     def event(topic):

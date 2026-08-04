@@ -1,5 +1,7 @@
 import json
 import os
+import time
+import uuid
 
 import boto3
 
@@ -8,8 +10,52 @@ ssm = boto3.client("ssm")
 ec2 = boto3.client("ec2")
 rds = boto3.client("rds")
 ecs = boto3.client("ecs")
+dynamodb = boto3.client("dynamodb")
 
 MODE_RANK = {"NORMAL": 0, "CONSERVE": 1, "READ_ONLY": 2, "SUSPENDED": 3}
+LOCK_NAME = "cost-governor"
+LOCK_LEASE_SECONDS = 90
+
+
+def _conditional_failure(error: Exception) -> bool:
+    response = getattr(error, "response", {})
+    return response.get("Error", {}).get("Code") == "ConditionalCheckFailedException"
+
+
+def _acquire_lock(context) -> str:
+    owner_id = getattr(context, "aws_request_id", None) or str(uuid.uuid4())
+    now = int(time.time())
+    try:
+        dynamodb.put_item(
+            TableName=os.environ["GOVERNOR_LOCK_TABLE"],
+            Item={
+                "lock_name": {"S": LOCK_NAME},
+                "owner_id": {"S": owner_id},
+                "expires_at": {"N": str(now + LOCK_LEASE_SECONDS)},
+            },
+            ConditionExpression="attribute_not_exists(lock_name) OR expires_at < :now",
+            ExpressionAttributeValues={":now": {"N": str(now)}},
+        )
+    except Exception as error:
+        if _conditional_failure(error):
+            raise RuntimeError("Cost governor serialization lease is busy") from error
+        raise
+    return owner_id
+
+
+def _release_lock(owner_id: str) -> None:
+    try:
+        dynamodb.delete_item(
+            TableName=os.environ["GOVERNOR_LOCK_TABLE"],
+            Key={"lock_name": {"S": LOCK_NAME}},
+            ConditionExpression="owner_id = :owner_id",
+            ExpressionAttributeValues={":owner_id": {"S": owner_id}},
+        )
+    except Exception as error:
+        if _conditional_failure(error):
+            print(json.dumps({"lock_release": "ownership_lost"}, sort_keys=True))
+            return
+        raise
 
 
 def _json_list(name: str) -> list[str]:
@@ -63,7 +109,7 @@ def _stop_compute() -> dict[str, list[str]]:
     return {"ec2": stopped_instances, "ecs": stopped_services, "rds": stopped_databases}
 
 
-def handler(event, _context):
+def _handle(event):
     parameter_name = os.environ["OPERATING_MODE_PARAMETER"]
     current_mode = ssm.get_parameter(Name=parameter_name)["Parameter"]["Value"]
     allow_monthly_reset = False
@@ -112,3 +158,11 @@ def handler(event, _context):
     result = {"mode": effective_mode, "changed": changed, "stopped": stopped}
     print(json.dumps(result, sort_keys=True))
     return result
+
+
+def handler(event, context):
+    owner_id = _acquire_lock(context)
+    try:
+        return _handle(event)
+    finally:
+        _release_lock(owner_id)

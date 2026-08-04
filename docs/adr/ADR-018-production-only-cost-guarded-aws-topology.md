@@ -32,10 +32,10 @@ durability, authorization, audit, or release controls would be unacceptable.
 - AWS has one environment named `production`. The account ID and region are
   explicit Terraform inputs and the provider rejects any other account.
 - The AWS account must use the paid account plan before production apply. The
-  Free plan's RDS backup-retention and Lambda concurrency restrictions may not
-  be used to weaken PITR or serialize cost controls. Upgrading the account plan
-  does not change the USD 50 budget or early suspension policy; remaining AWS
-  promotional credits continue to offset eligible charges.
+  Free plan's RDS backup-retention restriction may not be used to weaken PITR.
+  Upgrading the account plan does not change the USD 50 budget or early
+  suspension policy; remaining AWS promotional credits continue to offset
+  eligible charges.
 - Developer machines use the local Docker/Android acceptance stack. Local data,
   credentials, identities, and endpoints are never reused by production.
 - There is no persistent cloud staging environment. Before real traffic, every
@@ -118,6 +118,13 @@ durability, authorization, audit, or release controls would be unacceptable.
   single traffic or import burst is bounded independently of delayed billing.
 - Automated cost actions must be idempotent, audited, alarmed, reversible at a
   new billing period, and unable to grant access or bypass authorization.
+- The account's initial Lambda concurrency quota leaves no capacity for a
+  reserved-concurrency setting. Cost-governor invocations are instead serialized
+  by one KMS-encrypted, on-demand DynamoDB conditional lease with an owner token
+  and a 90-second expiry. A competing invocation fails before reading or writing
+  operating mode and is retried by its AWS event source; lease release is
+  owner-conditional. DynamoDB stores no user, cost-message, or durable domain
+  data and remains rebuildable.
 
 ### Deployment identity
 
