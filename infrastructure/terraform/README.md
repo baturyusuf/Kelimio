@@ -18,12 +18,13 @@ before an environment can use the S3 backend.
 
 ```powershell
 cd infrastructure/terraform/bootstrap
-terraform init
+terraform init -backend=false
 terraform plan -var="state_bucket_name=<globally-unique-name>"
 terraform apply -var="state_bucket_name=<globally-unique-name>"
+terraform init -migrate-state -force-copy -backend-config="bucket=<state-bucket>" -backend-config="key=kelimio/bootstrap.tfstate" -backend-config="region=eu-central-1" -backend-config="encrypt=true" -backend-config="kms_key_id=<state-kms-key-arn>" -backend-config="use_lockfile=true"
 
 cd ../environments/production
-terraform init -backend-config="bucket=<state-bucket>" -backend-config="key=kelimio/production.tfstate" -backend-config="region=eu-central-1" -backend-config="use_lockfile=true"
+terraform init -backend-config="bucket=<state-bucket>" -backend-config="key=kelimio/production.tfstate" -backend-config="region=eu-central-1" -backend-config="encrypt=true" -backend-config="kms_key_id=<state-kms-key-arn>" -backend-config="use_lockfile=true"
 terraform plan -var="budget_notification_email=<owner-operations-address>" -var="import_archive_retention_days=<approved-days>" -var="api_image_digest=sha256:<immutable-digest>" -var="build_revision=<full-git-sha>"
 ```
 

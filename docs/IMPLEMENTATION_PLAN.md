@@ -138,11 +138,12 @@ and availability trade-offs. The account-guarded no-NAT Terraform root now
 defines Cognito email/Google brokering, one private-ingress ARM64 Fargate API,
 Single-AZ RDS PostgreSQL, generated write-only secrets, separate migration and
 runtime roles, API Gateway HTTPS, alarms, monotonic budget/Lambda/SSM brakes,
-and exact GitHub OIDC plan/deploy roles. Backend enforcement, localized mobile
+and exact GitHub OIDC plan/deploy roles. The encrypted state/OIDC bootstrap is
+applied with a drift-free post-check. Backend enforcement, localized mobile
 handling, digest-specific image scanning/SBOM, migration-before-promotion, and
-the deployment runbook are validated locally. Every real AWS apply, provider
-canary, restore proof, custom DNS/WAF, and the production import worker remain
-open.
+the deployment runbook are validated locally. The application runtime apply,
+provider canary, independent GitHub approval, restore proof, custom DNS/WAF,
+and the production import worker remain open.
 
 Deliverables:
 

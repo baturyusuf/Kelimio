@@ -10,9 +10,16 @@ The owner runs the bootstrap root while authenticated to the exact AWS account:
 
 ```powershell
 cd infrastructure/terraform/bootstrap
-terraform init
+terraform init -backend=false
 terraform plan -var="state_bucket_name=<globally-unique-private-state-bucket>"
 terraform apply -var="state_bucket_name=<globally-unique-private-state-bucket>"
+terraform init -migrate-state -force-copy `
+  -backend-config="bucket=<bootstrap-output-state-bucket>" `
+  -backend-config="key=kelimio/bootstrap.tfstate" `
+  -backend-config="region=eu-central-1" `
+  -backend-config="encrypt=true" `
+  -backend-config="kms_key_id=<bootstrap-output-state-kms-key-arn>" `
+  -backend-config="use_lockfile=true"
 ```
 
 Record only these non-secret outputs:
@@ -24,21 +31,24 @@ Record only these non-secret outputs:
 
 Create a protected GitHub Environment named `production`, require an owner
 reviewer, prevent self-review where the plan permits it, restrict deployment to
-the approved branch, and add the following environment variables:
+the approved branch, add `AWS_BUDGET_NOTIFICATION_EMAIL` as an environment
+secret, and add the following environment variables:
 
 | Variable | Value |
 | --- | --- |
 | `AWS_TERRAFORM_STATE_BUCKET` | Bootstrap output. |
+| `AWS_TERRAFORM_STATE_KMS_KEY_ARN` | Bootstrap output. |
 | `AWS_PRODUCTION_PLAN_ROLE_ARN` | Bootstrap output. |
 | `AWS_PRODUCTION_DEPLOY_ROLE_ARN` | Bootstrap output. |
-| `AWS_BUDGET_NOTIFICATION_EMAIL` | Owner-controlled operations email. |
 | `AWS_IMPORT_ARCHIVE_RETENTION_DAYS` | Approved immutable original-workbook retention. |
 | `GOOGLE_IDENTITY_ENABLED` | `false` until the Google secret and linking test are ready. |
 | `GOOGLE_IDENTITY_CONFIGURATION_VERSION` | Non-secret rotation marker, initially `not-configured`. |
 | `DATABASE_SECRET_VERSION` | `1`; increment only during a coordinated migration-task rotation. |
 
 Do not create AWS access-key GitHub secrets. GitHub obtains a short-lived role
-session from the repository/environment-bound OIDC trust.
+session from the repository/environment-bound OIDC trust. Confirm that the
+local bootstrap state was migrated to `kelimio/bootstrap.tfstate` before
+removing any local state copy.
 
 ## Plan and first inactive deployment
 

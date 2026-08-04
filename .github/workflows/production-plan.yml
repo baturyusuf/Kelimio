@@ -37,6 +37,8 @@ jobs:
           -backend-config="bucket=${{ vars.AWS_TERRAFORM_STATE_BUCKET }}"
           -backend-config="key=kelimio/production.tfstate"
           -backend-config="region=eu-central-1"
+          -backend-config="encrypt=true"
+          -backend-config="kms_key_id=${{ vars.AWS_TERRAFORM_STATE_KMS_KEY_ARN }}"
           -backend-config="use_lockfile=true"
       - name: Validate production configuration
         working-directory: infrastructure/terraform/environments/production
@@ -44,7 +46,7 @@ jobs:
       - name: Plan production without applying
         working-directory: infrastructure/terraform/environments/production
         env:
-          TF_VAR_budget_notification_email: ${{ vars.AWS_BUDGET_NOTIFICATION_EMAIL }}
+          TF_VAR_budget_notification_email: ${{ secrets.AWS_BUDGET_NOTIFICATION_EMAIL }}
           TF_VAR_import_archive_retention_days: ${{ vars.AWS_IMPORT_ARCHIVE_RETENTION_DAYS }}
           TF_VAR_api_image_digest: ${{ vars.AWS_API_IMAGE_DIGEST || 'sha256:0000000000000000000000000000000000000000000000000000000000000000' }}
           TF_VAR_build_revision: ${{ github.sha }}
