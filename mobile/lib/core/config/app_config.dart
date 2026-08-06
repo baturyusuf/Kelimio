@@ -7,6 +7,7 @@ final class AppConfig {
     required this.postLogoutRedirectUri,
     required this.isProduction,
     this.localDevelopmentToolsEnabled = false,
+    this.internalTestingEnabled = false,
   });
 
   final Uri apiBaseUri;
@@ -16,6 +17,10 @@ final class AppConfig {
   final String postLogoutRedirectUri;
   final bool isProduction;
   final bool localDevelopmentToolsEnabled;
+  final bool internalTestingEnabled;
+
+  bool get starterCourseInstallerEnabled =>
+      localDevelopmentToolsEnabled || internalTestingEnabled;
 
   static AppConfigResult fromEnvironment() {
     const apiValue = String.fromEnvironment('KELIMIO_API_BASE_URL');
@@ -32,6 +37,9 @@ final class AppConfig {
     const isProduction = bool.fromEnvironment('dart.vm.product');
     const localDevelopmentToolsEnabled = bool.fromEnvironment(
       'KELIMIO_LOCAL_DEVELOPMENT_TOOLS',
+    );
+    const internalTestingEnabled = bool.fromEnvironment(
+      'KELIMIO_INTERNAL_TEST_MODE',
     );
 
     final issues = <ConfigurationIssue>[];
@@ -66,6 +74,9 @@ final class AppConfig {
     if (isProduction && localDevelopmentToolsEnabled) {
       issues.add(const ConfigurationIssue('KELIMIO_LOCAL_DEVELOPMENT_TOOLS'));
     }
+    if (localDevelopmentToolsEnabled && internalTestingEnabled) {
+      issues.add(const ConfigurationIssue('KELIMIO_INTERNAL_TEST_MODE'));
+    }
 
     if (issues.isNotEmpty || apiUri == null || issuerUri == null) {
       return AppConfigInvalid(List.unmodifiable(issues));
@@ -85,6 +96,7 @@ final class AppConfig {
         postLogoutRedirectUri: logoutRedirect,
         isProduction: isProduction,
         localDevelopmentToolsEnabled: localDevelopmentToolsEnabled,
+        internalTestingEnabled: internalTestingEnabled,
       ),
     );
   }

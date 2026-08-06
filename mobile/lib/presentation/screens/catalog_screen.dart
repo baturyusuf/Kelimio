@@ -17,9 +17,9 @@ final class CatalogScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final catalog = ref.watch(catalogControllerProvider);
-    final localToolsEnabled = ref
+    final starterCourseInstallerEnabled = ref
         .watch(appConfigProvider)
-        .localDevelopmentToolsEnabled;
+        .starterCourseInstallerEnabled;
     final hasCatalogItems = switch (catalog) {
       AsyncData(:final value) => value.items.isNotEmpty,
       _ => false,
@@ -28,7 +28,7 @@ final class CatalogScreen extends ConsumerWidget {
       appBar: AppBar(
         title: Text(context.l10n.catalog),
         actions: [
-          if (localToolsEnabled && hasCatalogItems)
+          if (starterCourseInstallerEnabled && hasCatalogItems)
             IconButton(
               key: const Key('catalog-install-starter'),
               tooltip: context.l10n.installLocalStarterCourse,
@@ -74,7 +74,7 @@ final class CatalogScreen extends ConsumerWidget {
                               context.l10n.emptyCatalog,
                               textAlign: TextAlign.center,
                             ),
-                            if (localToolsEnabled) ...[
+                            if (starterCourseInstallerEnabled) ...[
                               const SizedBox(height: 16),
                               Text(
                                 context.l10n.localStarterCourseBody,

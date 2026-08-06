@@ -1,0 +1,6 @@
+# Copy this file to mobile/android/key.properties.
+# Never commit the real file. The repository .gitignore excludes it.
+storeFile=keystores/kelimio-upload.p12
+storePassword=CHANGE_ME
+keyAlias=kelimio-upload
+keyPassword=CHANGE_ME
