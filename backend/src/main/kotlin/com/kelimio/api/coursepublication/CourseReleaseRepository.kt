@@ -186,14 +186,24 @@ class CourseReleaseRepository(
         check(
             dsl.execute(
                 """
-                update course
-                   set active_release_id = ?, publication_status = ?, updated_at = cast(? as timestamptz)
-                 where id = ? and active_release_id is not distinct from ?
+                update course course_row
+                   set active_release_id = ?,
+                       publication_status = ?,
+                       name = metadata.course_name,
+                       description = metadata.course_description,
+                       visibility = metadata.visibility,
+                       updated_at = cast(? as timestamptz)
+                  from course_release_metadata metadata
+                 where course_row.id = ?
+                   and metadata.course_release_id = ?
+                   and metadata.course_id = course_row.id
+                   and course_row.active_release_id is not distinct from ?
                 """.trimIndent(),
                 targetReleaseId,
                 publicationStatus,
                 now,
                 course.id,
+                targetReleaseId,
                 course.activeReleaseId,
             ) == 1,
         ) { "The course active release changed during activation" }

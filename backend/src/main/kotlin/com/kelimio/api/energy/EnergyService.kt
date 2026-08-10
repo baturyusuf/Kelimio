@@ -25,6 +25,52 @@ class EnergyService(
         consumesEnergy: Boolean,
     ): EnergyDecision = decide(userId, wrongAnswer, consumesEnergy)
 
+    @Transactional
+    fun creditRewardedAd(userId: UUID, requestedAmount: Int): RewardedEnergyCredit {
+        require(requestedAmount in 1..20)
+        val now = OffsetDateTime.ofInstant(clock.instant(), ZoneOffset.UTC)
+        val initialized = repository.ensureAndLock(userId, now)
+        val mutations = mutableListOf<EnergyMutation>()
+        if (initialized.created) {
+            mutations += EnergyMutation("ACCOUNT_INITIALIZED", 5, 0, 5, now)
+        }
+        val regenerated = EnergyPolicy.regenerate(initialized.state, now)
+        var state = regenerated.state
+        if (regenerated.regenerated > 0) {
+            mutations += EnergyMutation(
+                type = "LAZY_REGENERATED",
+                delta = regenerated.regenerated,
+                balanceBefore = initialized.state.balance,
+                balanceAfter = state.balance,
+                occurredAt = now,
+            )
+            repository.update(userId, state)
+        }
+        val before = state.balance
+        val credited = minOf(requestedAmount, EnergyPolicy.MAX_ENERGY - before)
+        if (credited > 0) {
+            state = state.copy(
+                balance = before + credited,
+                regenerationAnchorAt = now,
+                version = state.version + 1,
+            )
+            repository.update(userId, state)
+        }
+        mutations += EnergyMutation("REWARDED_AD_CREDIT", credited, before, state.balance, now)
+        appendEvents(userId, null, null, mutations)
+        return RewardedEnergyCredit(
+            credited = credited,
+            snapshot = EnergySnapshot(
+                balance = state.balance,
+                maximum = EnergyPolicy.MAX_ENERGY,
+                unlimited = false,
+                nextRegenerationAt = state.regenerationAnchorAt.plus(EnergyPolicy.REGENERATION_PERIOD)
+                    .takeIf { state.balance < EnergyPolicy.MAX_ENERGY },
+                asOf = now,
+            ),
+        )
+    }
+
     fun appendEvents(
         userId: UUID,
         attemptId: UUID?,
@@ -115,4 +161,10 @@ data class EnergyDecision(
     val snapshot: EnergySnapshot,
     val interrupted: Boolean,
     val mutations: List<EnergyMutation>,
+)
+
+
+data class RewardedEnergyCredit(
+    val credited: Int,
+    val snapshot: EnergySnapshot,
 )

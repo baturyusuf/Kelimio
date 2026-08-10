@@ -239,6 +239,24 @@ internal class SubsequentCourseDraftRepository(
                 command.occurredAt,
             ) == 1,
         )
+        check(
+            dsl.execute(
+                """
+                insert into course_release_metadata(
+                    course_release_id, course_id, course_name, course_description,
+                    visibility, created_at
+                )
+                select ?, course_id, course_name, course_description,
+                       visibility, cast(? as timestamptz)
+                  from course_release_metadata
+                 where course_release_id = ? and course_id = ?
+                """.trimIndent(),
+                command.draftReleaseId,
+                command.occurredAt,
+                source.baseReleaseId,
+                source.courseId,
+            ) == 1,
+        )
 
         check(
             dsl.execute(

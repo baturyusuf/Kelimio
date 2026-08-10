@@ -18,6 +18,7 @@ import org.springframework.security.oauth2.jwt.JwtDecoders
 import org.springframework.security.oauth2.jwt.JwtValidators
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder
 import org.springframework.security.web.SecurityFilterChain
+import org.springframework.http.HttpMethod
 
 @Configuration
 @EnableMethodSecurity
@@ -58,6 +59,9 @@ class SecurityConfig {
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
             .authorizeHttpRequests {
                 it.requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
+                it.requestMatchers(HttpMethod.GET, "/v1/profiles/**").permitAll()
+                it.requestMatchers(HttpMethod.GET, "/v1/leaderboards/**").permitAll()
+                it.requestMatchers(HttpMethod.GET, "/v1/rewards/ads/ssv").permitAll()
                 it.requestMatchers("/v1/**").authenticated()
                 it.anyRequest().denyAll()
             }

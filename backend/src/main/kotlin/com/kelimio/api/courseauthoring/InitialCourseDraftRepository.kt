@@ -99,6 +99,19 @@ internal class InitialCourseDraftRepository(
             graph.changeSetId,
             command.committedAt,
         )
+        dsl.execute(
+            """
+            insert into course_release_metadata(
+                course_release_id, course_id, course_name, course_description,
+                visibility, created_at
+            ) values (?, ?, ?, null, ?, cast(? as timestamptz))
+            """.trimIndent(),
+            graph.releaseId,
+            graph.courseId,
+            settings.courseName,
+            settings.visibility.name,
+            command.committedAt,
+        )
         insertSettings(command, graph)
         insertHierarchy(command, graph)
         insertQuestions(command, graph)

@@ -1,6 +1,7 @@
 package com.kelimio.api.coursepublication
 
 import com.kelimio.api.identityprofile.CurrentUserService
+import com.kelimio.api.teacher.TeacherAccessService
 import jakarta.validation.Valid
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.http.CacheControl
@@ -23,6 +24,7 @@ import java.util.UUID
 @ConditionalOnProperty(name = ["KELIMIO_RUNTIME_ROLE"], havingValue = "api", matchIfMissing = true)
 class CourseReleaseController(
     private val currentUserService: CurrentUserService,
+    private val teacherAccessService: TeacherAccessService,
     private val service: CourseReleaseService,
 ) {
     @GetMapping("/{releaseId}/impact")
@@ -30,10 +32,11 @@ class CourseReleaseController(
         @AuthenticationPrincipal jwt: Jwt,
         @PathVariable courseId: UUID,
         @PathVariable releaseId: UUID,
-    ): ResponseEntity<CourseReleaseImpactResponse> = noStore(
-        HttpStatus.OK,
-        service.impact(currentUserService.requireCompleted(jwt), courseId, releaseId),
-    )
+    ): ResponseEntity<CourseReleaseImpactResponse> {
+        val user = currentUserService.requireCompleted(jwt)
+        teacherAccessService.requireAuthorized(jwt, user)
+        return noStore(HttpStatus.OK, service.impact(user, courseId, releaseId))
+    }
 
     @PostMapping("/{releaseId}/activate")
     fun activate(
@@ -43,8 +46,10 @@ class CourseReleaseController(
         @RequestHeader("Idempotency-Key") idempotencyKey: UUID,
         @Valid @RequestBody request: ActivateCourseReleaseRequest,
     ): ResponseEntity<CourseReleaseActivationResponse> {
+        val user = currentUserService.requireCompleted(jwt)
+        teacherAccessService.requireAuthorized(jwt, user)
         val response = service.activate(
-            currentUserService.requireCompleted(jwt),
+            user,
             courseId,
             releaseId,
             idempotencyKey,
