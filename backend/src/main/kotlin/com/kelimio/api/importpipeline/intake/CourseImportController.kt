@@ -28,7 +28,7 @@ import java.util.UUID
 @RequestMapping("/v1/courses/imports")
 @ConditionalOnProperty(name = ["KELIMIO_IMPORT_ENABLED"], havingValue = "true")
 @ConditionalOnProperty(name = ["KELIMIO_RUNTIME_ROLE"], havingValue = "api", matchIfMissing = true)
-class CourseImportController(
+internal class CourseImportController(
     private val currentUserService: CurrentUserService,
     private val service: CourseImportService,
     private val teacherAccessService: TeacherAccessService,
