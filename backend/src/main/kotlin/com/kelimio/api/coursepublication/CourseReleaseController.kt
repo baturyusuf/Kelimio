@@ -22,7 +22,7 @@ import java.util.UUID
 @RequestMapping("/v1/courses/{courseId}/releases")
 @ConditionalOnProperty(name = ["KELIMIO_COURSE_RELEASE_ENABLED"], havingValue = "true")
 @ConditionalOnProperty(name = ["KELIMIO_RUNTIME_ROLE"], havingValue = "api", matchIfMissing = true)
-class CourseReleaseController(
+internal class CourseReleaseController(
     private val currentUserService: CurrentUserService,
     private val teacherAccessService: TeacherAccessService,
     private val service: CourseReleaseService,
