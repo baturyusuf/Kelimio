@@ -72,20 +72,6 @@ class InternalMvpMigrationTest {
                 statement.setObject(3, now)
                 statement.executeUpdate()
             }
-            connection.prepareStatement(
-                "update course_release set status = 'ACTIVE' where id = ?",
-            ).use { statement ->
-                statement.setObject(1, releaseId)
-                statement.executeUpdate()
-            }
-            connection.prepareStatement(
-                "update course set publication_status = 'PUBLISHED', active_release_id = ?, updated_at = ? where id = ?",
-            ).use { statement ->
-                statement.setObject(1, releaseId)
-                statement.setObject(2, now)
-                statement.setObject(3, courseId)
-                statement.executeUpdate()
-            }
             connection.commit()
         }
 

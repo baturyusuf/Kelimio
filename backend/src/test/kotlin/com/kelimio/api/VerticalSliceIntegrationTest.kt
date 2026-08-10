@@ -1964,6 +1964,18 @@ class VerticalSliceIntegrationTest {
             )
             jdbcTemplate.update(
                 """
+                insert into course_release_metadata(
+                    course_release_id, course_id, course_name,
+                    course_description, visibility, created_at
+                ) values (?, ?, 'Sourced authoring course',
+                          'Immutable revision proof', 'PUBLIC', ?)
+                """.trimIndent(),
+                fixture.baseReleaseId,
+                fixture.courseId,
+                now,
+            )
+            jdbcTemplate.update(
+                """
                 insert into course_release_source_change_set(
                     course_release_id, course_id, content_change_set_id, created_at
                 ) values (?, ?, ?, ?)
