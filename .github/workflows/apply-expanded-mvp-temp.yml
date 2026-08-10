@@ -47,3 +47,5 @@ jobs:
           git config user.email "75681771+baturyusuf@users.noreply.github.com"
           git commit -m "Expand Google Play internal MVP features"
           git push origin HEAD:agent/google-play-internal-mvp
+
+# rerun: conflict-free-mobile-infra
