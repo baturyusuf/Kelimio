@@ -1,0 +1,49 @@
+name: Apply expanded internal MVP (temporary)
+
+on:
+  push:
+    branches: ["agent/google-play-internal-mvp"]
+    paths: [".github/workflows/apply-expanded-mvp-temp.yml"]
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: agent/google-play-internal-mvp
+          persist-credentials: true
+          fetch-depth: 0
+      - uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9 # v4.8.0
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          flutter-version: 3.44.0
+          channel: stable
+          cache: true
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
+        with:
+          terraform_version: 1.15.8
+      - name: Apply reviewed patch and regenerate deterministic files
+        shell: bash
+        run: |
+          set -euo pipefail
+          base64 --decode .github/patch-parts/expanded-mobile-infra.b64 | gzip -d > /tmp/expanded.patch
+          git apply --index --whitespace=error /tmp/expanded.patch
+          rm -rf .github/patch-parts .github/workflows/apply-expanded-mvp-temp.yml
+          pushd mobile
+          flutter pub get
+          flutter gen-l10n
+          dart format .
+          popd
+          terraform fmt -recursive infrastructure/terraform
+          git add -A
+          git config user.name "baturyusuf"
+          git config user.email "75681771+baturyusuf@users.noreply.github.com"
+          git commit -m "Expand Google Play internal MVP features"
+          git push origin HEAD:agent/google-play-internal-mvp
