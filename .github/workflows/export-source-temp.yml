@@ -18,11 +18,11 @@ jobs:
       - name: Create source archive
         run: |
           set -euo pipefail
-          tar --exclude=.git --exclude=.github/workflows/export-source-temp.yml -czf kelimio-source.tar.gz .
+          tar --exclude=.git --exclude=.github/workflows/export-source-temp.yml -czf /tmp/kelimio-source.tar.gz .
       - name: Upload source archive
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: kelimio-source-${{ github.sha }}
-          path: kelimio-source.tar.gz
+          path: /tmp/kelimio-source.tar.gz
           if-no-files-found: error
           retention-days: 1
