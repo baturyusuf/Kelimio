@@ -111,7 +111,9 @@ class InternalMvpMigrationTest {
         val configuration = Flyway.configure()
             .dataSource(postgres.jdbcUrl, postgres.username, postgres.password)
             .locations("classpath:db/migration")
-        target?.let(configuration::target)
+        if (target != null) {
+            configuration.target(target)
+        }
         configuration.load().migrate()
     }
 
