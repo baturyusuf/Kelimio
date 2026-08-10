@@ -74,6 +74,19 @@ class LocalStarterCourseRepository(
             now,
         )
         dsl.execute(
+            """
+            insert into course_release_metadata(
+                course_release_id, course_id, course_name, course_description,
+                visibility, created_at
+            ) values (?, ?, ?, ?, 'PUBLIC', cast(? as timestamptz))
+            """.trimIndent(),
+            releaseId,
+            courseId,
+            LocalStarterCourseDefinition.COURSE_NAME,
+            LocalStarterCourseDefinition.COURSE_DESCRIPTION,
+            now,
+        )
+        dsl.execute(
             "insert into course_test(id, course_id, created_at) values (?, ?, cast(? as timestamptz))",
             testId,
             courseId,

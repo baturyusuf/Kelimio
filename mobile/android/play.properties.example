@@ -1,0 +1,8 @@
+# Copy this file to mobile/android/play.properties.
+# applicationId is immutable after the first Google Play upload.
+applicationId=com.yourcompany.kelimio
+appLabel=Kelimio
+
+# The current production Cognito callback is already registered for this scheme.
+# It may differ from applicationId. Change it only together with the OIDC provider.
+redirectScheme=com.kelimio.app

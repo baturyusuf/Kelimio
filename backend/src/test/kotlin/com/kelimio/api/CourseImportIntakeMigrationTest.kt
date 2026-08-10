@@ -928,7 +928,12 @@ class CourseImportIntakeMigrationTest {
         attemptId: UUID,
         scoreEventId: UUID,
     ): List<String?> = listOf(
-        queryString(connection, "select row_to_json(t)::text from (select * from app_user where id='$userId') t"),
+        queryString(
+            connection,
+            "select row_to_json(t)::text from (select id,oidc_subject,email,display_name,username," +
+                "app_locale,active_target_language,time_zone,created_at,updated_at,preferred_support_language," +
+                "profile_setup_completed_at,profile_version from app_user where id='$userId') t",
+        ),
         queryString(connection, "select row_to_json(t)::text from (select * from course where id='$courseId') t"),
         queryString(connection, "select row_to_json(t)::text from (select * from energy_event where id='$energyEventId') t"),
         queryString(connection, "select row_to_json(t)::text from (select * from test_attempt where id='$attemptId') t"),

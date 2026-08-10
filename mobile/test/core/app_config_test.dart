@@ -16,4 +16,33 @@ void main() {
       }),
     );
   });
+
+  test('internal testing exposes only the starter-course installer gate', () {
+    final config = AppConfig(
+      apiBaseUri: Uri.parse('https://api.example.test'),
+      oidcIssuer: Uri.parse('https://identity.example.test'),
+      oidcClientId: 'mobile-client',
+      redirectUri: 'com.kelimio.app:/oauthredirect',
+      postLogoutRedirectUri: 'com.kelimio.app:/logout',
+      isProduction: true,
+      internalTestingEnabled: true,
+    );
+
+    expect(config.internalTestingEnabled, isTrue);
+    expect(config.localDevelopmentToolsEnabled, isFalse);
+    expect(config.starterCourseInstallerEnabled, isTrue);
+  });
+
+  test('normal production configuration keeps the installer closed', () {
+    final config = AppConfig(
+      apiBaseUri: Uri.parse('https://api.example.test'),
+      oidcIssuer: Uri.parse('https://identity.example.test'),
+      oidcClientId: 'mobile-client',
+      redirectUri: 'com.kelimio.app:/oauthredirect',
+      postLogoutRedirectUri: 'com.kelimio.app:/logout',
+      isProduction: true,
+    );
+
+    expect(config.starterCourseInstallerEnabled, isFalse);
+  });
 }

@@ -22,8 +22,8 @@ final class CatalogController extends AsyncNotifier<CatalogPage> {
   }
 
   Future<void> installLocalStarterCourse() async {
-    if (!ref.read(appConfigProvider).localDevelopmentToolsEnabled) {
-      throw StateError('Local development tools are disabled');
+    if (!ref.read(appConfigProvider).starterCourseInstallerEnabled) {
+      throw StateError('Starter-course installation is disabled');
     }
     state = const AsyncLoading<CatalogPage>();
     state = await AsyncValue.guard(() async {

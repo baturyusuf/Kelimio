@@ -1,9 +1,10 @@
 package com.kelimio.api.config
 
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
-import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication
+import org.springframework.http.HttpMethod
 import org.springframework.security.config.Customizer.withDefaults
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
@@ -58,6 +59,9 @@ class SecurityConfig {
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
             .authorizeHttpRequests {
                 it.requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
+                it.requestMatchers(HttpMethod.GET, "/v1/profiles/**").permitAll()
+                it.requestMatchers(HttpMethod.GET, "/v1/leaderboards/**").permitAll()
+                it.requestMatchers(HttpMethod.GET, "/v1/rewards/ads/ssv").permitAll()
                 it.requestMatchers("/v1/**").authenticated()
                 it.anyRequest().denyAll()
             }

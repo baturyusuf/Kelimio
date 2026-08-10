@@ -1,6 +1,8 @@
 package com.kelimio.api.importpipeline.intake
 
+import com.kelimio.api.identityprofile.AppUser
 import com.kelimio.api.identityprofile.CurrentUserService
+import com.kelimio.api.teacher.TeacherAccessService
 import jakarta.validation.constraints.Max
 import jakarta.validation.constraints.Min
 import jakarta.validation.constraints.Size
@@ -26,9 +28,10 @@ import java.util.UUID
 @RequestMapping("/v1/courses/imports")
 @ConditionalOnProperty(name = ["KELIMIO_IMPORT_ENABLED"], havingValue = "true")
 @ConditionalOnProperty(name = ["KELIMIO_RUNTIME_ROLE"], havingValue = "api", matchIfMissing = true)
-class CourseImportController(
+internal class CourseImportController(
     private val currentUserService: CurrentUserService,
     private val service: CourseImportService,
+    private val teacherAccessService: TeacherAccessService,
 ) {
     @GetMapping
     fun list(
@@ -37,7 +40,7 @@ class CourseImportController(
         @RequestParam(defaultValue = "20") @Min(1) @Max(50) limit: Int,
     ): ResponseEntity<CourseImportStatusPage> = noStore(
         HttpStatus.OK,
-        service.list(currentUserService.requireCompleted(jwt), cursor, limit),
+        service.list(teacher(jwt), cursor, limit),
     )
 
     @PostMapping
@@ -46,7 +49,7 @@ class CourseImportController(
         @RequestHeader("Idempotency-Key") idempotencyKey: UUID,
         @RequestBody request: CreateCourseImportRequest,
     ): ResponseEntity<CourseImportUploadSessionResponse> {
-        val response = service.create(currentUserService.requireCompleted(jwt), idempotencyKey, request)
+        val response = service.create(teacher(jwt), idempotencyKey, request)
         return noStore(if (response.created) HttpStatus.CREATED else HttpStatus.OK, response)
     }
 
@@ -56,7 +59,7 @@ class CourseImportController(
         @PathVariable importId: UUID,
     ): ResponseEntity<CourseImportStatusResponse> = noStore(
         HttpStatus.OK,
-        service.status(currentUserService.requireCompleted(jwt), importId),
+        service.status(teacher(jwt), importId),
     )
 
     @PostMapping("/{importId}/complete")
@@ -66,7 +69,7 @@ class CourseImportController(
         @RequestHeader("Idempotency-Key") idempotencyKey: UUID,
         @RequestBody request: CompleteCourseImportUploadRequest,
     ): ResponseEntity<CourseImportStatusResponse> {
-        val result = service.complete(currentUserService.requireCompleted(jwt), importId, idempotencyKey, request)
+        val result = service.complete(teacher(jwt), importId, idempotencyKey, request)
         return noStore(if (result.created) HttpStatus.ACCEPTED else HttpStatus.OK, result.value)
     }
 
@@ -78,7 +81,7 @@ class CourseImportController(
         @RequestParam(defaultValue = "20") @Min(1) @Max(100) limit: Int,
     ): ResponseEntity<CourseImportPreviewPage> = noStore(
         HttpStatus.OK,
-        service.preview(currentUserService.requireCompleted(jwt), importId, cursor, limit),
+        service.preview(teacher(jwt), importId, cursor, limit),
     )
 
     @GetMapping("/{importId}/issues")
@@ -89,7 +92,7 @@ class CourseImportController(
         @RequestParam(defaultValue = "20") @Min(1) @Max(100) limit: Int,
     ): ResponseEntity<CourseImportIssuePage> = noStore(
         HttpStatus.OK,
-        service.issues(currentUserService.requireCompleted(jwt), importId, cursor, limit),
+        service.issues(teacher(jwt), importId, cursor, limit),
     )
 
     @PostMapping("/{importId}/approve")
@@ -99,7 +102,7 @@ class CourseImportController(
         @RequestHeader("Idempotency-Key") idempotencyKey: UUID,
         @RequestBody request: ApproveCourseImportRequest,
     ): ResponseEntity<CourseImportApprovalResponse> {
-        val response = service.approve(currentUserService.requireCompleted(jwt), importId, idempotencyKey, request)
+        val response = service.approve(teacher(jwt), importId, idempotencyKey, request)
         return noStore(if (response.created) HttpStatus.CREATED else HttpStatus.OK, response)
     }
 
@@ -110,8 +113,14 @@ class CourseImportController(
         @RequestHeader("Idempotency-Key") idempotencyKey: UUID,
         @RequestBody request: CommitCourseImportRequest,
     ): ResponseEntity<CourseImportCommitResponse> {
-        val response = service.commit(currentUserService.requireCompleted(jwt), importId, idempotencyKey, request)
+        val response = service.commit(teacher(jwt), importId, idempotencyKey, request)
         return noStore(if (response.created) HttpStatus.CREATED else HttpStatus.OK, response)
+    }
+
+    private fun teacher(jwt: Jwt): AppUser {
+        val user = currentUserService.requireCompleted(jwt)
+        teacherAccessService.requireAuthorized(jwt, user)
+        return user
     }
 
     private fun <T> noStore(status: HttpStatus, body: T): ResponseEntity<T> = ResponseEntity.status(status)

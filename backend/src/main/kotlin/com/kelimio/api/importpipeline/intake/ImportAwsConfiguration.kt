@@ -41,10 +41,12 @@ class ImportAwsConfiguration {
         @Value("\${KELIMIO_BUILD_REVISION:}") parserVersion: String,
         @Value("\${KELIMIO_IMPORT_UPLOAD_TTL_SECONDS:900}") uploadTtlSeconds: Long,
         @Value("\${KELIMIO_IMPORT_CURSOR_HMAC_KEY:}") cursorHmacKey: String,
+        @Value("\${KELIMIO_PRODUCTION_TEACHER_FEATURES_ENABLED:false}") productionEnabled: Boolean,
     ): ImportRuntimeSettings = ImportRuntimeSettings(
         environment = environment.trim().lowercase().also {
-            require(it in setOf("local", "test")) {
-                "Course imports require author-eligibility and consent gates before staging/production enablement."
+            require(it in setOf("local", "test", "production"))
+            require(it != "production" || productionEnabled) {
+                "Production course imports require KELIMIO_PRODUCTION_TEACHER_FEATURES_ENABLED=true."
             }
         },
         runtimeRole = ImportRuntimeRole.parse(runtimeRole),

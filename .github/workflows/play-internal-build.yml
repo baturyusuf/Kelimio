@@ -1,0 +1,201 @@
+name: Google Play Internal Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      upload_to_play:
+        description: Upload to the existing Google Play internal track after building
+        required: true
+        type: boolean
+        default: false
+      release_notes:
+        description: Internal tester release notes
+        required: true
+        type: string
+        default: Kelimio internal test build
+
+permissions:
+  contents: read
+
+concurrency:
+  group: google-play-internal-build
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+    env:
+      ANDROID_APPLICATION_ID: ${{ vars.ANDROID_APPLICATION_ID }}
+      ANDROID_REDIRECT_SCHEME: ${{ vars.ANDROID_REDIRECT_SCHEME || 'com.kelimio.app' }}
+      KELIMIO_API_BASE_URL: ${{ vars.KELIMIO_API_BASE_URL }}
+      KELIMIO_OIDC_ISSUER: ${{ vars.KELIMIO_OIDC_ISSUER }}
+      KELIMIO_OIDC_CLIENT_ID: ${{ vars.KELIMIO_OIDC_CLIENT_ID }}
+      ANDROID_UPLOAD_KEYSTORE_BASE64: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_BASE64 }}
+      ANDROID_UPLOAD_STORE_PASSWORD: ${{ secrets.ANDROID_UPLOAD_STORE_PASSWORD }}
+      ANDROID_UPLOAD_KEY_ALIAS: ${{ secrets.ANDROID_UPLOAD_KEY_ALIAS }}
+      ANDROID_UPLOAD_KEY_PASSWORD: ${{ secrets.ANDROID_UPLOAD_KEY_PASSWORD }}
+      PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+      RELEASE_NOTES: ${{ inputs.release_notes }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9 # v4.8.0
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          flutter-version: 3.44.0
+          channel: stable
+          cache: true
+
+      - name: Require immutable Play and runtime configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in \
+            ANDROID_APPLICATION_ID \
+            KELIMIO_API_BASE_URL \
+            KELIMIO_OIDC_ISSUER \
+            KELIMIO_OIDC_CLIENT_ID \
+            ANDROID_UPLOAD_KEYSTORE_BASE64 \
+            ANDROID_UPLOAD_STORE_PASSWORD \
+            ANDROID_UPLOAD_KEY_ALIAS \
+            ANDROID_UPLOAD_KEY_PASSWORD
+          do
+            if [ -z "${!name:-}" ]; then
+              echo "Missing required Actions variable or secret: $name" >&2
+              exit 1
+            fi
+          done
+          if [ "$ANDROID_APPLICATION_ID" = "com.kelimio.app" ]; then
+            echo "The scaffold applicationId cannot enter a Google Play track" >&2
+            exit 1
+          fi
+          case "$KELIMIO_API_BASE_URL" in https://*) ;; *) echo "API URL must use HTTPS" >&2; exit 1 ;; esac
+          case "$KELIMIO_OIDC_ISSUER" in https://*) ;; *) echo "OIDC issuer must use HTTPS" >&2; exit 1 ;; esac
+
+      - name: Materialize ephemeral signing and compile-time configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p mobile/android/keystores mobile/config
+          printf '%s' "$ANDROID_UPLOAD_KEYSTORE_BASE64" |
+            base64 --decode > mobile/android/keystores/kelimio-upload.p12
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          def property_value(value: str) -> str:
+              if "\n" in value or "\r" in value:
+                  raise SystemExit("Signing values may not contain line breaks")
+              return value.replace("\\", "\\\\")
+
+          Path("mobile/android/key.properties").write_text(
+              "\n".join(
+                  [
+                      "storeFile=keystores/kelimio-upload.p12",
+                      "storePassword=" + property_value(os.environ["ANDROID_UPLOAD_STORE_PASSWORD"]),
+                      "keyAlias=" + property_value(os.environ["ANDROID_UPLOAD_KEY_ALIAS"]),
+                      "keyPassword=" + property_value(os.environ["ANDROID_UPLOAD_KEY_PASSWORD"]),
+                      "",
+                  ]
+              ),
+              encoding="utf-8",
+          )
+          Path("mobile/android/play.properties").write_text(
+              "\n".join(
+                  [
+                      "applicationId=" + os.environ["ANDROID_APPLICATION_ID"],
+                      "appLabel=Kelimio",
+                      "redirectScheme=" + os.environ["ANDROID_REDIRECT_SCHEME"],
+                      "",
+                  ]
+              ),
+              encoding="utf-8",
+          )
+          config = {
+              "KELIMIO_API_BASE_URL": os.environ["KELIMIO_API_BASE_URL"].rstrip("/"),
+              "KELIMIO_OIDC_ISSUER": os.environ["KELIMIO_OIDC_ISSUER"].rstrip("/"),
+              "KELIMIO_OIDC_CLIENT_ID": os.environ["KELIMIO_OIDC_CLIENT_ID"],
+              "KELIMIO_OIDC_REDIRECT_URI": os.environ["ANDROID_REDIRECT_SCHEME"] + ":/oauthredirect",
+              "KELIMIO_OIDC_POST_LOGOUT_REDIRECT_URI": os.environ["ANDROID_REDIRECT_SCHEME"] + ":/logout",
+              "KELIMIO_INTERNAL_TEST_MODE": "true",
+              "KELIMIO_LOCAL_DEVELOPMENT_TOOLS": "false",
+          }
+          Path("mobile/config/play.internal.json").write_text(
+              json.dumps(config, indent=2) + "\n",
+              encoding="utf-8",
+          )
+          PY
+
+      - name: Verify Flutter source and build signed App Bundle
+        working-directory: mobile
+        run: |
+          flutter pub get --enforce-lockfile
+          flutter gen-l10n
+          dart format --output=none --set-exit-if-changed .
+          flutter analyze --fatal-infos
+          flutter test
+          flutter build appbundle \
+            --release \
+            --flavor production \
+            --dart-define-from-file=config/play.internal.json
+
+      - name: Verify signed bundle and package identity
+        shell: pwsh
+        run: |
+          ./scripts/play/verify-internal-aab.ps1 `
+            -AabPath mobile/build/app/outputs/bundle/productionRelease/app-production-release.aab `
+            -DownloadBundletool
+
+      - name: Retain internal-test App Bundle
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: kelimio-google-play-internal-${{ github.sha }}
+          path: |
+            mobile/build/app/outputs/bundle/productionRelease/app-production-release.aab
+            mobile/build/app/outputs/bundle/productionRelease/app-production-release.aab.sha256
+            mobile/build/app/outputs/bundle/productionRelease/app-production-release.aab.manifest.xml
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload to Google Play internal track
+        if: ${{ inputs.upload_to_play }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "$PLAY_SERVICE_ACCOUNT_JSON" ]; then
+            echo "PLAY_SERVICE_ACCOUNT_JSON is required for API upload" >&2
+            exit 1
+          fi
+          service_account_file="$(mktemp)"
+          trap 'rm -f "$service_account_file"' EXIT
+          printf '%s' "$PLAY_SERVICE_ACCOUNT_JSON" > "$service_account_file"
+          python3 -m pip install --disable-pip-version-check -r scripts/play/requirements.txt
+          python3 scripts/play/upload-internal.py \
+            --package-name "$ANDROID_APPLICATION_ID" \
+            --aab mobile/build/app/outputs/bundle/productionRelease/app-production-release.aab \
+            --service-account "$service_account_file" \
+            --track internal \
+            --status completed \
+            --release-name "Internal ${GITHUB_SHA::7}" \
+            --notes-tr "$RELEASE_NOTES" \
+            --notes-en "$RELEASE_NOTES"
+
+      - name: Remove ephemeral credentials
+        if: always()
+        shell: bash
+        run: |
+          rm -f \
+            mobile/android/key.properties \
+            mobile/android/play.properties \
+            mobile/android/keystores/kelimio-upload.p12 \
+            mobile/config/play.internal.json

@@ -1,6 +1,7 @@
 package com.kelimio.api.development
 
 import com.kelimio.api.identityprofile.CurrentUserService
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
@@ -16,13 +17,22 @@ import java.util.UUID
 class LocalStarterCourseController(
     private val currentUserService: CurrentUserService,
     private val service: LocalStarterCourseService,
+    @Value("\${KELIMIO_ENVIRONMENT}") private val environment: String,
 ) {
     @PostMapping
     fun install(
         @AuthenticationPrincipal jwt: Jwt,
         @RequestHeader("Idempotency-Key") idempotencyKey: UUID,
     ): ResponseEntity<LocalStarterCourseResponse> {
-        val result = service.install(currentUserService.requireCompleted(jwt), idempotencyKey)
+        val productionInternalTesterAuthorized = InternalTesterPolicy.canInstallStarterCourse(
+            environment = environment,
+            groups = jwt.getClaimAsStringList("cognito:groups").orEmpty(),
+        )
+        val result = service.install(
+            user = currentUserService.requireCompleted(jwt),
+            idempotencyKey = idempotencyKey,
+            productionInternalTesterAuthorized = productionInternalTesterAuthorized,
+        )
         val status = if (result.created) HttpStatus.CREATED else HttpStatus.OK
         return ResponseEntity.status(status).body(
             LocalStarterCourseResponse(

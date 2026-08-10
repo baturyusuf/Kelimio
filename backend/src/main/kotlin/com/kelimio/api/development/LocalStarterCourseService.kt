@@ -22,9 +22,16 @@ class LocalStarterCourseService(
     @Value("\${KELIMIO_LOCAL_STARTER_COURSE_ENABLED:false}") private val enabled: Boolean,
 ) {
     @Transactional
-    fun install(user: AppUser, idempotencyKey: UUID): LocalStarterCourseResult {
-        if (environment != "local" || !enabled) {
-            throw NotFoundProblem("Local starter-course installation is not enabled.")
+    fun install(
+        user: AppUser,
+        idempotencyKey: UUID,
+        productionInternalTesterAuthorized: Boolean = false,
+    ): LocalStarterCourseResult {
+        val localAllowed = environment == "local" && enabled
+        val productionAllowed =
+            environment == "production" && productionInternalTesterAuthorized
+        if (!localAllowed && !productionAllowed) {
+            throw NotFoundProblem("Starter-course installation is not enabled.")
         }
         val lookup = idempotencyService.lockAndFind(
             user.id,
