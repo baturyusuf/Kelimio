@@ -29,7 +29,7 @@ alter table app_user
 
 create unique index uq_app_user_username_lower
     on app_user(lower(username))
-    where username is not null;
+    where username is not null and public_profile_enabled;
 
 create table public_profile_event (
     id uuid primary key,

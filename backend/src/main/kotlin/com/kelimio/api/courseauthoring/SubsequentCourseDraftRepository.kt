@@ -246,10 +246,15 @@ internal class SubsequentCourseDraftRepository(
                     course_release_id, course_id, course_name, course_description,
                     visibility, created_at
                 )
-                select ?, course_id, course_name, course_description,
-                       visibility, cast(? as timestamptz)
-                  from course_release_metadata
-                 where course_release_id = ? and course_id = ?
+                select ?, course_row.id,
+                       coalesce(metadata.course_name, course_row.name),
+                       coalesce(metadata.course_description, course_row.description),
+                       coalesce(metadata.visibility, course_row.visibility),
+                       cast(? as timestamptz)
+                  from course course_row
+                  left join course_release_metadata metadata
+                    on metadata.course_release_id = ? and metadata.course_id = course_row.id
+                 where course_row.id = ?
                 """.trimIndent(),
                 command.draftReleaseId,
                 command.occurredAt,

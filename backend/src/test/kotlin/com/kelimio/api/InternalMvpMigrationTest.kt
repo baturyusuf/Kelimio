@@ -49,14 +49,13 @@ class InternalMvpMigrationTest {
                     default_support_language, visibility, publication_status,
                     access_type, created_at, updated_at, active_release_id
                 ) values (?, ?, 'Existing Course', 'Existing Description', 'tr', 'en',
-                          'PRIVATE', 'PUBLISHED', 'FREE', ?, ?, ?)
+                          'PRIVATE', 'DRAFT', 'FREE', ?, ?, null)
                 """.trimIndent(),
             ).use { statement ->
                 statement.setObject(1, courseId)
                 statement.setObject(2, userId)
                 statement.setObject(3, now)
                 statement.setObject(4, now)
-                statement.setObject(5, releaseId)
                 statement.executeUpdate()
             }
             connection.prepareStatement(
@@ -66,11 +65,25 @@ class InternalMvpMigrationTest {
                 statement.executeUpdate()
             }
             connection.prepareStatement(
-                "insert into course_release(id, course_id, revision_number, status, created_at) values (?, ?, 1, 'ACTIVE', ?)",
+                "insert into course_release(id, course_id, revision_number, status, created_at) values (?, ?, 1, 'DRAFT', ?)",
             ).use { statement ->
                 statement.setObject(1, releaseId)
                 statement.setObject(2, courseId)
                 statement.setObject(3, now)
+                statement.executeUpdate()
+            }
+            connection.prepareStatement(
+                "update course_release set status = 'ACTIVE' where id = ?",
+            ).use { statement ->
+                statement.setObject(1, releaseId)
+                statement.executeUpdate()
+            }
+            connection.prepareStatement(
+                "update course set publication_status = 'PUBLISHED', active_release_id = ?, updated_at = ? where id = ?",
+            ).use { statement ->
+                statement.setObject(1, releaseId)
+                statement.setObject(2, now)
+                statement.setObject(3, courseId)
                 statement.executeUpdate()
             }
             connection.commit()
