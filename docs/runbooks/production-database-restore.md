@@ -14,9 +14,11 @@ restores over the source database.
   production database security group, and encryption enabled.
 - Do not read or copy secret values. ECS injects database credentials from
   Secrets Manager into short-lived migration and API tasks.
-- Leave the production API service at desired count zero. Validation uses
-  standalone tasks with course-release, projection-processing, and import
-  processing disabled so no business facts are created.
+- Do not change the production API service's desired count during a rehearsal.
+  Validation uses standalone tasks with course-release, projection-processing,
+  and import processing disabled so no business facts are created. An incident
+  traffic cutover or service suspension requires the incident commander's
+  explicit approval.
 - Use the latest restorable time for a normal rehearsal. An incident commander
   must approve a historical timestamp and the resulting data-loss window.
 - Never delete the source database. Cleanup may delete only the exact temporary

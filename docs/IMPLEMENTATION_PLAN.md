@@ -43,12 +43,13 @@ Exit gate:
 
 ## Phase 1 — Real auth-to-answer vertical slice
 
-Status: in progress; the local code path and inactive ADR-018 production
-foundation exist, but the production pre-traffic exit gate is not met.
+Status: in progress; the local code path and an active, guarded ADR-018
+internal-test runtime exist, but the production auth-to-answer exit gate is not
+met.
 
 Implemented so far: JWT/OIDC resource-server validation, mobile Authorization Code + PKCE, a server-enforced provisional-user gate, profile/language/time-zone setup, catalog/detail/enrollment, and authoritative Type-A/B/C/D attempts. Type D exposes independently ordered sides, accepts one complete bijection, and grades all-or-nothing under the attempt's pinned support language. Its durable fact retains no submitted mapping or correct-pair count; replay uses a random salt and versioned externally keyed HMAC with constant-time comparison. Authored answer relationships remain in immutable content and the staging/production keyring remains external to PostgreSQL and source.
 
-Persistent idempotency, authoritative scoring/energy/outbox, privacy-safe recovery, owner-scoped lost-response reconciliation, rebuildable release-aware progress, stored capability gates, and real-PostgreSQL evidence are present. The local starter release contains five Type-A, one Type-B, the reviewed-workbook Type-C row, and one four-pair Type-D question without seeding users or learning results. The backend passes 41 suites and 193/193 tests; generated contract checks pass for the current OpenAPI consumers; and Flutter analysis plus 134/134 tests pass, including accessible Type-D, resumable teacher, secure editor recovery, ETag conflict/reapply, and localized cost-mode coverage. Cognito email/password, linking functions, access-token validation, and initial Secrets Manager replay-key injection are applied in the inactive production foundation; the Google provider and production email sender remain deliberately unconfigured. The isolated Android journey passes learning, reviewed-workbook initial publication, secure editor recovery, a real stale-ETag conflict, explicit reapply, and revision-3 publication against Flyway V13. Production pre-traffic acceptance, provider lifecycle configuration, general profile editing, legal consent, physical-device evidence, production telemetry, production authoring, replay-key rotation, and native Custom Tab/deep-link acceptance remain open.
+Persistent idempotency, authoritative scoring/energy/outbox, privacy-safe recovery, owner-scoped lost-response reconciliation, rebuildable release-aware progress, stored capability gates, and real-PostgreSQL evidence are present. The bounded internal-test starter release contains Type-A/B/C/D coverage without seeding users or learning results. The backend, generated contract checks, Flutter analysis/tests, web gates, filesystem scan, and container scan passed before merge. Cognito email/password, linking functions, access-token validation, and Secrets Manager replay-key injection are applied in the active production runtime; the Google provider and approved production email sender remain deliberately unconfigured. The guarded 2026-08-10 deployment applied Flyway V14, promoted one immutable API task, passed database-aware readiness, exposed valid OIDC discovery, and accepted the registered Android PKCE redirect. The isolated Android journey passes learning, reviewed-workbook initial publication, secure editor recovery, a real stale-ETag conflict, explicit reapply, and revision-3 publication. The full native production sign-in/course/answer canary, provider lifecycle configuration, general profile editing, legal consent, supported physical-device evidence, production telemetry, production authoring, replay-key rotation, and Custom Tab/deep-link acceptance remain open.
 
 Deliverables:
 
@@ -136,14 +137,16 @@ Official store sandboxes prove purchase, duplicate delivery, restore, refund/rev
 Status: in progress. ADR-018 records the production-only account, region, cost
 and availability trade-offs. The account-guarded no-NAT Terraform root and
 protected state/OIDC bootstrap are applied in account `923300948109`. The
-inactive foundation includes Cognito email/password brokering and linking
+guarded internal-test runtime includes Cognito email/password brokering and linking
 functions, a private-ingress ARM64 Fargate task definition, Single-AZ RDS
 PostgreSQL, generated write-only secrets, separate migration/runtime database
 roles, API Gateway HTTPS, alarms, and monotonic budget/Lambda/SSM brakes. The
-immutable image passed scan/SBOM gates, the one-shot Flyway V13 migration exited
-successfully, a live cost-governor canary passed, ECS remains at desired count
-zero, the operations notification subscription is confirmed, and the
-post-deployment plan reports no drift. Google/SES, provider/pre-traffic canaries,
+immutable image passed scan/SBOM gates, the one-shot Flyway V14 migration exited
+successfully, a live cost-governor canary passed, and the guarded 2026-08-10
+activation promoted one ECS API task. Database-aware readiness, OIDC discovery,
+and the registered Android redirect passed; the digest-pinned post-deployment
+plan reports no drift. The operations notification subscription is confirmed.
+Google/SES, the full native auth-to-answer canary,
 independent GitHub approval, isolated backup custody/ledger export, custom
 DNS/WAF, and the production import worker remain open. The same-account PITR
 exercise now proves a 5m06s RPO lag and 1h05m42s end-to-end application RTO;
