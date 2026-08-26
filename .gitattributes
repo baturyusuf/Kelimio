@@ -2,3 +2,4 @@
 * text=auto
 *.xlsx binary
 *.sh text eol=lf
+*.dart text eol=lf
