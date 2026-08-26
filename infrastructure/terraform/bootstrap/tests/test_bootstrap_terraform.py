@@ -26,6 +26,18 @@ class BootstrapTerraformTest(unittest.TestCase):
             with self.subTest(action=action):
                 self.assertIn(f'"{action}"', policy)
 
+    def test_production_deploy_can_manage_import_worker_autoscaling(self):
+        for action in (
+            "application-autoscaling:RegisterScalableTarget",
+            "application-autoscaling:PutScalingPolicy",
+            "application-autoscaling:DeregisterScalableTarget",
+            "application-autoscaling:DeleteScalingPolicy",
+        ):
+            with self.subTest(action=action):
+                self.assertIn(f'"{action}"', self.main)
+
+        self.assertIn('"ecs.application-autoscaling.amazonaws.com"', self.main)
+
 
 if __name__ == "__main__":
     unittest.main()

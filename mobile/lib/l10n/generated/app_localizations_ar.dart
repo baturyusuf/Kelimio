@@ -396,6 +396,25 @@ class AppLocalizationsAr extends AppLocalizations {
   String get teacher => 'المعلّم';
 
   @override
+  String get teacherAccessTitle => 'صلاحية إنشاء الدورات';
+
+  @override
+  String get teacherFeatureUnavailable =>
+      'إنشاء الدورات الآمن غير مفعّل لهذا الإصدار حالياً.';
+
+  @override
+  String get teacherAccountNotEligible =>
+      'هذا الحساب غير مخوّل بإنشاء الدورات. تُدار الصلاحية من الخادم.';
+
+  @override
+  String get teacherTermsBody =>
+      'يجب أن يحتوي ملف Excel على محتوى تملكه أو يحق لك استخدامه فقط. يُفحص الملف أمنياً وتُعرض معاينته قبل نشر الدورة.';
+
+  @override
+  String get teacherTermsAcceptance =>
+      'قرأت هذه الشروط وأؤكد أنني أملك حقوق المحتوى الذي أرفعه.';
+
+  @override
   String get teacherImportTitle => 'إنشاء دورة من Excel';
 
   @override

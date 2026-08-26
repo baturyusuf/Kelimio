@@ -13,7 +13,6 @@ import java.util.UUID
 
 @Repository
 @ConditionalOnProperty(name = ["KELIMIO_IMPORT_ENABLED"], havingValue = "true")
-@ConditionalOnProperty(name = ["KELIMIO_RUNTIME_ROLE"], havingValue = "worker")
 class CourseImportWorkerRepository(
     private val dsl: DSLContext,
     private val imports: CourseImportRepository,

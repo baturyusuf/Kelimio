@@ -782,6 +782,36 @@ abstract class AppLocalizations {
   /// **'Teacher'**
   String get teacher;
 
+  /// No description provided for @teacherAccessTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Course authoring access'**
+  String get teacherAccessTitle;
+
+  /// No description provided for @teacherFeatureUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Secure course authoring is not enabled for this build.'**
+  String get teacherFeatureUnavailable;
+
+  /// No description provided for @teacherAccountNotEligible.
+  ///
+  /// In en, this message translates to:
+  /// **'This account is not authorized to create courses. Access is managed by the server.'**
+  String get teacherAccountNotEligible;
+
+  /// No description provided for @teacherTermsBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your Excel file must contain only content you own or have the right to use. The file is security-scanned and previewed before the course is published.'**
+  String get teacherTermsBody;
+
+  /// No description provided for @teacherTermsAcceptance.
+  ///
+  /// In en, this message translates to:
+  /// **'I have read these terms and confirm that I have the rights to the content I upload.'**
+  String get teacherTermsAcceptance;
+
   /// No description provided for @teacherImportTitle.
   ///
   /// In en, this message translates to:

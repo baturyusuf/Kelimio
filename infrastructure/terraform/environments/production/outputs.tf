@@ -14,10 +14,15 @@ output "foundation" {
   value = {
     kms_key_arn         = module.foundation.kms_key_arn
     bucket_names        = module.foundation.bucket_names
+    bucket_arns         = module.foundation.bucket_arns
     worker_queue_url    = module.foundation.worker_queue_url
     worker_dlq_url      = module.foundation.worker_dlq_url
     import_queue_url    = module.foundation.import_queue_url
     import_dlq_url      = module.foundation.import_dlq_url
+    import_queue_arn    = module.foundation.import_queue_arn
+    import_queue_name   = module.foundation.import_queue_name
+    import_dlq_arn      = module.foundation.import_dlq_arn
+    import_dlq_name     = module.foundation.import_dlq_name
     ecr_repository_urls = module.foundation.ecr_repository_urls
     ecr_repository_arns = module.foundation.ecr_repository_arns
   }
@@ -46,16 +51,19 @@ output "cost_controls" {
 
 output "runtime" {
   value = {
-    api_endpoint                  = module.runtime.api_endpoint
-    api_id                        = module.runtime.api_id
-    ecs_cluster_name              = module.runtime.ecs_cluster_name
-    api_service_name              = module.runtime.api_service_name
-    api_task_definition_arn       = module.runtime.api_task_definition_arn
-    migration_task_definition_arn = module.runtime.migration_task_definition_arn
-    migration_subnet_id           = module.runtime.migration_subnet_id
-    task_security_group_id        = module.runtime.task_security_group_id
-    database_identifier           = module.runtime.database_identifier
-    database_runtime_secret_arn   = module.runtime.database_runtime_secret_arn
-    matching_replay_secret_arn    = module.runtime.matching_replay_secret_arn
+    api_endpoint                      = module.runtime.api_endpoint
+    api_id                            = module.runtime.api_id
+    ecs_cluster_name                  = module.runtime.ecs_cluster_name
+    api_service_name                  = module.runtime.api_service_name
+    api_task_definition_arn           = module.runtime.api_task_definition_arn
+    migration_task_definition_arn     = module.runtime.migration_task_definition_arn
+    migration_subnet_id               = module.runtime.migration_subnet_id
+    task_security_group_id            = module.runtime.task_security_group_id
+    database_identifier               = module.runtime.database_identifier
+    database_runtime_secret_arn       = module.runtime.database_runtime_secret_arn
+    matching_replay_secret_arn        = module.runtime.matching_replay_secret_arn
+    import_worker_service_name        = module.runtime.import_worker_service_name
+    import_worker_task_definition_arn = module.runtime.import_worker_task_definition_arn
+    database_worker_secret_arn        = module.runtime.database_worker_secret_arn
   }
 }

@@ -42,6 +42,8 @@ tags:
     description: Owner-scoped XLSX intake, isolated validation preview, and provenance-bound approval.
   - name: Course Release
     description: Owner-scoped impact review, publication, and rollback of immutable course releases.
+  - name: Teacher
+    description: Production teacher eligibility and versioned authoring-terms acceptance.
   - name: Development
     description: Explicit local/test utilities that are unavailable outside enabled non-production environments.
 security:
@@ -727,7 +729,9 @@ paths:
       description: >-
         Atomically activates the reviewed release, appends the activation and
         outbox facts, and creates a cutoff-bound progress reprojection job.
-        This endpoint is fail-closed outside explicitly enabled local/test environments.
+        In production this endpoint additionally requires the server-side teacher
+        feature gate, Cognito teacher-group eligibility, and current versioned
+        authoring-terms acceptance.
       parameters:
         - $ref: "#/components/parameters/CourseId"
         - $ref: "#/components/parameters/ReleaseId"
@@ -764,6 +768,67 @@ paths:
         "404":
           $ref: "#/components/responses/Problem"
         "409":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/teacher/access:
+    get:
+      operationId: getTeacherAccess
+      tags: [Teacher]
+      summary: Return the authenticated user's production teacher access state
+      description: >-
+        Reports server-authoritative feature enablement, Cognito group eligibility,
+        and current versioned terms acceptance. A client flag never grants access.
+      responses:
+        "200":
+          description: Current teacher access state
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeacherAccessResponse"
+        "401":
+          $ref: "#/components/responses/Problem"
+        "409":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/teacher/access/terms-acceptance:
+    post:
+      operationId: acceptTeacherTerms
+      tags: [Teacher]
+      summary: Accept the exact current version of the production authoring terms
+      description: >-
+        Appends one auditable owner-scoped acceptance fact. The account must be
+        eligible through the managed identity group and production teacher
+        features must already be enabled.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AcceptTeacherTermsRequest"
+      responses:
+        "200":
+          description: Updated teacher access state
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeacherAccessResponse"
+        "400":
+          $ref: "#/components/responses/Problem"
+        "401":
+          $ref: "#/components/responses/Problem"
+        "403":
+          $ref: "#/components/responses/Problem"
+        "409":
+          $ref: "#/components/responses/Problem"
+        "422":
           $ref: "#/components/responses/Problem"
         default:
           $ref: "#/components/responses/Problem"
@@ -1109,6 +1174,37 @@ components:
             REQUIRED pairs with profileVersion 0 and no support language;
             COMPLETE pairs with profileVersion at least 1 and a support language.
           enum: [REQUIRED, COMPLETE]
+    TeacherAccessResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - eligible
+        - termsAccepted
+        - productionFeaturesEnabled
+        - requiredTermsVersion
+      properties:
+        eligible:
+          type: boolean
+          description: Server-authoritative managed-identity teacher eligibility.
+        termsAccepted:
+          type: boolean
+          description: Whether the current required authoring-terms version was accepted.
+        productionFeaturesEnabled:
+          type: boolean
+          description: Server-side production feature gate; never granted by the client.
+        requiredTermsVersion:
+          type: string
+          minLength: 1
+          maxLength: 64
+    AcceptTeacherTermsRequest:
+      type: object
+      additionalProperties: false
+      required: [termsVersion]
+      properties:
+        termsVersion:
+          type: string
+          minLength: 1
+          maxLength: 64
     ProfileSetupRequest:
       type: object
       additionalProperties: false

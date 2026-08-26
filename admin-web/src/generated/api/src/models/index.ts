@@ -1,5 +1,6 @@
 /* tslint:disable */
 /* eslint-disable */
+export * from './AcceptTeacherTermsRequest';
 export * from './ActivateCourseReleaseRequest';
 export * from './AnswerOption';
 export * from './AnswerRecordedResponse';
@@ -52,4 +53,5 @@ export * from './ProfileSetupRequest';
 export * from './QuestionPayload';
 export * from './SubmitAnswerRequest';
 export * from './SubsequentCourseDraftResult';
+export * from './TeacherAccessResponse';
 export * from './TestSummary';

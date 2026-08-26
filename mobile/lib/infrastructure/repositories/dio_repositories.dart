@@ -7,6 +7,7 @@ import '../../domain/energy/energy.dart';
 import '../../domain/failures.dart';
 import '../../domain/learning/learning.dart';
 import '../../domain/profile/profile.dart';
+import '../../domain/teacher/teacher_access.dart';
 import '../network/failure_mapper.dart';
 import '../network/request_metadata.dart';
 import 'api_decoders.dart';
@@ -406,6 +407,57 @@ final class GeneratedEnergyRepository implements EnergyRepository {
         throw const ProtocolFailure('Energy response body was empty');
       }
       return mapEnergy(data);
+    } on DioException catch (error) {
+      throw _failures.map(error);
+    } on AppFailure {
+      rethrow;
+    } on Object catch (error) {
+      throw UnknownFailure(cause: error);
+    }
+  }
+}
+
+final class GeneratedTeacherAccessRepository
+    implements TeacherAccessRepository {
+  const GeneratedTeacherAccessRepository(this._api, this._failures);
+
+  final api.TeacherApi _api;
+  final DioFailureMapper _failures;
+
+  @override
+  Future<TeacherAccess> getAccess() => _guard(() async {
+    final response = await _api.getTeacherAccess();
+    final data = response.data;
+    if (data == null) {
+      throw const ProtocolFailure('Teacher-access response body was empty');
+    }
+    return _map(data);
+  });
+
+  @override
+  Future<TeacherAccess> acceptTerms(String termsVersion) => _guard(() async {
+    final response = await _api.acceptTeacherTerms(
+      acceptTeacherTermsRequest: api.AcceptTeacherTermsRequest(
+        termsVersion: termsVersion,
+      ),
+    );
+    final data = response.data;
+    if (data == null) {
+      throw const ProtocolFailure('Teacher-access response body was empty');
+    }
+    return _map(data);
+  });
+
+  TeacherAccess _map(api.TeacherAccessResponse value) => TeacherAccess(
+    eligible: value.eligible,
+    termsAccepted: value.termsAccepted,
+    productionFeaturesEnabled: value.productionFeaturesEnabled,
+    requiredTermsVersion: value.requiredTermsVersion,
+  );
+
+  Future<T> _guard<T>(Future<T> Function() request) async {
+    try {
+      return await request();
     } on DioException catch (error) {
       throw _failures.map(error);
     } on AppFailure {

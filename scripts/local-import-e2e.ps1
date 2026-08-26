@@ -450,8 +450,10 @@ function Start-Import {
         $signedPart.requiredHeaders.sha256 -ne $hash.Base64) {
         throw "The upload session did not bind the declared part."
     }
-    $signedExpiry = [DateTimeOffset]::Parse($create.Body.upload.expiresAt)
-    $sessionExpiry = [DateTimeOffset]::Parse($create.Body.import.uploadExpiresAt)
+    # PowerShell 7 may materialize ISO JSON timestamps as DateTime values;
+    # casting avoids culture-dependent string round-trips on Turkish hosts.
+    $signedExpiry = [DateTimeOffset] $create.Body.upload.expiresAt
+    $sessionExpiry = [DateTimeOffset] $create.Body.import.uploadExpiresAt
     $expiryCheckTime = [DateTimeOffset]::UtcNow
     if ($signedExpiry -gt $sessionExpiry -or $signedExpiry -le $expiryCheckTime) {
         throw "The signed upload expiry is inconsistent (signed=$($signedExpiry.ToString('O')), session=$($sessionExpiry.ToString('O')), checked=$($expiryCheckTime.ToString('O')))."
@@ -499,7 +501,7 @@ function Invoke-DatabaseScalar {
 function Assert-LocalInfrastructure {
     $flyway = Invoke-DatabaseScalar `
         "select version from flyway_schema_history where success and version is not null order by installed_rank desc limit 1"
-    if ($flyway -ne "13") { throw "The isolated database did not reach Flyway V13." }
+    if ($flyway -ne "14") { throw "The isolated database did not reach Flyway V14." }
     foreach ($bucket in @("kelimio-local-import-quarantine", "kelimio-local-import-archive")) {
         $status = Invoke-DockerCapture (Get-ComposeArguments @(
             "exec", "-T", "localstack", "awslocal", "s3api", "get-bucket-versioning",

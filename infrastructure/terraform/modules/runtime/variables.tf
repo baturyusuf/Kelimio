@@ -64,6 +64,44 @@ variable "api_log_group_arn" {
   type = string
 }
 
+variable "worker_ecr_repository_url" { type = string }
+variable "worker_ecr_repository_arn" { type = string }
+variable "scanner_ecr_repository_url" { type = string }
+variable "scanner_ecr_repository_arn" { type = string }
+variable "worker_log_group_name" { type = string }
+variable "worker_log_group_arn" { type = string }
+variable "scanner_log_group_name" { type = string }
+variable "scanner_log_group_arn" { type = string }
+variable "import_quarantine_bucket_name" { type = string }
+variable "import_quarantine_bucket_arn" { type = string }
+variable "import_archive_bucket_name" { type = string }
+variable "import_archive_bucket_arn" { type = string }
+variable "import_queue_name" { type = string }
+variable "import_queue_arn" { type = string }
+variable "import_dlq_name" { type = string }
+variable "import_dlq_arn" { type = string }
+
+variable "worker_image_digest" {
+  type = string
+  validation {
+    condition     = can(regex("^sha256:[0-9a-f]{64}$", var.worker_image_digest))
+    error_message = "worker_image_digest must be an immutable sha256 image digest."
+  }
+}
+
+variable "scanner_image_digest" {
+  type = string
+  validation {
+    condition     = can(regex("^sha256:[0-9a-f]{64}$", var.scanner_image_digest))
+    error_message = "scanner_image_digest must be an immutable sha256 image digest."
+  }
+}
+
+variable "production_teacher_features_enabled" {
+  type    = bool
+  default = false
+}
+
 variable "api_image_digest" {
   description = "Immutable multi-architecture ECR image digest, including the sha256: prefix."
   type        = string
@@ -117,6 +155,16 @@ variable "database_secret_version" {
   description = "Increment deliberately to rotate the write-only runtime database password."
   type        = number
   default     = 1
+}
+
+variable "worker_database_secret_version" {
+  type    = number
+  default = 1
+}
+
+variable "import_cursor_secret_version" {
+  type    = number
+  default = 1
 }
 
 variable "matching_secret_version" {

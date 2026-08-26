@@ -8,10 +8,15 @@ import org.springframework.stereotype.Component
 @ConditionalOnProperty(name = ["KELIMIO_COURSE_RELEASE_ENABLED"], havingValue = "true")
 class CourseReleaseConfigurationVerifier(
     @Value("\${KELIMIO_ENVIRONMENT}") environment: String,
+    @Value("\${KELIMIO_PRODUCTION_TEACHER_FEATURES_ENABLED:false}") productionEnabled: Boolean,
 ) {
     init {
-        require(environment.trim().lowercase() in setOf("local", "test")) {
-            "Course release activation requires author eligibility, consent, and staging controls outside local/test."
+        val normalizedEnvironment = environment.trim().lowercase()
+        require(normalizedEnvironment in setOf("local", "test", "production")) {
+            "KELIMIO_ENVIRONMENT must be local, test, or production."
+        }
+        require(normalizedEnvironment != "production" || productionEnabled) {
+            "Production course release activation requires KELIMIO_PRODUCTION_TEACHER_FEATURES_ENABLED=true."
         }
     }
 }

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../application/course_authoring_controller.dart';
 import '../../application/course_editor_controller.dart';
+import '../../application/providers.dart';
 import '../../domain/course_authoring/course_authoring.dart';
 import '../../domain/failures.dart';
 import '../widgets/localization.dart';
@@ -18,6 +19,9 @@ final class TeacherImportScreen extends ConsumerWidget {
     final controller = ref.read(courseAuthoringControllerProvider.notifier);
     final editorState = ref.watch(courseEditorControllerProvider);
     final editor = ref.read(courseEditorControllerProvider.notifier);
+    final localEditorEnabled = ref
+        .watch(appConfigProvider)
+        .localDevelopmentToolsEnabled;
     final publishedCourseId =
         state.activation?.courseId ??
         state.commit?.courseId ??
@@ -212,7 +216,8 @@ final class TeacherImportScreen extends ConsumerWidget {
                 message: context.l10n.coursePublished,
               ),
               const SizedBox(height: 12),
-              if (publishedCourseId != null &&
+              if (localEditorEnabled &&
+                  publishedCourseId != null &&
                   editorState.document == null) ...[
                 FilledButton.tonalIcon(
                   key: const Key('teacher-open-course-editor'),
@@ -233,12 +238,13 @@ final class TeacherImportScreen extends ConsumerWidget {
                 label: Text(context.l10n.newImport),
               ),
             ],
-            if (editorState.activity == CourseEditorActivity.loading &&
+            if (localEditorEnabled &&
+                editorState.activity == CourseEditorActivity.loading &&
                 editorState.document == null) ...[
               const SizedBox(height: 12),
               const LinearProgressIndicator(),
             ],
-            if (editorState.document != null) ...[
+            if (localEditorEnabled && editorState.document != null) ...[
               const SizedBox(height: 12),
               _CourseEditorPanel(state: editorState, controller: editor),
             ],

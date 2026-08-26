@@ -17,7 +17,7 @@ void main() {
     );
   });
 
-  test('internal testing exposes only the starter-course installer gate', () {
+  test('internal testing exposes the controlled starter and authoring gates', () {
     final config = AppConfig(
       apiBaseUri: Uri.parse('https://api.example.test'),
       oidcIssuer: Uri.parse('https://identity.example.test'),
@@ -31,6 +31,7 @@ void main() {
     expect(config.internalTestingEnabled, isTrue);
     expect(config.localDevelopmentToolsEnabled, isFalse);
     expect(config.starterCourseInstallerEnabled, isTrue);
+    expect(config.courseAuthoringEnabled, isTrue);
   });
 
   test('normal production configuration keeps the installer closed', () {
@@ -44,5 +45,6 @@ void main() {
     );
 
     expect(config.starterCourseInstallerEnabled, isFalse);
+    expect(config.courseAuthoringEnabled, isFalse);
   });
 }

@@ -3,6 +3,7 @@
 README.md
 analysis_options.yaml
 build.yaml
+doc/AcceptTeacherTermsRequest.md
 doc/ActivateCourseReleaseRequest.md
 doc/AnswerOption.md
 doc/AnswerRecordedResponse.md
@@ -63,6 +64,8 @@ doc/ProfileSetupRequest.md
 doc/QuestionPayload.md
 doc/SubmitAnswerRequest.md
 doc/SubsequentCourseDraftResult.md
+doc/TeacherAccessResponse.md
+doc/TeacherApi.md
 doc/TestSummary.md
 lib/kelimio_api_client.dart
 lib/src/api.dart
@@ -74,12 +77,14 @@ lib/src/api/energy_api.dart
 lib/src/api/enrollment_api.dart
 lib/src/api/learning_api.dart
 lib/src/api/profile_api.dart
+lib/src/api/teacher_api.dart
 lib/src/auth/api_key_auth.dart
 lib/src/auth/auth.dart
 lib/src/auth/basic_auth.dart
 lib/src/auth/bearer_auth.dart
 lib/src/auth/oauth.dart
 lib/src/deserialize.dart
+lib/src/model/accept_teacher_terms_request.dart
 lib/src/model/activate_course_release_request.dart
 lib/src/model/answer_option.dart
 lib/src/model/answer_recorded_response.dart
@@ -132,8 +137,10 @@ lib/src/model/profile_setup_request.dart
 lib/src/model/question_payload.dart
 lib/src/model/submit_answer_request.dart
 lib/src/model/subsequent_course_draft_result.dart
+lib/src/model/teacher_access_response.dart
 lib/src/model/test_summary.dart
 pubspec.yaml
+test/accept_teacher_terms_request_test.dart
 test/activate_course_release_request_test.dart
 test/answer_option_test.dart
 test/answer_recorded_response_test.dart
@@ -194,4 +201,6 @@ test/profile_setup_request_test.dart
 test/question_payload_test.dart
 test/submit_answer_request_test.dart
 test/subsequent_course_draft_result_test.dart
+test/teacher_access_response_test.dart
+test/teacher_api_test.dart
 test/test_summary_test.dart

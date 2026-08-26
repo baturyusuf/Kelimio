@@ -15,6 +15,7 @@ import 'package:kelimio_api_client/src/api/energy_api.dart';
 import 'package:kelimio_api_client/src/api/enrollment_api.dart';
 import 'package:kelimio_api_client/src/api/learning_api.dart';
 import 'package:kelimio_api_client/src/api/profile_api.dart';
+import 'package:kelimio_api_client/src/api/teacher_api.dart';
 
 class KelimioApiClient {
   static const String basePath = r'http://localhost';
@@ -131,5 +132,11 @@ class KelimioApiClient {
   /// by doing that all interceptors will not be executed
   ProfileApi getProfileApi() {
     return ProfileApi(dio);
+  }
+
+  /// Get TeacherApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  TeacherApi getTeacherApi() {
+    return TeacherApi(dio);
   }
 }

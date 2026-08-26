@@ -13,8 +13,8 @@ locals {
     "offline-packages",
     "exports"
   ])
-  repositories = toset(["api", "worker", "web"])
-  log_groups   = toset(["api", "worker", "web"])
+  repositories = toset(["api", "worker", "scanner", "web"])
+  log_groups   = toset(["api", "worker", "scanner", "web"])
 }
 
 data "aws_iam_policy_document" "application_kms" {

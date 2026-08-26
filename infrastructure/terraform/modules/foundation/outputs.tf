@@ -6,6 +6,10 @@ output "bucket_names" {
   value = { for name, bucket in aws_s3_bucket.private : name => bucket.id }
 }
 
+output "bucket_arns" {
+  value = { for name, bucket in aws_s3_bucket.private : name => bucket.arn }
+}
+
 output "worker_queue_url" {
   value = aws_sqs_queue.worker.id
 }
@@ -20,6 +24,22 @@ output "import_queue_url" {
 
 output "import_dlq_url" {
   value = aws_sqs_queue.import_dlq.id
+}
+
+output "import_queue_arn" {
+  value = aws_sqs_queue.import.arn
+}
+
+output "import_queue_name" {
+  value = aws_sqs_queue.import.name
+}
+
+output "import_dlq_arn" {
+  value = aws_sqs_queue.import_dlq.arn
+}
+
+output "import_dlq_name" {
+  value = aws_sqs_queue.import_dlq.name
 }
 
 output "ecr_repository_urls" {

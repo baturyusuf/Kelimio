@@ -12,7 +12,7 @@ import '../screens/energy_screen.dart';
 import '../screens/profile_setup_screen.dart';
 import '../screens/sign_in_screen.dart';
 import '../screens/splash_screen.dart';
-import '../screens/teacher_import_screen.dart';
+import '../screens/teacher_gate_screen.dart';
 import '../widgets/localization.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
@@ -21,9 +21,9 @@ final _energyNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'energy');
 final _teacherNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'teacher');
 
 final appRouterProvider = Provider<GoRouter>((ref) {
-  final localToolsEnabled = ref
+  final courseAuthoringEnabled = ref
       .watch(appConfigProvider)
-      .localDevelopmentToolsEnabled;
+      .courseAuthoringEnabled;
   final refresh = ValueNotifier<int>(0);
   ref.listen(authControllerProvider, (previous, next) {
     refresh.value += 1;
@@ -113,13 +113,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               ),
             ],
           ),
-          if (localToolsEnabled)
+          if (courseAuthoringEnabled)
             StatefulShellBranch(
               navigatorKey: _teacherNavigatorKey,
               routes: [
                 GoRoute(
                   path: '/teacher',
-                  builder: (context, state) => const TeacherImportScreen(),
+                  builder: (context, state) => const TeacherGateScreen(),
                 ),
               ],
             ),
@@ -142,9 +142,9 @@ final class AppShell extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final localToolsEnabled = ref
+    final courseAuthoringEnabled = ref
         .watch(appConfigProvider)
-        .localDevelopmentToolsEnabled;
+        .courseAuthoringEnabled;
     return Scaffold(
       body: navigationShell,
       bottomNavigationBar: NavigationBar(
@@ -166,7 +166,7 @@ final class AppShell extends ConsumerWidget {
             selectedIcon: const Icon(Icons.bolt),
             label: context.l10n.energy,
           ),
-          if (localToolsEnabled)
+          if (courseAuthoringEnabled)
             NavigationDestination(
               icon: const Icon(Icons.school_outlined),
               selectedIcon: const Icon(Icons.school),

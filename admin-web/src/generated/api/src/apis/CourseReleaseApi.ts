@@ -51,7 +51,7 @@ export interface GetCourseReleaseImpactRequest {
  */
 export interface CourseReleaseApiInterface {
     /**
-     * Atomically activates the reviewed release, appends the activation and outbox facts, and creates a cutoff-bound progress reprojection job. This endpoint is fail-closed outside explicitly enabled local/test environments.
+     * Atomically activates the reviewed release, appends the activation and outbox facts, and creates a cutoff-bound progress reprojection job. In production this endpoint additionally requires the server-side teacher feature gate, Cognito teacher-group eligibility, and current versioned authoring-terms acceptance.
      * @summary Publish or roll back to an exact reviewed immutable release
      * @param {string} courseId
      * @param {string} releaseId
@@ -64,7 +64,7 @@ export interface CourseReleaseApiInterface {
     activateCourseReleaseRaw(requestParameters: ActivateCourseReleaseOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<CourseReleaseActivationResponse>>;
 
     /**
-     * Atomically activates the reviewed release, appends the activation and outbox facts, and creates a cutoff-bound progress reprojection job. This endpoint is fail-closed outside explicitly enabled local/test environments.
+     * Atomically activates the reviewed release, appends the activation and outbox facts, and creates a cutoff-bound progress reprojection job. In production this endpoint additionally requires the server-side teacher feature gate, Cognito teacher-group eligibility, and current versioned authoring-terms acceptance.
      * Publish or roll back to an exact reviewed immutable release
      */
     activateCourseRelease(requestParameters: ActivateCourseReleaseOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<CourseReleaseActivationResponse>;
@@ -94,7 +94,7 @@ export interface CourseReleaseApiInterface {
 export class CourseReleaseApi extends runtime.BaseAPI implements CourseReleaseApiInterface {
 
     /**
-     * Atomically activates the reviewed release, appends the activation and outbox facts, and creates a cutoff-bound progress reprojection job. This endpoint is fail-closed outside explicitly enabled local/test environments.
+     * Atomically activates the reviewed release, appends the activation and outbox facts, and creates a cutoff-bound progress reprojection job. In production this endpoint additionally requires the server-side teacher feature gate, Cognito teacher-group eligibility, and current versioned authoring-terms acceptance.
      * Publish or roll back to an exact reviewed immutable release
      */
     async activateCourseReleaseRaw(requestParameters: ActivateCourseReleaseOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<CourseReleaseActivationResponse>> {
@@ -161,7 +161,7 @@ export class CourseReleaseApi extends runtime.BaseAPI implements CourseReleaseAp
     }
 
     /**
-     * Atomically activates the reviewed release, appends the activation and outbox facts, and creates a cutoff-bound progress reprojection job. This endpoint is fail-closed outside explicitly enabled local/test environments.
+     * Atomically activates the reviewed release, appends the activation and outbox facts, and creates a cutoff-bound progress reprojection job. In production this endpoint additionally requires the server-side teacher feature gate, Cognito teacher-group eligibility, and current versioned authoring-terms acceptance.
      * Publish or roll back to an exact reviewed immutable release
      */
     async activateCourseRelease(requestParameters: ActivateCourseReleaseOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<CourseReleaseActivationResponse> {

@@ -22,6 +22,9 @@ final class AppConfig {
   bool get starterCourseInstallerEnabled =>
       localDevelopmentToolsEnabled || internalTestingEnabled;
 
+  bool get courseAuthoringEnabled =>
+      localDevelopmentToolsEnabled || internalTestingEnabled;
+
   static AppConfigResult fromEnvironment() {
     const apiValue = String.fromEnvironment('KELIMIO_API_BASE_URL');
     const issuerValue = String.fromEnvironment('KELIMIO_OIDC_ISSUER');

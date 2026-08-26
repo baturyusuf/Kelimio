@@ -67,6 +67,30 @@ variable "api_image_digest" {
   }
 }
 
+variable "worker_image_digest" {
+  description = "Immutable X86_64 import-worker backend image digest."
+  type        = string
+  validation {
+    condition     = can(regex("^sha256:[0-9a-f]{64}$", var.worker_image_digest))
+    error_message = "worker_image_digest must be an immutable sha256 image digest."
+  }
+}
+
+variable "scanner_image_digest" {
+  description = "Immutable X86_64 ClamAV scanner image digest."
+  type        = string
+  validation {
+    condition     = can(regex("^sha256:[0-9a-f]{64}$", var.scanner_image_digest))
+    error_message = "scanner_image_digest must be an immutable sha256 image digest."
+  }
+}
+
+variable "production_teacher_features_enabled" {
+  description = "Server-side release gate for authenticated, authorized teacher import."
+  type        = bool
+  default     = false
+}
+
 variable "build_revision" {
   description = "Full Git commit SHA used to build the backend image."
   type        = string
@@ -89,6 +113,16 @@ variable "api_desired_count" {
 }
 
 variable "database_secret_version" {
+  type    = number
+  default = 1
+}
+
+variable "worker_database_secret_version" {
+  type    = number
+  default = 1
+}
+
+variable "import_cursor_secret_version" {
   type    = number
   default = 1
 }

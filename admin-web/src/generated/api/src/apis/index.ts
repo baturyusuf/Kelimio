@@ -8,3 +8,4 @@ export * from './EnergyApi';
 export * from './EnrollmentApi';
 export * from './LearningApi';
 export * from './ProfileApi';
+export * from './TeacherApi';

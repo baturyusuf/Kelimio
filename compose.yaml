@@ -169,7 +169,9 @@ services:
       - scanner-only
       - scanner-egress
     healthcheck:
-      test: ["CMD", "/bin/sh", "/usr/local/bin/kelimio-clamav-healthcheck.sh"]
+      # The pipe also protects Windows checkouts before Git's LF attribute is
+      # applied; production images normalize the same script at build time.
+      test: ["CMD-SHELL", "tr -d '\r' < /usr/local/bin/kelimio-clamav-healthcheck.sh | /bin/sh"]
       interval: 30s
       timeout: 10s
       retries: 20

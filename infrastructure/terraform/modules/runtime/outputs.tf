@@ -54,3 +54,19 @@ output "database_runtime_secret_arn" {
 output "matching_replay_secret_arn" {
   value = aws_secretsmanager_secret.matching_replay.arn
 }
+
+output "import_worker_service_name" {
+  value = aws_ecs_service.import_worker.name
+}
+
+output "import_worker_task_definition_arn" {
+  value = aws_ecs_task_definition.import_worker.arn
+}
+
+output "import_worker_security_group_id" {
+  value = aws_security_group.import_worker.id
+}
+
+output "database_worker_secret_arn" {
+  value = aws_secretsmanager_secret.database_worker.arn
+}

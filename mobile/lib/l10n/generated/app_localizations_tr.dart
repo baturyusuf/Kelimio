@@ -399,6 +399,25 @@ class AppLocalizationsTr extends AppLocalizations {
   String get teacher => 'Öğretmen';
 
   @override
+  String get teacherAccessTitle => 'Kurs oluşturma erişimi';
+
+  @override
+  String get teacherFeatureUnavailable =>
+      'Güvenli kurs oluşturma hizmeti şu anda bu sürüm için etkin değil.';
+
+  @override
+  String get teacherAccountNotEligible =>
+      'Bu hesap kurs oluşturma yetkisine sahip değil. Yetki sunucu tarafından yönetilir.';
+
+  @override
+  String get teacherTermsBody =>
+      'Excel dosyan yalnızca sana ait veya kullanma hakkına sahip olduğun içerikleri barındırmalıdır. Dosya güvenlik taramasından geçirilir ve kurs yayımlanmadan önce önizlemesi gösterilir.';
+
+  @override
+  String get teacherTermsAcceptance =>
+      'Bu koşulları okudum; yüklediğim içeriğin haklarına sahip olduğumu onaylıyorum.';
+
+  @override
   String get teacherImportTitle => 'Excel’den kurs oluştur';
 
   @override

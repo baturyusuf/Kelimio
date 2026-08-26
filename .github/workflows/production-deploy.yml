@@ -8,6 +8,11 @@ on:
         required: true
         type: boolean
         default: false
+      activate_teacher_import:
+        description: Enable authorized Excel course import and the scale-to-zero scanner worker
+        required: true
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -26,15 +31,20 @@ jobs:
     env:
       AWS_REGION: eu-central-1
       AWS_ACCOUNT_ID: "923300948109"
-      ECR_REPOSITORY: kelimio-production-api
+      API_ECR_REPOSITORY: kelimio-production-api
+      WORKER_ECR_REPOSITORY: kelimio-production-worker
+      SCANNER_ECR_REPOSITORY: kelimio-production-scanner
       TF_VAR_budget_notification_email: ${{ secrets.AWS_BUDGET_NOTIFICATION_EMAIL }}
       TF_VAR_import_archive_retention_days: ${{ vars.AWS_IMPORT_ARCHIVE_RETENTION_DAYS }}
       TF_VAR_build_revision: ${{ github.sha }}
       TF_VAR_google_identity_enabled: ${{ vars.GOOGLE_IDENTITY_ENABLED || 'false' }}
       TF_VAR_google_identity_configuration_version: ${{ vars.GOOGLE_IDENTITY_CONFIGURATION_VERSION || 'not-configured' }}
       TF_VAR_database_secret_version: ${{ vars.DATABASE_SECRET_VERSION || '1' }}
+      TF_VAR_worker_database_secret_version: ${{ vars.WORKER_DATABASE_SECRET_VERSION || '1' }}
+      TF_VAR_import_cursor_secret_version: ${{ vars.IMPORT_CURSOR_SECRET_VERSION || '1' }}
       TF_VAR_matching_secret_version: "1"
       TF_VAR_api_desired_count: "0"
+      TF_VAR_production_teacher_features_enabled: ${{ inputs.activate_teacher_import }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
@@ -58,6 +68,11 @@ jobs:
             echo "Production requires the PAID account plan; Free-plan RDS backup restrictions are not accepted" >&2
             exit 1
           fi
+      - name: Require API promotion when enabling teacher import
+        if: ${{ inputs.activate_teacher_import && !inputs.activate_api }}
+        run: |
+          echo "Teacher import requires promotion of the matching API task definition" >&2
+          exit 1
       - name: Initialize protected production state
         working-directory: infrastructure/terraform/environments/production
         run: >-
@@ -75,10 +90,22 @@ jobs:
             exit 0
           fi
           export TF_VAR_api_image_digest="sha256:0000000000000000000000000000000000000000000000000000000000000000"
+          export TF_VAR_worker_image_digest="sha256:0000000000000000000000000000000000000000000000000000000000000000"
+          export TF_VAR_scanner_image_digest="sha256:0000000000000000000000000000000000000000000000000000000000000000"
+          export TF_VAR_production_teacher_features_enabled="false"
           terraform apply -input=false -lock-timeout=5m -auto-approve
-      - name: Build and push immutable ARM64 API image
-        id: image
-        working-directory: backend
+      - name: Apply image repositories before publication
+        working-directory: infrastructure/terraform/environments/production
+        env:
+          TF_VAR_api_image_digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+          TF_VAR_worker_image_digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+          TF_VAR_scanner_image_digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+          TF_VAR_production_teacher_features_enabled: "false"
+        run: >-
+          terraform apply -input=false -lock-timeout=5m -auto-approve
+          -target=module.foundation
+      - name: Build and push immutable API, worker, and scanner images
+        id: images
         run: |
           aws ecr get-login-password --region "$AWS_REGION" |
             docker login --username AWS --password-stdin "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com"
@@ -87,35 +114,77 @@ jobs:
             --platform linux/arm64 \
             --provenance=false \
             --sbom=false \
-            --tag "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:${GITHUB_SHA}" \
+            --tag "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$API_ECR_REPOSITORY:${GITHUB_SHA}" \
+            --push \
+            backend
+          docker buildx build \
+            --platform linux/amd64 \
+            --provenance=false \
+            --sbom=false \
+            --tag "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$WORKER_ECR_REPOSITORY:${GITHUB_SHA}" \
+            --push \
+            backend
+          docker buildx build \
+            --platform linux/amd64 \
+            --provenance=false \
+            --sbom=false \
+            --file infrastructure/scanner/Dockerfile \
+            --tag "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$SCANNER_ECR_REPOSITORY:${GITHUB_SHA}" \
             --push \
             .
-          digest="$(aws ecr describe-images \
-            --repository-name "$ECR_REPOSITORY" \
-            --image-ids "imageTag=${GITHUB_SHA}" \
-            --query 'imageDetails[0].imageDigest' \
-            --output text)"
-          case "$digest" in
-            sha256:[0-9a-f][0-9a-f]*) ;;
-            *) echo "ECR did not return an immutable digest" >&2; exit 1 ;;
-          esac
-          echo "digest=$digest" >> "$GITHUB_OUTPUT"
-      - name: Gate the exact production image with Trivy
+          for component in api worker scanner; do
+            case "$component" in
+              api) repository="$API_ECR_REPOSITORY" ;;
+              worker) repository="$WORKER_ECR_REPOSITORY" ;;
+              scanner) repository="$SCANNER_ECR_REPOSITORY" ;;
+            esac
+            digest="$(aws ecr describe-images \
+              --repository-name "$repository" \
+              --image-ids "imageTag=${GITHUB_SHA}" \
+              --query 'imageDetails[0].imageDigest' \
+              --output text)"
+            case "$digest" in
+              sha256:[0-9a-f][0-9a-f]*) ;;
+              *) echo "ECR did not return an immutable $component digest" >&2; exit 1 ;;
+            esac
+            echo "${component}_digest=$digest" >> "$GITHUB_OUTPUT"
+          done
+      - name: Gate the exact API image with Trivy
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           version: v0.72.0
           scan-type: image
-          image-ref: ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }}@${{ steps.image.outputs.digest }}
+          image-ref: ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.API_ECR_REPOSITORY }}@${{ steps.images.outputs.api_digest }}
           format: table
           severity: CRITICAL,HIGH
           ignore-unfixed: false
           exit-code: "1"
-      - name: Generate the exact production image SBOM
+      - name: Gate the exact worker image with Trivy
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           version: v0.72.0
           scan-type: image
-          image-ref: ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }}@${{ steps.image.outputs.digest }}
+          image-ref: ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.WORKER_ECR_REPOSITORY }}@${{ steps.images.outputs.worker_digest }}
+          format: table
+          severity: CRITICAL,HIGH
+          ignore-unfixed: false
+          exit-code: "1"
+      - name: Gate the exact scanner image with Trivy
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          version: v0.72.0
+          scan-type: image
+          image-ref: ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.SCANNER_ECR_REPOSITORY }}@${{ steps.images.outputs.scanner_digest }}
+          format: table
+          severity: CRITICAL,HIGH
+          ignore-unfixed: false
+          exit-code: "1"
+      - name: Generate the exact API image SBOM
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          version: v0.72.0
+          scan-type: image
+          image-ref: ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.API_ECR_REPOSITORY }}@${{ steps.images.outputs.api_digest }}
           format: cyclonedx
           output: kelimio-production-api.cdx.json
           exit-code: "0"
@@ -126,24 +195,31 @@ jobs:
           path: kelimio-production-api.cdx.json
           if-no-files-found: error
           retention-days: 90
-      - name: Require a clean ECR critical-vulnerability scan
+      - name: Require clean ECR critical-vulnerability scans
         run: |
-          aws ecr wait image-scan-complete \
-            --repository-name "$ECR_REPOSITORY" \
-            --image-id "imageDigest=${{ steps.image.outputs.digest }}"
-          critical="$(aws ecr describe-image-scan-findings \
-            --repository-name "$ECR_REPOSITORY" \
-            --image-id "imageDigest=${{ steps.image.outputs.digest }}" \
-            --query 'imageScanFindings.findingSeverityCounts.CRITICAL' \
-            --output text)"
-          if [ "$critical" != "None" ] && [ "${critical:-0}" -gt 0 ]; then
-            echo "Critical image findings block production deployment" >&2
-            exit 1
-          fi
+          for pair in \
+            "$API_ECR_REPOSITORY:${{ steps.images.outputs.api_digest }}" \
+            "$WORKER_ECR_REPOSITORY:${{ steps.images.outputs.worker_digest }}" \
+            "$SCANNER_ECR_REPOSITORY:${{ steps.images.outputs.scanner_digest }}"; do
+            repository="${pair%%:*}"
+            digest="${pair#*:}"
+            aws ecr wait image-scan-complete --repository-name "$repository" --image-id "imageDigest=$digest"
+            critical="$(aws ecr describe-image-scan-findings \
+              --repository-name "$repository" \
+              --image-id "imageDigest=$digest" \
+              --query 'imageScanFindings.findingSeverityCounts.CRITICAL' \
+              --output text)"
+            if [ "$critical" != "None" ] && [ "${critical:-0}" -gt 0 ]; then
+              echo "Critical findings in $repository block production deployment" >&2
+              exit 1
+            fi
+          done
       - name: Apply the immutable task definitions without promoting them
         working-directory: infrastructure/terraform/environments/production
         env:
-          TF_VAR_api_image_digest: ${{ steps.image.outputs.digest }}
+          TF_VAR_api_image_digest: ${{ steps.images.outputs.api_digest }}
+          TF_VAR_worker_image_digest: ${{ steps.images.outputs.worker_digest }}
+          TF_VAR_scanner_image_digest: ${{ steps.images.outputs.scanner_digest }}
         run: terraform apply -input=false -lock-timeout=5m -auto-approve
       - name: Run and verify the one-shot database migration task
         working-directory: infrastructure/terraform/environments/production

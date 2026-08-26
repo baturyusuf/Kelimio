@@ -405,6 +405,25 @@ class AppLocalizationsEn extends AppLocalizations {
   String get teacher => 'Teacher';
 
   @override
+  String get teacherAccessTitle => 'Course authoring access';
+
+  @override
+  String get teacherFeatureUnavailable =>
+      'Secure course authoring is not enabled for this build.';
+
+  @override
+  String get teacherAccountNotEligible =>
+      'This account is not authorized to create courses. Access is managed by the server.';
+
+  @override
+  String get teacherTermsBody =>
+      'Your Excel file must contain only content you own or have the right to use. The file is security-scanned and previewed before the course is published.';
+
+  @override
+  String get teacherTermsAcceptance =>
+      'I have read these terms and confirm that I have the rights to the content I upload.';
+
+  @override
   String get teacherImportTitle => 'Create a course from Excel';
 
   @override

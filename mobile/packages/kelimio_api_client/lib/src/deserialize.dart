@@ -1,3 +1,4 @@
+import 'package:kelimio_api_client/src/model/accept_teacher_terms_request.dart';
 import 'package:kelimio_api_client/src/model/activate_course_release_request.dart';
 import 'package:kelimio_api_client/src/model/answer_option.dart';
 import 'package:kelimio_api_client/src/model/answer_recorded_response.dart';
@@ -47,6 +48,7 @@ import 'package:kelimio_api_client/src/model/profile_setup_request.dart';
 import 'package:kelimio_api_client/src/model/question_payload.dart';
 import 'package:kelimio_api_client/src/model/submit_answer_request.dart';
 import 'package:kelimio_api_client/src/model/subsequent_course_draft_result.dart';
+import 'package:kelimio_api_client/src/model/teacher_access_response.dart';
 import 'package:kelimio_api_client/src/model/test_summary.dart';
 
 final _regList = RegExp(r'^List<(.*)>$');
@@ -71,6 +73,9 @@ ReturnType deserialize<ReturnType, BaseType>(
       return (valueString == 'true' || valueString == '1') as ReturnType;
     case 'double':
       return (value is double ? value : double.parse('$value')) as ReturnType;
+    case 'AcceptTeacherTermsRequest':
+      return AcceptTeacherTermsRequest.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
     case 'ActivateCourseReleaseRequest':
       return ActivateCourseReleaseRequest.fromJson(
             value as Map<String, dynamic>,
@@ -232,6 +237,9 @@ ReturnType deserialize<ReturnType, BaseType>(
           as ReturnType;
     case 'SubsequentCourseDraftResult':
       return SubsequentCourseDraftResult.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'TeacherAccessResponse':
+      return TeacherAccessResponse.fromJson(value as Map<String, dynamic>)
           as ReturnType;
     case 'TestSummary':
       return TestSummary.fromJson(value as Map<String, dynamic>) as ReturnType;
