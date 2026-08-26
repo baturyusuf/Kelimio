@@ -1,3 +1,5 @@
 # Auto detect text files and perform LF normalization
 * text=auto
 *.xlsx binary
+*.sh text eol=lf
+*.dart text eol=lf

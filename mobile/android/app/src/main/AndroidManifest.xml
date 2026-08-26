@@ -8,8 +8,8 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:launchMode="singleTop"
-            android:taskAffinity=""
+            android:launchMode="singleTask"
+            android:taskAffinity="${applicationId}.auth"
             android:theme="@style/LaunchTheme"
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
             android:hardwareAccelerated="true"
@@ -22,6 +22,14 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity
+            android:name="net.openid.appauth.AuthorizationManagementActivity"
+            android:excludeFromRecents="true"
+            android:taskAffinity="${applicationId}.auth" />
+        <activity
+            android:name="net.openid.appauth.RedirectUriReceiverActivity"
+            android:excludeFromRecents="true"
+            android:taskAffinity="${applicationId}.auth" />
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />

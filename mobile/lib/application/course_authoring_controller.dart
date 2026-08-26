@@ -133,7 +133,7 @@ final class CourseAuthoringController extends Notifier<CourseAuthoringState> {
   CourseAuthoringState build() => const CourseAuthoringState();
 
   Future<void> selectAndUpload() async {
-    _requireLocalTools();
+    _requireAuthoringEnabled();
     if (state.busy) return;
     _retryDiscovery = false;
     SelectedWorkbook? selected;
@@ -157,7 +157,7 @@ final class CourseAuthoringController extends Notifier<CourseAuthoringState> {
   }
 
   Future<void> discoverImports() async {
-    _requireLocalTools();
+    _requireAuthoringEnabled();
     if (state.busy || state.importSummary != null) return;
     _retryDiscovery = true;
     state = state.copyWith(
@@ -209,7 +209,7 @@ final class CourseAuthoringController extends Notifier<CourseAuthoringState> {
   }
 
   Future<void> resumeImport(CourseImportSummary discovered) async {
-    _requireLocalTools();
+    _requireAuthoringEnabled();
     if (state.busy) return;
     _retryDiscovery = false;
     _selectedWorkbook = null;
@@ -254,7 +254,7 @@ final class CourseAuthoringController extends Notifier<CourseAuthoringState> {
   }
 
   Future<void> retry() async {
-    _requireLocalTools();
+    _requireAuthoringEnabled();
     if (state.busy) return;
     if (_retryDiscovery && state.importSummary == null) {
       await discoverImports();
@@ -354,7 +354,7 @@ final class CourseAuthoringController extends Notifier<CourseAuthoringState> {
   }
 
   Future<void> approve() async {
-    _requireLocalTools();
+    _requireAuthoringEnabled();
     final summary = state.importSummary;
     final binding = summary?.approvalBindingSha256;
     if (state.busy ||
@@ -395,7 +395,7 @@ final class CourseAuthoringController extends Notifier<CourseAuthoringState> {
   }
 
   Future<void> commitDraft() async {
-    _requireLocalTools();
+    _requireAuthoringEnabled();
     final summary = state.importSummary;
     final binding = summary?.approvalBindingSha256;
     if (state.busy ||
@@ -476,7 +476,7 @@ final class CourseAuthoringController extends Notifier<CourseAuthoringState> {
   }
 
   Future<void> activateRelease() async {
-    _requireLocalTools();
+    _requireAuthoringEnabled();
     final impact = state.impact;
     if (state.busy || impact == null || !state.impactAcknowledged) return;
     _activationCommandId ??= ref.read(identifierFactoryProvider).create();
@@ -626,9 +626,9 @@ final class CourseAuthoringController extends Notifier<CourseAuthoringState> {
     );
   }
 
-  void _requireLocalTools() {
-    if (!ref.read(appConfigProvider).localDevelopmentToolsEnabled) {
-      throw StateError('Course authoring is disabled outside local tools');
+  void _requireAuthoringEnabled() {
+    if (!ref.read(appConfigProvider).courseAuthoringEnabled) {
+      throw StateError('Course authoring is disabled in this build');
     }
   }
 }

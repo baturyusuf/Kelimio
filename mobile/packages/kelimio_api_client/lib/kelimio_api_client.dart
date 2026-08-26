@@ -16,7 +16,9 @@ export 'package:kelimio_api_client/src/api/energy_api.dart';
 export 'package:kelimio_api_client/src/api/enrollment_api.dart';
 export 'package:kelimio_api_client/src/api/learning_api.dart';
 export 'package:kelimio_api_client/src/api/profile_api.dart';
+export 'package:kelimio_api_client/src/api/teacher_api.dart';
 
+export 'package:kelimio_api_client/src/model/accept_teacher_terms_request.dart';
 export 'package:kelimio_api_client/src/model/activate_course_release_request.dart';
 export 'package:kelimio_api_client/src/model/answer_option.dart';
 export 'package:kelimio_api_client/src/model/answer_recorded_response.dart';
@@ -69,4 +71,5 @@ export 'package:kelimio_api_client/src/model/profile_setup_request.dart';
 export 'package:kelimio_api_client/src/model/question_payload.dart';
 export 'package:kelimio_api_client/src/model/submit_answer_request.dart';
 export 'package:kelimio_api_client/src/model/subsequent_course_draft_result.dart';
+export 'package:kelimio_api_client/src/model/teacher_access_response.dart';
 export 'package:kelimio_api_client/src/model/test_summary.dart';

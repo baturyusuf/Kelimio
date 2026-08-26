@@ -8,7 +8,7 @@ void main() {
   group(CourseReleaseApi, () {
     // Publish or roll back to an exact reviewed immutable release
     //
-    // Atomically activates the reviewed release, appends the activation and outbox facts, and creates a cutoff-bound progress reprojection job. This endpoint is fail-closed outside explicitly enabled local/test environments.
+    // Atomically activates the reviewed release, appends the activation and outbox facts, and creates a cutoff-bound progress reprojection job. In production this endpoint additionally requires the server-side teacher feature gate, Cognito teacher-group eligibility, and current versioned authoring-terms acceptance.
     //
     //Future<CourseReleaseActivationResponse> activateCourseRelease(String courseId, String releaseId, String idempotencyKey, ActivateCourseReleaseRequest activateCourseReleaseRequest) async
     test('test activateCourseRelease', () async {

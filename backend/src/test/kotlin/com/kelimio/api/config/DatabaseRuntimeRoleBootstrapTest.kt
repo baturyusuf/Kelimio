@@ -19,6 +19,19 @@ class DatabaseRuntimeRoleBootstrapTest {
             admin.connection.use { connection ->
                 connection.createStatement().use {
                     it.execute("create table runtime_proof(id bigint generated always as identity primary key, value text not null)")
+                    listOf(
+                        "course_import",
+                        "course_import_artifact",
+                        "course_import_dead_letter",
+                        "course_import_dispatch_alert",
+                        "course_import_preview",
+                        "course_import_preview_issue",
+                        "course_import_preview_row",
+                        "course_import_processing_attempt",
+                        "course_import_scan",
+                        "outbox_delivery",
+                        "outbox_event",
+                    ).forEach { table -> it.execute("create table $table(id bigint primary key, value text)") }
                 }
             }
 
@@ -34,6 +47,19 @@ class DatabaseRuntimeRoleBootstrapTest {
                 }
                 assertThatThrownBy {
                     connection.createStatement().use { it.execute("create table forbidden(id integer)") }
+                }.hasMessageContaining("permission denied")
+            }
+            DriverManager.getConnection(
+                postgres.jdbcUrl,
+                "kelimio_worker",
+                "A-production-worker-password-0001!",
+            ).use { connection ->
+                connection.createStatement().use {
+                    assertThat(it.executeUpdate("insert into course_import(id, value) values (1, 'allowed')"))
+                        .isEqualTo(1)
+                }
+                assertThatThrownBy {
+                    connection.createStatement().use { it.executeQuery("select * from runtime_proof") }
                 }.hasMessageContaining("permission denied")
             }
 
@@ -81,6 +107,8 @@ class DatabaseRuntimeRoleBootstrapTest {
             databaseName = "kelimio",
             runtimeUsername = "kelimio_runtime",
             runtimePassword = password,
+            workerUsername = "kelimio_worker",
+            workerPassword = "A-production-worker-password-0001!",
         ).run(DefaultApplicationArguments())
     }
 

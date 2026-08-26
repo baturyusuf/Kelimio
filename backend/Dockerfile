@@ -12,9 +12,13 @@ RUN gradle --no-daemon clean bootJar
 
 FROM eclipse-temurin:21-jre-alpine@sha256:3f08b13888f595cc49edabea7250ba69499ba25602b267da591720769400e08c AS runtime
 RUN apk add --no-cache --upgrade \
-        libexpat=2.8.2-r0 \
+        libexpat=2.8.3-r0 \
+        libcrypto3=3.5.8-r0 \
+        libssl3=3.5.8-r0 \
+        openssl=3.5.8-r0 \
         p11-kit=0.26.2-r0 \
         p11-kit-trust=0.26.2-r0 \
+        sqlite-libs=3.53.4-r0 \
     && addgroup -S kelimio \
     && adduser -S kelimio -G kelimio \
     && chown kelimio:kelimio /tmp \

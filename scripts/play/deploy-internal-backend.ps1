@@ -1,6 +1,7 @@
 [CmdletBinding()]
 param(
     [string]$Ref = "main",
+    [switch]$ActivateTeacherImport,
     [switch]$ConfirmProductionImpact
 )
 
@@ -24,7 +25,8 @@ $existingRuns = @(
 
 Invoke-KelimioCommand gh workflow run production-deploy.yml `
     --ref $Ref `
-    -f activate_api=true
+    -f activate_api=true `
+    -f "activate_teacher_import=$($ActivateTeacherImport.IsPresent.ToString().ToLowerInvariant())"
 
 $runId = $null
 for ($attempt = 0; $attempt -lt 30 -and -not $runId; $attempt++) {

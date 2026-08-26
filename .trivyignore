@@ -1,0 +1,4 @@
+# The pinned ClamAV init process must prepare root-owned socket/config paths before
+# launching clamd and freshclam as the clamav user. The ECS task drops every Linux
+# capability and adds only its audited filesystem/setup subset.
+DS-0002

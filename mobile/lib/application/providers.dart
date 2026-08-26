@@ -15,6 +15,7 @@ import '../domain/failures.dart';
 import '../domain/identifiers.dart';
 import '../domain/learning/learning.dart';
 import '../domain/profile/profile.dart';
+import '../domain/teacher/teacher_access.dart';
 import '../infrastructure/auth/app_auth_gateway.dart';
 import '../infrastructure/files/native_workbook_picker.dart';
 import '../infrastructure/network/failure_mapper.dart';
@@ -135,6 +136,15 @@ final profileRepositoryProvider = Provider<ProfileRepository>((ref) {
 final energyRepositoryProvider = Provider<EnergyRepository>((ref) {
   return GeneratedEnergyRepository(
     ref.watch(apiClientProvider).getEnergyApi(),
+    const DioFailureMapper(),
+  );
+});
+
+final teacherAccessRepositoryProvider = Provider<TeacherAccessRepository>((
+  ref,
+) {
+  return GeneratedTeacherAccessRepository(
+    ref.watch(apiClientProvider).getTeacherApi(),
     const DioFailureMapper(),
   );
 });

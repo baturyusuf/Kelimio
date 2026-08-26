@@ -11,8 +11,10 @@ src/apis/EnergyApi.ts
 src/apis/EnrollmentApi.ts
 src/apis/LearningApi.ts
 src/apis/ProfileApi.ts
+src/apis/TeacherApi.ts
 src/apis/index.ts
 src/index.ts
+src/models/AcceptTeacherTermsRequest.ts
 src/models/ActivateCourseReleaseRequest.ts
 src/models/AnswerOption.ts
 src/models/AnswerRecordedResponse.ts
@@ -65,6 +67,7 @@ src/models/ProfileSetupRequest.ts
 src/models/QuestionPayload.ts
 src/models/SubmitAnswerRequest.ts
 src/models/SubsequentCourseDraftResult.ts
+src/models/TeacherAccessResponse.ts
 src/models/TestSummary.ts
 src/models/index.ts
 src/runtime.ts

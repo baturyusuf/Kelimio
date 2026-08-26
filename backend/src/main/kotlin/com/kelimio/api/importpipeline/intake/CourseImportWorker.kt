@@ -19,7 +19,7 @@ import java.time.ZoneOffset
 
 @Component
 @ConditionalOnProperty(name = ["KELIMIO_IMPORT_ENABLED"], havingValue = "true")
-@ConditionalOnProperty(name = ["KELIMIO_RUNTIME_ROLE"], havingValue = "worker")
+@ConditionalOnProperty(name = ["KELIMIO_RUNTIME_ROLE"], havingValue = "api", matchIfMissing = true)
 class ImportOutboxPublisher(
     private val repository: CourseImportWorkerRepository,
     private val processor: ImportOutboxPublicationProcessor,
@@ -32,7 +32,7 @@ class ImportOutboxPublisher(
 
 @Service
 @ConditionalOnProperty(name = ["KELIMIO_IMPORT_ENABLED"], havingValue = "true")
-@ConditionalOnProperty(name = ["KELIMIO_RUNTIME_ROLE"], havingValue = "worker")
+@ConditionalOnProperty(name = ["KELIMIO_RUNTIME_ROLE"], havingValue = "api", matchIfMissing = true)
 class ImportOutboxPublicationProcessor(
     private val repository: CourseImportWorkerRepository,
     private val sqs: SqsClient,

@@ -17,21 +17,25 @@ void main() {
     );
   });
 
-  test('internal testing exposes only the starter-course installer gate', () {
-    final config = AppConfig(
-      apiBaseUri: Uri.parse('https://api.example.test'),
-      oidcIssuer: Uri.parse('https://identity.example.test'),
-      oidcClientId: 'mobile-client',
-      redirectUri: 'com.kelimio.app:/oauthredirect',
-      postLogoutRedirectUri: 'com.kelimio.app:/logout',
-      isProduction: true,
-      internalTestingEnabled: true,
-    );
+  test(
+    'internal testing exposes the controlled starter and authoring gates',
+    () {
+      final config = AppConfig(
+        apiBaseUri: Uri.parse('https://api.example.test'),
+        oidcIssuer: Uri.parse('https://identity.example.test'),
+        oidcClientId: 'mobile-client',
+        redirectUri: 'com.kelimio.app:/oauthredirect',
+        postLogoutRedirectUri: 'com.kelimio.app:/logout',
+        isProduction: true,
+        internalTestingEnabled: true,
+      );
 
-    expect(config.internalTestingEnabled, isTrue);
-    expect(config.localDevelopmentToolsEnabled, isFalse);
-    expect(config.starterCourseInstallerEnabled, isTrue);
-  });
+      expect(config.internalTestingEnabled, isTrue);
+      expect(config.localDevelopmentToolsEnabled, isFalse);
+      expect(config.starterCourseInstallerEnabled, isTrue);
+      expect(config.courseAuthoringEnabled, isTrue);
+    },
+  );
 
   test('normal production configuration keeps the installer closed', () {
     final config = AppConfig(
@@ -44,5 +48,6 @@ void main() {
     );
 
     expect(config.starterCourseInstallerEnabled, isFalse);
+    expect(config.courseAuthoringEnabled, isFalse);
   });
 }

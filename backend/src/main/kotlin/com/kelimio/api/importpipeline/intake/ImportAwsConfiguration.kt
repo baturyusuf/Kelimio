@@ -134,7 +134,6 @@ class ImportAwsConfiguration {
         .build()
 
     @Bean(destroyMethod = "close")
-    @ConditionalOnProperty(name = ["KELIMIO_RUNTIME_ROLE"], havingValue = "worker")
     fun importSqsClient(
         settings: ImportRuntimeSettings,
         @Value("\${KELIMIO_SQS_ENDPOINT:}") endpoint: String,

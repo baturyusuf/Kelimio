@@ -16,6 +16,8 @@ class DatabaseRuntimeRoleBootstrap(
     @Value("\${KELIMIO_DB_NAME:kelimio}") private val databaseName: String,
     @Value("\${KELIMIO_DB_RUNTIME_USER}") private val runtimeUsername: String,
     @Value("\${KELIMIO_DB_RUNTIME_PASSWORD}") private val runtimePassword: String,
+    @Value("\${KELIMIO_DB_WORKER_USER}") private val workerUsername: String,
+    @Value("\${KELIMIO_DB_WORKER_PASSWORD}") private val workerPassword: String,
 ) : ApplicationRunner {
     private val logger = LoggerFactory.getLogger(DatabaseRuntimeRoleBootstrap::class.java)
 
@@ -27,15 +29,24 @@ class DatabaseRuntimeRoleBootstrap(
         require(runtimePassword.length >= 32 && runtimePassword.none(Char::isWhitespace)) {
             "KELIMIO_DB_RUNTIME_PASSWORD must contain at least 32 non-whitespace characters."
         }
+        require(workerUsername == "kelimio_worker") {
+            "KELIMIO_DB_WORKER_USER must be the isolated kelimio_worker role."
+        }
+        require(workerPassword.length >= 32 && workerPassword.none(Char::isWhitespace)) {
+            "KELIMIO_DB_WORKER_PASSWORD must contain at least 32 non-whitespace characters."
+        }
     }
 
     override fun run(args: ApplicationArguments) {
         dataSource.connection.use { connection ->
             connection.autoCommit = false
             try {
-                assertNoMemberships(connection)
-                createOrHardenRole(connection)
+                assertNoMemberships(connection, runtimeUsername)
+                assertNoMemberships(connection, workerUsername)
+                createOrHardenRole(connection, runtimeUsername, runtimePassword)
+                createOrHardenRole(connection, workerUsername, workerPassword)
                 grantRuntimePrivileges(connection)
+                grantWorkerPrivileges(connection)
                 connection.commit()
             } catch (exception: RuntimeException) {
                 connection.rollback()
@@ -45,7 +56,7 @@ class DatabaseRuntimeRoleBootstrap(
         logger.info("Least-privilege production database runtime role is ready role={}", runtimeUsername)
     }
 
-    private fun assertNoMemberships(connection: Connection) {
+    private fun assertNoMemberships(connection: Connection, username: String) {
         connection.prepareStatement(
             """
             select count(*)
@@ -54,7 +65,7 @@ class DatabaseRuntimeRoleBootstrap(
             where member_role.rolname = ?
             """.trimIndent(),
         ).use { statement ->
-            statement.setString(1, runtimeUsername)
+            statement.setString(1, username)
             statement.executeQuery().use { result ->
                 check(result.next() && result.getLong(1) == 0L) {
                     "The runtime database role has unexpected memberships; refusing to continue."
@@ -63,7 +74,7 @@ class DatabaseRuntimeRoleBootstrap(
         }
     }
 
-    private fun createOrHardenRole(connection: Connection) {
+    private fun createOrHardenRole(connection: Connection, username: String, password: String) {
         val existingRoleIsSafe = connection.prepareStatement(
             """
             select rolcanlogin,
@@ -77,7 +88,7 @@ class DatabaseRuntimeRoleBootstrap(
             where rolname = ?
             """.trimIndent(),
         ).use { statement ->
-            statement.setString(1, runtimeUsername)
+            statement.setString(1, username)
             statement.executeQuery().use { result ->
                 if (!result.next()) {
                     null
@@ -88,7 +99,7 @@ class DatabaseRuntimeRoleBootstrap(
         }
         if (existingRoleIsSafe == null) {
             val createSql = connection.prepareStatement("select format('CREATE ROLE %I', ?)").use { statement ->
-                statement.setString(1, runtimeUsername)
+                statement.setString(1, username)
                 statement.executeQuery().use { result ->
                     check(result.next())
                     result.getString(1)
@@ -108,8 +119,8 @@ class DatabaseRuntimeRoleBootstrap(
             }
         }
         val passwordSql = connection.prepareStatement("select format('ALTER ROLE %I PASSWORD %L', ?, ?)").use {
-            it.setString(1, runtimeUsername)
-            it.setString(2, runtimePassword)
+            it.setString(1, username)
+            it.setString(2, password)
             it.executeQuery().use { result ->
                 check(result.next())
                 result.getString(1)
@@ -142,5 +153,38 @@ class DatabaseRuntimeRoleBootstrap(
         }
     }
 
+    private fun grantWorkerPrivileges(connection: Connection) {
+        val role = quotedIdentifier(workerUsername)
+        val database = quotedIdentifier(databaseName)
+        val tables = WORKER_TABLES.joinToString(", ") { quotedIdentifier(it) }
+        connection.createStatement().use { statement ->
+            listOf(
+                "GRANT CONNECT ON DATABASE $database TO $role",
+                "GRANT USAGE ON SCHEMA public TO $role",
+                "REVOKE CREATE ON SCHEMA public FROM $role",
+                "REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM $role",
+                "GRANT SELECT, INSERT, UPDATE ON TABLE $tables TO $role",
+                "REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public FROM $role",
+                "REVOKE EXECUTE ON ALL FUNCTIONS IN SCHEMA public FROM $role",
+            ).forEach(statement::execute)
+        }
+    }
+
     private fun quotedIdentifier(value: String): String = "\"${value.replace("\"", "\"\"")}\""
+
+    private companion object {
+        val WORKER_TABLES = listOf(
+            "course_import",
+            "course_import_artifact",
+            "course_import_dead_letter",
+            "course_import_dispatch_alert",
+            "course_import_preview",
+            "course_import_preview_issue",
+            "course_import_preview_row",
+            "course_import_processing_attempt",
+            "course_import_scan",
+            "outbox_delivery",
+            "outbox_event",
+        )
+    }
 }

@@ -92,10 +92,13 @@ Class | Method | HTTP request | Description
 [*LearningApi*](doc/LearningApi.md) | [**submitAnswer**](doc/LearningApi.md#submitanswer) | **POST** /v1/attempts/{attemptId}/answers | Record and evaluate one online answer exactly once
 [*ProfileApi*](doc/ProfileApi.md) | [**completeProfileSetup**](doc/ProfileApi.md#completeprofilesetup) | **POST** /v1/me/profile-setup | Complete the authenticated user&#39;s first-login profile setup
 [*ProfileApi*](doc/ProfileApi.md) | [**getMe**](doc/ProfileApi.md#getme) | **GET** /v1/me | Return the authenticated user&#39;s profile and language preferences
+[*TeacherApi*](doc/TeacherApi.md) | [**acceptTeacherTerms**](doc/TeacherApi.md#acceptteacherterms) | **POST** /v1/teacher/access/terms-acceptance | Accept the exact current version of the production authoring terms
+[*TeacherApi*](doc/TeacherApi.md) | [**getTeacherAccess**](doc/TeacherApi.md#getteacheraccess) | **GET** /v1/teacher/access | Return the authenticated user&#39;s production teacher access state
 
 
 ## Documentation For Models
 
+ - [AcceptTeacherTermsRequest](doc/AcceptTeacherTermsRequest.md)
  - [ActivateCourseReleaseRequest](doc/ActivateCourseReleaseRequest.md)
  - [AnswerOption](doc/AnswerOption.md)
  - [AnswerRecordedResponse](doc/AnswerRecordedResponse.md)
@@ -148,6 +151,7 @@ Class | Method | HTTP request | Description
  - [QuestionPayload](doc/QuestionPayload.md)
  - [SubmitAnswerRequest](doc/SubmitAnswerRequest.md)
  - [SubsequentCourseDraftResult](doc/SubsequentCourseDraftResult.md)
+ - [TeacherAccessResponse](doc/TeacherAccessResponse.md)
  - [TestSummary](doc/TestSummary.md)
 
 

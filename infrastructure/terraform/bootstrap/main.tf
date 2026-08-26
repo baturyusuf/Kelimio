@@ -205,6 +205,12 @@ data "aws_iam_policy_document" "github_production_deploy" {
       "apigateway:PUT",
       "apigateway:TagResource",
       "apigateway:UntagResource",
+      "application-autoscaling:DeleteScalingPolicy",
+      "application-autoscaling:DeregisterScalableTarget",
+      "application-autoscaling:PutScalingPolicy",
+      "application-autoscaling:RegisterScalableTarget",
+      "application-autoscaling:TagResource",
+      "application-autoscaling:UntagResource",
       "cloudwatch:DeleteAlarms",
       "cloudwatch:PutMetricAlarm",
       "cloudwatch:TagResource",
@@ -500,6 +506,7 @@ data "aws_iam_policy_document" "github_production_deploy" {
       variable = "iam:AWSServiceName"
       values = [
         "ops.apigateway.amazonaws.com",
+        "ecs.application-autoscaling.amazonaws.com",
         "ecs.amazonaws.com",
         "rds.amazonaws.com",
         "servicediscovery.amazonaws.com"

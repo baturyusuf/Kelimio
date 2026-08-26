@@ -451,9 +451,13 @@ data "aws_iam_policy_document" "migration_execution" {
   }
 
   statement {
-    sid       = "ReadMigrationSecrets"
-    actions   = ["secretsmanager:GetSecretValue"]
-    resources = [aws_db_instance.this.master_user_secret[0].secret_arn, aws_secretsmanager_secret.database_runtime.arn]
+    sid     = "ReadMigrationSecrets"
+    actions = ["secretsmanager:GetSecretValue"]
+    resources = [
+      aws_db_instance.this.master_user_secret[0].secret_arn,
+      aws_secretsmanager_secret.database_runtime.arn,
+      aws_secretsmanager_secret.database_worker.arn
+    ]
   }
 
   statement {
@@ -537,13 +541,21 @@ resource "aws_ecs_task_definition" "api" {
     environment = [
       { name = "AWS_REGION", value = var.aws_region },
       { name = "KELIMIO_BUILD_REVISION", value = var.build_revision },
-      { name = "KELIMIO_COURSE_RELEASE_ENABLED", value = "false" },
+      { name = "KELIMIO_CLAMAV_FUTURE_SKEW_SECONDS", value = "300" },
+      { name = "KELIMIO_CLAMAV_MAX_DEFINITION_AGE_SECONDS", value = "86400" },
+      { name = "KELIMIO_CLAMAV_MIN_ENGINE_VERSION", value = "1.4.0" },
+      { name = "KELIMIO_CLAMAV_MIN_SIGNATURE_NUMBER", value = "1" },
+      { name = "KELIMIO_COURSE_RELEASE_ENABLED", value = tostring(var.production_teacher_features_enabled) },
       { name = "KELIMIO_DB_MAX_POOL_SIZE", value = "4" },
       { name = "KELIMIO_DB_MIN_IDLE", value = "1" },
       { name = "KELIMIO_DB_URL", value = local.database_url },
       { name = "KELIMIO_DB_USER", value = local.database_runtime_user },
       { name = "KELIMIO_ENVIRONMENT", value = var.environment },
-      { name = "KELIMIO_IMPORT_ENABLED", value = "false" },
+      { name = "KELIMIO_IMPORT_ARCHIVE_BUCKET", value = var.import_archive_bucket_name },
+      { name = "KELIMIO_IMPORT_DLQ_NAME", value = var.import_dlq_name },
+      { name = "KELIMIO_IMPORT_ENABLED", value = tostring(var.production_teacher_features_enabled) },
+      { name = "KELIMIO_IMPORT_QUARANTINE_BUCKET", value = var.import_quarantine_bucket_name },
+      { name = "KELIMIO_IMPORT_QUEUE_NAME", value = var.import_queue_name },
       { name = "KELIMIO_LOCAL_COURSE_AUTHORING_ENABLED", value = "false" },
       { name = "KELIMIO_LOCAL_STARTER_COURSE_ENABLED", value = "false" },
       { name = "KELIMIO_MATCHING_REPLAY_ACTIVE_KEY_VERSION", value = local.matching_key_version },
@@ -553,12 +565,14 @@ resource "aws_ecs_task_definition" "api" {
       { name = "KELIMIO_OIDC_TOKEN_PROFILE", value = "cognito-access" },
       { name = "KELIMIO_OPERATING_MODE_PARAMETER", value = var.operating_mode_parameter_name },
       { name = "KELIMIO_PROJECTION_ENABLED", value = "true" },
+      { name = "KELIMIO_PRODUCTION_TEACHER_FEATURES_ENABLED", value = tostring(var.production_teacher_features_enabled) },
       { name = "KELIMIO_RUNTIME_ROLE", value = "api" },
       { name = "PORT", value = tostring(local.api_container_port) },
       { name = "SPRING_FLYWAY_ENABLED", value = "false" }
     ]
     secrets = [
       { name = "KELIMIO_DB_PASSWORD", valueFrom = "${aws_secretsmanager_secret.database_runtime.arn}:password::" },
+      { name = "KELIMIO_IMPORT_CURSOR_HMAC_KEY", valueFrom = "${aws_secretsmanager_secret.import_cursor.arn}:key::" },
       { name = "KELIMIO_MATCHING_REPLAY_KEYS", valueFrom = "${aws_secretsmanager_secret.matching_replay.arn}:matchingReplayKeys::" }
     ]
     healthCheck = {
@@ -583,6 +597,9 @@ resource "aws_ecs_task_definition" "api" {
   depends_on = [
     aws_iam_role_policy.api_execution,
     aws_iam_role_policy.api_task,
+    aws_iam_role_policy.api_import_execution,
+    aws_iam_role_policy.api_import_task,
+    aws_secretsmanager_secret_version.import_cursor,
     aws_secretsmanager_secret_version.database_runtime,
     aws_secretsmanager_secret_version.matching_replay
   ]
@@ -635,6 +652,7 @@ resource "aws_ecs_task_definition" "migration" {
       { name = "KELIMIO_DB_MIN_IDLE", value = "1" },
       { name = "KELIMIO_DB_NAME", value = local.database_name },
       { name = "KELIMIO_DB_RUNTIME_USER", value = local.database_runtime_user },
+      { name = "KELIMIO_DB_WORKER_USER", value = local.database_worker_user },
       { name = "KELIMIO_DB_URL", value = local.database_url },
       { name = "KELIMIO_ENVIRONMENT", value = var.environment },
       { name = "KELIMIO_IMPORT_ENABLED", value = "false" },
@@ -648,7 +666,8 @@ resource "aws_ecs_task_definition" "migration" {
     secrets = [
       { name = "KELIMIO_DB_USER", valueFrom = "${aws_db_instance.this.master_user_secret[0].secret_arn}:username::" },
       { name = "KELIMIO_DB_PASSWORD", valueFrom = "${aws_db_instance.this.master_user_secret[0].secret_arn}:password::" },
-      { name = "KELIMIO_DB_RUNTIME_PASSWORD", valueFrom = "${aws_secretsmanager_secret.database_runtime.arn}:password::" }
+      { name = "KELIMIO_DB_RUNTIME_PASSWORD", valueFrom = "${aws_secretsmanager_secret.database_runtime.arn}:password::" },
+      { name = "KELIMIO_DB_WORKER_PASSWORD", valueFrom = "${aws_secretsmanager_secret.database_worker.arn}:password::" }
     ]
     logConfiguration = {
       logDriver = "awslogs"
@@ -664,7 +683,8 @@ resource "aws_ecs_task_definition" "migration" {
 
   depends_on = [
     aws_iam_role_policy.migration_execution,
-    aws_secretsmanager_secret_version.database_runtime
+    aws_secretsmanager_secret_version.database_runtime,
+    aws_secretsmanager_secret_version.database_worker
   ]
 }
 

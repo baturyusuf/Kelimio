@@ -11,6 +11,11 @@ plugins {
 group = "com.kelimio"
 version = "0.1.0-SNAPSHOT"
 
+// Spring Boot 3.5.16 manages 5.3.6, which is below the fixes for
+// CVE-2026-54399 and CVE-2026-54428. Keep the compatible security floor
+// explicit until the Boot 3.x BOM carries an equal or newer release.
+extra["httpcore5.version"] = "5.4.3"
+
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(21)
