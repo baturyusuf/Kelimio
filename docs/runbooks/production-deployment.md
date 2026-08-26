@@ -43,6 +43,9 @@ secret, and add the following environment variables:
 | `AWS_IMPORT_ARCHIVE_RETENTION_DAYS` | Approved immutable original-workbook retention. |
 | `AWS_API_IMAGE_DIGEST` | Immutable digest from the latest successfully applied production image. |
 | `AWS_API_BUILD_REVISION` | Full Git SHA that produced `AWS_API_IMAGE_DIGEST`. |
+| `AWS_WORKER_IMAGE_DIGEST` | Immutable digest from the latest successfully applied import-worker image. |
+| `AWS_SCANNER_IMAGE_DIGEST` | Immutable digest from the latest successfully applied private scanner image. |
+| `AWS_PRODUCTION_TEACHER_FEATURES_ENABLED` | `true` only after the matching API, worker, and scanner deployment is promoted and verified. |
 | `GOOGLE_IDENTITY_ENABLED` | `false` until the Google secret and linking test are ready. |
 | `GOOGLE_IDENTITY_CONFIGURATION_VERSION` | Non-secret rotation marker, initially `not-configured`. |
 | `DATABASE_SECRET_VERSION` | `1`; increment only during a coordinated migration-task rotation. |
@@ -83,8 +86,10 @@ The deployment workflow:
 5. leaves the public service at its existing desired count unless the guarded
    activation input is explicitly selected.
 
-After a successful application apply, update `AWS_API_IMAGE_DIGEST` and
-`AWS_API_BUILD_REVISION` together in the protected environment, then rerun
+After a successful application apply, update `AWS_API_IMAGE_DIGEST`,
+`AWS_WORKER_IMAGE_DIGEST`, `AWS_SCANNER_IMAGE_DIGEST`,
+`AWS_PRODUCTION_TEACHER_FEATURES_ENABLED`, and `AWS_API_BUILD_REVISION`
+together in the protected environment, then rerun
 **Production Terraform Plan**. The plan must use the source revision that built
 the deployed digest, not the current documentation-only commit, and must report
 no unintended change before the deployment evidence is accepted.
