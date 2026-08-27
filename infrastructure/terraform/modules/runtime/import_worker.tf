@@ -324,16 +324,7 @@ resource "aws_ecs_task_definition" "import_worker" {
       mountPoints            = [{ sourceVolume = "worker-tmp", containerPath = "/tmp", readOnly = false }]
       volumesFrom            = []
       systemControls         = []
-      # The upstream entrypoint creates runtime directories and drops to its
-      # clamav account. These are the minimum capabilities verified against
-      # the pinned image; the worker container itself retains no capabilities.
-      linuxParameters = {
-        initProcessEnabled = true
-        capabilities = {
-          add  = ["CHOWN", "DAC_OVERRIDE", "FOWNER", "SETGID", "SETUID"]
-          drop = ["ALL"]
-        }
-      }
+      linuxParameters        = { initProcessEnabled = true, capabilities = { add = [], drop = ["ALL"] } }
       environment = [
         { name = "AWS_REGION", value = var.aws_region },
         { name = "KELIMIO_BUILD_REVISION", value = var.build_revision },
