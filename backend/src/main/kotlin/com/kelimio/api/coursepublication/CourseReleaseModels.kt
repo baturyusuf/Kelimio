@@ -54,6 +54,15 @@ data class CourseReleaseActivationResponse(
     val created: Boolean,
 )
 
+data class CourseReleaseAbandonmentResponse(
+    val abandonmentId: UUID,
+    val courseId: UUID,
+    val releaseId: UUID,
+    val releaseRevision: Int,
+    val abandonedAt: OffsetDateTime,
+    val created: Boolean,
+)
+
 data class CourseReleaseCourseState(
     val id: UUID,
     val ownerUserId: UUID,

@@ -31,6 +31,8 @@ class CatalogRepository(
         cursor: UUID?,
         targetLanguage: String?,
         supportLanguage: String?,
+        query: String?,
+        accessType: String?,
         pageSize: Int,
         clientCapabilities: Set<String>,
     ): List<CourseSummary> {
@@ -43,6 +45,10 @@ class CatalogRepository(
                     .and(CourseSupportLanguages.LANGUAGE_CODE.eq(language)),
             )
         } ?: noCondition()
+        val queryCondition = query?.let {
+            Courses.NAME.containsIgnoreCase(it).or(Courses.DESCRIPTION.containsIgnoreCase(it))
+        } ?: noCondition()
+        val accessCondition = accessType?.let { Courses.ACCESS_TYPE.eq(it) } ?: noCondition()
         val unsupportedCapability = org.jooq.impl.DSL.notExists(
             selectOne().from(COURSE_RELEASE_CAPABILITIES)
                 .where(RELEASE_CAPABILITY_RELEASE_ID.eq(Courses.ACTIVE_RELEASE_ID))
@@ -72,6 +78,8 @@ class CatalogRepository(
             .and(cursorCondition)
             .and(targetCondition)
             .and(supportCondition)
+            .and(queryCondition)
+            .and(accessCondition)
             .and(unsupportedCapability)
             .orderBy(Courses.ID.asc())
             .limit(pageSize)

@@ -9,9 +9,57 @@ All URIs are relative to *http://localhost*
 
 Method | HTTP request | Description
 ------------- | ------------- | -------------
+[**abandonCourseRelease**](CourseReleaseApi.md#abandoncourserelease) | **POST** /v1/courses/{courseId}/releases/{releaseId}/abandon | Mark an inactive draft release as abandoned without deleting its facts
 [**activateCourseRelease**](CourseReleaseApi.md#activatecourserelease) | **POST** /v1/courses/{courseId}/releases/{releaseId}/activate | Publish or roll back to an exact reviewed immutable release
 [**getCourseReleaseImpact**](CourseReleaseApi.md#getcoursereleaseimpact) | **GET** /v1/courses/{courseId}/releases/{releaseId}/impact | Review the exact owner-scoped impact of activating an immutable release
 
+
+# **abandonCourseRelease**
+> CourseReleaseAbandonmentResponse abandonCourseRelease(courseId, releaseId, idempotencyKey)
+
+Mark an inactive draft release as abandoned without deleting its facts
+
+Atomically changes only a DRAFT release to ABANDONED and appends an owner-scoped abandonment fact plus an outbox event. Active and historical releases cannot be abandoned.
+
+### Example
+```dart
+import 'package:kelimio_api_client/api.dart';
+
+final api = KelimioApiClient().getCourseReleaseApi();
+final String courseId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final String releaseId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final String idempotencyKey = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String | Stable UUID generated once for the logical command.
+
+try {
+    final response = api.abandonCourseRelease(courseId, releaseId, idempotencyKey);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling CourseReleaseApi->abandonCourseRelease: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **courseId** | **String**|  |
+ **releaseId** | **String**|  |
+ **idempotencyKey** | **String**| Stable UUID generated once for the logical command. |
+
+### Return type
+
+[**CourseReleaseAbandonmentResponse**](CourseReleaseAbandonmentResponse.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json, application/problem+json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **activateCourseRelease**
 > CourseReleaseActivationResponse activateCourseRelease(courseId, releaseId, idempotencyKey, activateCourseReleaseRequest)

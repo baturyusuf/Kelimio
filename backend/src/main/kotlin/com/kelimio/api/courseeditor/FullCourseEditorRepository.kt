@@ -49,6 +49,36 @@ internal class FullCourseEditorRepository(
             )
         }
 
+    fun publishedCourseState(courseId: UUID): FullCourseEditorCourseState? = dsl.fetchOne(
+        """
+        select course.id, course.owner_user_id, course.active_release_id,
+               release_row.revision_number, course.publication_status,
+               course.name, course.description, course.visibility,
+               course.target_language, course.default_support_language,
+               array_agg(language.language_code order by language.language_code) as support_languages
+          from course
+          join course_release release_row on release_row.id = course.active_release_id
+          join course_support_language language on language.course_id = course.id
+         where course.id = ? and course.publication_status = 'PUBLISHED'
+         group by course.id, release_row.id
+        """.trimIndent(),
+        courseId,
+    )?.let {
+        FullCourseEditorCourseState(
+            courseId = it.get("id", UUID::class.java)!!,
+            ownerUserId = it.get("owner_user_id", UUID::class.java)!!,
+            activeReleaseId = it.get("active_release_id", UUID::class.java)!!,
+            releaseRevision = it.get("revision_number", Int::class.java)!!,
+            publicationStatus = it.get("publication_status", String::class.java)!!,
+            name = it.get("name", String::class.java)!!,
+            description = it.get("description", String::class.java),
+            visibility = it.get("visibility", String::class.java)!!,
+            targetLanguage = it.get("target_language", String::class.java)!!,
+            defaultSupportLanguage = it.get("default_support_language", String::class.java)!!,
+            supportLanguages = it.get("support_languages", Array<String>::class.java)!!.toList(),
+        )
+    }
+
     fun document(course: FullCourseEditorCourseState): FullCourseEditorDocument {
         val releaseId = course.activeReleaseId
         val levels = linkedMapOf<UUID, MutableLevel>()

@@ -22,6 +22,20 @@ void main() {
       // TODO
     });
 
+    // Return authoritative aggregate progress, current streak, and recent completed attempts
+    //
+    //Future<LearningSummary> getLearningSummary() async
+    test('test getLearningSummary', () async {
+      // TODO
+    });
+
+    // Create or reuse an immutable scoreless-practice package and return a short-lived download URL
+    //
+    //Future<OfflinePackage> getOfflineCoursePackage(String courseId, String supportLanguage) async
+    test('test getOfflineCoursePackage', () async {
+      // TODO
+    });
+
     // Reconcile one previously committed answer owned by the current user
     //
     // Returns the immutable committed result only when both the attempt and submission belong to the authenticated user. Missing or non-owned records are indistinguishable and return not found.

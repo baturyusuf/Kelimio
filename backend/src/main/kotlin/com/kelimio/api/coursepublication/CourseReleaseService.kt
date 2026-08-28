@@ -152,6 +152,79 @@ class CourseReleaseService(
         )
     }
 
+    @Transactional
+    fun abandon(
+        user: AppUser,
+        courseId: UUID,
+        releaseId: UUID,
+        idempotencyKey: UUID,
+    ): CourseReleaseAbandonmentResponse {
+        val lookup = idempotencyService.lockAndFind(
+            user.id,
+            ABANDON_OPERATION,
+            idempotencyKey,
+            "$courseId|$releaseId",
+        )
+        lookup.resourceId?.let { abandonmentId ->
+            return repository.abandonment(abandonmentId, user.id, created = false)
+                ?: throw ConflictProblem("The idempotent release abandonment no longer exists.")
+        }
+        val course = repository.course(courseId, lock = true)
+            ?.takeIf { it.ownerUserId == user.id }
+            ?: throw NotFoundProblem("Course was not found.")
+        val target = repository.target(courseId, releaseId, lock = true)
+            ?: throw NotFoundProblem("Course release was not found.")
+        if (target.status != "DRAFT" || course.activeReleaseId == releaseId) {
+            throw ConflictProblem("Only an inactive draft release can be abandoned.")
+        }
+        val now = OffsetDateTime.ofInstant(clock.instant(), ZoneOffset.UTC)
+        val abandonmentId = UUID.randomUUID()
+        val eventId = UUID.randomUUID()
+        val correlationId = correlationIdProvider.current()
+        outbox.appendRecorded(
+            RecordedOutboxEvent(
+                id = eventId,
+                aggregateType = "course",
+                aggregateId = courseId,
+                eventType = "content.release-abandoned.v1",
+                schemaVersion = 1,
+                payload = mapOf(
+                    "eventId" to eventId,
+                    "abandonmentId" to abandonmentId,
+                    "courseId" to courseId,
+                    "releaseId" to releaseId,
+                    "releaseRevision" to target.revision,
+                ),
+                correlationId = correlationId,
+                occurredAt = now,
+            ),
+        )
+        repository.abandon(
+            abandonmentId = abandonmentId,
+            courseId = courseId,
+            releaseId = releaseId,
+            actorUserId = user.id,
+            outboxEventId = eventId,
+            abandonedAt = now,
+            correlationId = correlationId,
+        )
+        idempotencyService.record(
+            user.id,
+            ABANDON_OPERATION,
+            idempotencyKey,
+            lookup.fingerprint,
+            abandonmentId,
+        )
+        return CourseReleaseAbandonmentResponse(
+            abandonmentId = abandonmentId,
+            courseId = courseId,
+            releaseId = releaseId,
+            releaseRevision = target.revision,
+            abandonedAt = now,
+            created = true,
+        )
+    }
+
     private fun state(
         user: AppUser,
         courseId: UUID,
@@ -163,6 +236,9 @@ class CourseReleaseService(
             ?: throw NotFoundProblem("Course was not found.")
         val target = repository.target(courseId, releaseId, lock)
             ?: throw NotFoundProblem("Course release was not found.")
+        if (target.status == "ABANDONED") {
+            throw ConflictProblem("An abandoned release cannot be reviewed or activated.")
+        }
         return CourseReleaseImpactState(
             course = course,
             target = target,
@@ -191,5 +267,6 @@ class CourseReleaseService(
 
     private companion object {
         const val OPERATION = "course-release.activate"
+        const val ABANDON_OPERATION = "course-release.abandon"
     }
 }

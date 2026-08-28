@@ -309,6 +309,25 @@ final class GeneratedCourseAuthoringRepository
   });
 
   @override
+  Future<void> abandonRelease({
+    required String courseId,
+    required String releaseId,
+    required String commandId,
+  }) => _guard(() async {
+    final response = await _releases.abandonCourseRelease(
+      courseId: courseId,
+      releaseId: releaseId,
+      idempotencyKey: commandId,
+      extra: {RequestMetadata.idempotencyKey: commandId},
+    );
+    if (response.data == null) {
+      throw const ProtocolFailure(
+        'Release abandonment response body was empty',
+      );
+    }
+  });
+
+  @override
   Future<LocalCourseEditorDocument> getEditor(String courseId) =>
       _guard(() async {
         final response = await _development.getLocalCourseEditor(

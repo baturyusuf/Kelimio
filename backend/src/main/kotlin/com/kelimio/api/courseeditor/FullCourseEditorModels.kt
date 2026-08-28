@@ -88,20 +88,29 @@ internal data class CourseEditorQuestion(
     @field:Valid
     @field:Size(max = 6)
     val matchingPairs: List<CourseEditorMatchingPair> = emptyList(),
-)
+) {
+    override fun toString(): String =
+        "CourseEditorQuestion(id=$id, type=$type, prompt=[REDACTED], correctAnswer=[REDACTED], " +
+            "alternativeCorrectAnswer=[REDACTED], translations=[REDACTED], options=[REDACTED], " +
+            "matchingPairs=[REDACTED])"
+}
 
 internal data class CourseEditorOption(
     @field:Size(min = 1, max = 500)
     val text: String,
     val correct: Boolean,
     val translations: Map<String, String> = emptyMap(),
-)
+) {
+    override fun toString(): String = "CourseEditorOption([REDACTED])"
+}
 
 internal data class CourseEditorMatchingPair(
     @field:Size(min = 1, max = 500)
     val targetText: String,
     val translations: Map<String, String>,
-)
+) {
+    override fun toString(): String = "CourseEditorMatchingPair([REDACTED])"
+}
 
 internal data class FullCourseEditorDraftResponse(
     val courseId: UUID,

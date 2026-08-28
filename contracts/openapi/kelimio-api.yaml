@@ -44,6 +44,10 @@ tags:
     description: Owner-scoped impact review, publication, and rollback of immutable course releases.
   - name: Teacher
     description: Production teacher eligibility and versioned authoring-terms acceptance.
+  - name: Social
+    description: Private-by-default public profiles and explicitly opted-in rankings.
+  - name: Account
+    description: Owner-scoped export, deletion, consent, and notification controls.
   - name: Development
     description: Explicit local/test utilities that are unavailable outside enabled non-production environments.
 security:
@@ -121,6 +125,18 @@ paths:
           in: query
           schema:
             $ref: "#/components/schemas/LanguageTag"
+        - name: q
+          in: query
+          description: Case-insensitive course name or description search.
+          schema:
+            type: string
+            minLength: 2
+            maxLength: 80
+        - name: accessType
+          in: query
+          schema:
+            type: string
+            enum: [FREE, PAID]
       responses:
         "200":
           description: A cursor page of courses
@@ -832,6 +848,465 @@ paths:
           $ref: "#/components/responses/Problem"
         default:
           $ref: "#/components/responses/Problem"
+  /v1/courses/{courseId}/releases/{releaseId}/abandon:
+    post:
+      operationId: abandonCourseRelease
+      tags: [Course Release]
+      summary: Mark an inactive draft release as abandoned without deleting its facts
+      description: >-
+        Atomically changes only a DRAFT release to ABANDONED and appends an
+        owner-scoped abandonment fact plus an outbox event. Active and historical
+        releases cannot be abandoned.
+      parameters:
+        - $ref: "#/components/parameters/CourseId"
+        - $ref: "#/components/parameters/ReleaseId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "201":
+          description: Draft abandonment created
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CourseReleaseAbandonmentResponse"
+        "200":
+          description: Existing abandonment returned for an idempotent retry
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CourseReleaseAbandonmentResponse"
+        "400":
+          $ref: "#/components/responses/Problem"
+        "401":
+          $ref: "#/components/responses/Problem"
+        "404":
+          $ref: "#/components/responses/Problem"
+        "409":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/courses/{courseId}/offline-package:
+    get:
+      operationId: getOfflineCoursePackage
+      tags: [Learning]
+      summary: Create or reuse an immutable scoreless-practice package and return a short-lived download URL
+      parameters:
+        - $ref: "#/components/parameters/CourseId"
+        - name: supportLanguage
+          in: query
+          required: true
+          schema:
+            $ref: "#/components/schemas/LanguageTag"
+      responses:
+        "200":
+          description: Release-bound package download metadata
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OfflinePackage"
+        "403":
+          $ref: "#/components/responses/Problem"
+        "404":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/me/learning-summary:
+    get:
+      operationId: getLearningSummary
+      tags: [Learning]
+      summary: Return authoritative aggregate progress, current streak, and recent completed attempts
+      responses:
+        "200":
+          description: Current learner summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LearningSummary"
+        "401":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/me/notification-preferences:
+    get:
+      operationId: getNotificationPreferences
+      tags: [Account]
+      summary: Read notification choices and real provider availability
+      responses:
+        "200":
+          description: Notification preferences
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationPreference"
+        default:
+          $ref: "#/components/responses/Problem"
+    put:
+      operationId: updateNotificationPreferences
+      tags: [Account]
+      summary: Optimistically update notification preferences
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateNotificationPreferenceRequest"
+      responses:
+        "200":
+          description: Updated notification preferences
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationPreference"
+        "409":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/me/export:
+    get:
+      operationId: exportOwnAccount
+      tags: [Account]
+      summary: Export the authenticated user's portable account and learning facts
+      responses:
+        "200":
+          description: No-store account export
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountExport"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/me/deletion-requests:
+    get:
+      operationId: listAccountDeletionRequests
+      tags: [Account]
+      summary: List the current user's recent deletion requests
+      responses:
+        "200":
+          description: Recent owner-scoped deletion requests
+          content:
+            application/json:
+              schema:
+                type: array
+                maxItems: 20
+                items:
+                  $ref: "#/components/schemas/AccountDeletionRequest"
+        default:
+          $ref: "#/components/responses/Problem"
+    post:
+      operationId: requestAccountDeletion
+      tags: [Account]
+      summary: Request audited account deletion after a seven-day recovery window
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "201":
+          description: Deletion request created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountDeletionRequest"
+        "200":
+          description: Existing request returned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountDeletionRequest"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/me/deletion-requests/{requestId}/cancel:
+    post:
+      operationId: cancelAccountDeletion
+      tags: [Account]
+      summary: Cancel a pending deletion request during its recovery window
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/Id"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "200":
+          description: Deletion request cancelled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountDeletionRequest"
+        "404":
+          $ref: "#/components/responses/Problem"
+        "409":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/me/session-revocations:
+    post:
+      operationId: revokeAllSessions
+      tags: [Account]
+      summary: Revoke all Cognito refresh sessions for the authenticated identity
+      description: >-
+        Calls Cognito AdminUserGlobalSignOut using the server-authenticated username,
+        then appends an audit/outbox event. The current access token may remain valid
+        until its short expiry and the client must clear its local session.
+      responses:
+        "200":
+          description: All refresh sessions revoked
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionRevocation"
+        "401":
+          $ref: "#/components/responses/Problem"
+        "503":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/me/legal-consents:
+    get:
+      operationId: listLegalConsents
+      tags: [Account]
+      summary: List append-only legal-consent facts recorded for the current user
+      responses:
+        "200":
+          description: Consent facts; empty until owner-approved documents exist
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LegalConsent"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/teacher/courses:
+    get:
+      operationId: listTeacherCourses
+      tags: [Teacher]
+      summary: List courses owned by the authenticated authorized teacher
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Owner-scoped course page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeacherCoursePage"
+        "401":
+          $ref: "#/components/responses/Problem"
+        "403":
+          $ref: "#/components/responses/Problem"
+        "409":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/teacher/courses/{courseId}/editor:
+    get:
+      operationId: getFullCourseEditor
+      tags: [Teacher]
+      summary: Read the active immutable release as a full owner-scoped editor document
+      parameters:
+        - $ref: "#/components/parameters/CourseId"
+      responses:
+        "200":
+          description: Current full editor document
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+            ETag:
+              description: Strong version required when saving a draft.
+              schema:
+                type: string
+                pattern: '^"[0-9a-f]{64}"$'
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FullCourseEditorDocument"
+        "401":
+          $ref: "#/components/responses/Problem"
+        "403":
+          $ref: "#/components/responses/Problem"
+        "404":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/teacher/courses/{courseId}/editor/drafts:
+    post:
+      operationId: createFullCourseEditorDraft
+      tags: [Teacher]
+      summary: Save an ETag-bound complete immutable course draft
+      parameters:
+        - $ref: "#/components/parameters/CourseId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/IfMatch"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SaveFullCourseEditorDraftRequest"
+      responses:
+        "201":
+          description: Draft created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FullCourseEditorDraftResponse"
+        "200":
+          description: Existing draft returned for an idempotent retry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FullCourseEditorDraftResponse"
+        "401":
+          $ref: "#/components/responses/Problem"
+        "403":
+          $ref: "#/components/responses/Problem"
+        "404":
+          $ref: "#/components/responses/Problem"
+        "409":
+          $ref: "#/components/responses/Problem"
+        "422":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/teacher/courses/{courseId}/invitations:
+    post:
+      operationId: createCourseInvitation
+      tags: [Teacher]
+      summary: Create an expiring private free-course invitation
+      parameters:
+        - $ref: "#/components/parameters/CourseId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCourseInvitationRequest"
+      responses:
+        "201":
+          description: Invitation token returned exactly once
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CourseInvitationCreated"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/course-invitations/{token}/accept:
+    post:
+      operationId: acceptCourseInvitation
+      tags: [Enrollment]
+      summary: Accept an opaque invitation and create active course access
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: "^[A-Za-z0-9_-]{43}$"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AcceptCourseInvitationRequest"
+      responses:
+        "200":
+          description: Invitation accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CourseInvitationAccepted"
+        "404":
+          $ref: "#/components/responses/Problem"
+        "409":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/me/public-profile:
+    get:
+      operationId: getOwnPublicProfile
+      tags: [Social]
+      summary: Read private settings and public-profile projection for the current user
+      responses:
+        "200":
+          description: Own profile controls and projection
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OwnPublicProfile"
+        default:
+          $ref: "#/components/responses/Problem"
+    put:
+      operationId: updateOwnPublicProfile
+      tags: [Social]
+      summary: Update public-profile fields and explicit visibility choices
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePublicProfileRequest"
+      responses:
+        "200":
+          description: Updated profile controls and projection
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OwnPublicProfile"
+        "409":
+          $ref: "#/components/responses/Problem"
+        "422":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/profiles/{username}:
+    get:
+      operationId: getPublicProfile
+      tags: [Social]
+      security: []
+      summary: Read an explicitly enabled public profile
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/PublicUsername"
+      responses:
+        "200":
+          description: Public profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicProfile"
+        "404":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+  /v1/leaderboards/global:
+    get:
+      operationId: getGlobalLeaderboard
+      tags: [Social]
+      security: []
+      summary: List only users who explicitly opted in to public ranking
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Opt-in global leaderboard
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Leaderboard"
+        default:
+          $ref: "#/components/responses/Problem"
   /v1/development/starter-course:
     post:
       operationId: installLocalStarterCourse
@@ -1205,6 +1680,562 @@ components:
           type: string
           minLength: 1
           maxLength: 64
+    TeacherCoursePage:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/TeacherCourseSummary"
+        nextCursor:
+          type: [string, "null"]
+          format: uuid
+    TeacherCourseSummary:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - name
+        - targetLanguage
+        - defaultSupportLanguage
+        - visibility
+        - publicationStatus
+        - activeReleaseId
+        - activeReleaseRevision
+        - hasOpenDraft
+        - createdAt
+      properties:
+        id:
+          $ref: "#/components/schemas/Id"
+        name:
+          type: string
+          minLength: 1
+          maxLength: 160
+        description:
+          type: [string, "null"]
+          maxLength: 2000
+        targetLanguage:
+          $ref: "#/components/schemas/LanguageTag"
+        defaultSupportLanguage:
+          $ref: "#/components/schemas/LanguageTag"
+        visibility:
+          type: string
+          enum: [PUBLIC, PRIVATE]
+        publicationStatus:
+          type: string
+          enum: [PUBLISHED, HIDDEN]
+        activeReleaseId:
+          $ref: "#/components/schemas/Id"
+        activeReleaseRevision:
+          type: integer
+          minimum: 1
+        hasOpenDraft:
+          type: boolean
+        openDraftReleaseId:
+          type: [string, "null"]
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+    FullCourseEditorDocument:
+      type: object
+      additionalProperties: false
+      x-kelimio-redacted-to-string: true
+      required: [courseId, activeReleaseId, releaseRevision, name, visibility, targetLanguage, defaultSupportLanguage, supportLanguages, levels]
+      properties:
+        courseId:
+          $ref: "#/components/schemas/Id"
+        activeReleaseId:
+          $ref: "#/components/schemas/Id"
+        releaseRevision:
+          type: integer
+          minimum: 1
+        name:
+          type: string
+          minLength: 1
+          maxLength: 160
+        description:
+          type: [string, "null"]
+          maxLength: 2000
+        visibility:
+          type: string
+          enum: [PUBLIC, PRIVATE]
+        targetLanguage:
+          $ref: "#/components/schemas/LanguageTag"
+        defaultSupportLanguage:
+          $ref: "#/components/schemas/LanguageTag"
+        supportLanguages:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          items:
+            $ref: "#/components/schemas/LanguageTag"
+        levels:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items:
+            $ref: "#/components/schemas/CourseEditorLevel"
+    SaveFullCourseEditorDraftRequest:
+      type: object
+      additionalProperties: false
+      x-kelimio-redacted-to-string: true
+      required: [baseReleaseId, name, visibility, levels]
+      properties:
+        baseReleaseId:
+          $ref: "#/components/schemas/Id"
+        name:
+          type: string
+          minLength: 1
+          maxLength: 160
+        description:
+          type: [string, "null"]
+          minLength: 1
+          maxLength: 2000
+        visibility:
+          type: string
+          enum: [PUBLIC, PRIVATE]
+        levels:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items:
+            $ref: "#/components/schemas/CourseEditorLevel"
+    CourseEditorLevel:
+      type: object
+      additionalProperties: false
+      required: [title, units]
+      properties:
+        id:
+          type: [string, "null"]
+          format: uuid
+        title:
+          type: string
+          minLength: 1
+          maxLength: 2000
+        units:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items:
+            $ref: "#/components/schemas/CourseEditorUnit"
+    CourseEditorUnit:
+      type: object
+      additionalProperties: false
+      required: [title, topics]
+      properties:
+        id:
+          type: [string, "null"]
+          format: uuid
+        title:
+          type: string
+          minLength: 1
+          maxLength: 2000
+        topics:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items:
+            $ref: "#/components/schemas/CourseEditorTopic"
+    CourseEditorTopic:
+      type: object
+      additionalProperties: false
+      required: [title, tests]
+      properties:
+        id:
+          type: [string, "null"]
+          format: uuid
+        title:
+          type: string
+          minLength: 1
+          maxLength: 2000
+        tests:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items:
+            $ref: "#/components/schemas/CourseEditorTest"
+    CourseEditorTest:
+      type: object
+      additionalProperties: false
+      required: [title, passThreshold, questions]
+      properties:
+        id:
+          type: [string, "null"]
+          format: uuid
+        title:
+          type: string
+          minLength: 1
+          maxLength: 160
+        passThreshold:
+          type: number
+          minimum: 0.5
+          maximum: 1
+        questions:
+          type: array
+          minItems: 1
+          maxItems: 500
+          items:
+            $ref: "#/components/schemas/CourseEditorQuestion"
+    CourseEditorQuestion:
+      type: object
+      additionalProperties: false
+      x-kelimio-redacted-to-string: true
+      x-kelimio-redacted-field-names:
+        [prompt, correctAnswer, alternativeCorrectAnswer, translations, options, matchingPairs]
+      required: [type, translations, options, matchingPairs]
+      properties:
+        id:
+          type: [string, "null"]
+          format: uuid
+        type:
+          type: string
+          enum: [WORD_MULTIPLE_CHOICE, MULTIPLE_CHOICE_CLOZE, TYPED_CLOZE, MATCHING]
+        prompt:
+          type: [string, "null"]
+          minLength: 1
+          maxLength: 1000
+        correctAnswer:
+          type: [string, "null"]
+          minLength: 1
+          maxLength: 500
+        alternativeCorrectAnswer:
+          type: [string, "null"]
+          minLength: 1
+          maxLength: 500
+        translations:
+          $ref: "#/components/schemas/EditorTranslations"
+        options:
+          type: array
+          maxItems: 4
+          items:
+            $ref: "#/components/schemas/CourseEditorOption"
+        matchingPairs:
+          type: array
+          maxItems: 6
+          items:
+            $ref: "#/components/schemas/CourseEditorMatchingPair"
+    EditorTranslations:
+      type: object
+      propertyNames:
+        pattern: "^[a-z]{2,8}(?:-[A-Z][a-z]{3})?(?:-(?:[A-Z]{2}|[0-9]{3}))?(?:-(?:[a-z0-9]{5,8}|[0-9][a-z0-9]{3}))*$"
+      additionalProperties:
+        type: string
+        minLength: 1
+        maxLength: 500
+    CourseEditorOption:
+      type: object
+      additionalProperties: false
+      required: [text, correct, translations]
+      properties:
+        text:
+          type: string
+          minLength: 1
+          maxLength: 500
+        correct:
+          type: boolean
+        translations:
+          $ref: "#/components/schemas/EditorTranslations"
+    CourseEditorMatchingPair:
+      type: object
+      additionalProperties: false
+      required: [targetText, translations]
+      properties:
+        targetText:
+          type: string
+          minLength: 1
+          maxLength: 500
+        translations:
+          $ref: "#/components/schemas/EditorTranslations"
+    FullCourseEditorDraftResponse:
+      type: object
+      additionalProperties: false
+      required: [courseId, baseReleaseId, contentChangeSetId, draftReleaseId, releaseRevision, questionCount, requiredClientCapabilities, createdAt, created]
+      properties:
+        courseId:
+          $ref: "#/components/schemas/Id"
+        baseReleaseId:
+          $ref: "#/components/schemas/Id"
+        contentChangeSetId:
+          $ref: "#/components/schemas/Id"
+        draftReleaseId:
+          $ref: "#/components/schemas/Id"
+        releaseRevision:
+          type: integer
+          minimum: 2
+        questionCount:
+          type: integer
+          minimum: 1
+        requiredClientCapabilities:
+          type: array
+          uniqueItems: true
+          items:
+            $ref: "#/components/schemas/ClientCapability"
+        createdAt:
+          type: string
+          format: date-time
+        created:
+          type: boolean
+    PublicUsername:
+      type: string
+      minLength: 3
+      maxLength: 24
+      pattern: "^[a-z][a-z0-9_]{2,23}$"
+    UpdatePublicProfileRequest:
+      type: object
+      additionalProperties: false
+      required: [displayName, publicProfileEnabled, leaderboardOptIn]
+      properties:
+        username:
+          type: [string, "null"]
+          minLength: 3
+          maxLength: 24
+          pattern: "^[a-z][a-z0-9_]{2,23}$"
+        displayName:
+          type: string
+          minLength: 1
+          maxLength: 80
+        bio:
+          type: [string, "null"]
+          minLength: 1
+          maxLength: 280
+        avatarSeed:
+          type: [string, "null"]
+          pattern: "^[A-Za-z0-9_-]{8,64}$"
+        publicProfileEnabled:
+          type: boolean
+        leaderboardOptIn:
+          type: boolean
+    OwnPublicProfile:
+      type: object
+      additionalProperties: false
+      required: [displayName, targetLanguage, publicProfileEnabled, leaderboardOptIn, lifetimeScore, completedAttempts]
+      properties:
+        username:
+          type: [string, "null"]
+        displayName:
+          type: string
+        bio:
+          type: [string, "null"]
+        avatarSeed:
+          type: [string, "null"]
+        targetLanguage:
+          $ref: "#/components/schemas/LanguageTag"
+        publicProfileEnabled:
+          type: boolean
+        leaderboardOptIn:
+          type: boolean
+        lifetimeScore:
+          type: integer
+          format: int64
+          minimum: 0
+        completedAttempts:
+          type: integer
+          minimum: 0
+        updatedAt:
+          type: [string, "null"]
+          format: date-time
+    PublicProfile:
+      type: object
+      additionalProperties: false
+      required: [username, displayName, targetLanguage, lifetimeScore, completedAttempts, joinedAt]
+      properties:
+        username:
+          $ref: "#/components/schemas/PublicUsername"
+        displayName:
+          type: string
+        bio:
+          type: [string, "null"]
+        avatarSeed:
+          type: [string, "null"]
+        targetLanguage:
+          $ref: "#/components/schemas/LanguageTag"
+        lifetimeScore:
+          type: integer
+          format: int64
+          minimum: 0
+        completedAttempts:
+          type: integer
+          minimum: 0
+        joinedAt:
+          type: string
+          format: date-time
+    LeaderboardEntry:
+      type: object
+      additionalProperties: false
+      required: [rank, username, displayName, targetLanguage, lifetimeScore, completedAttempts]
+      properties:
+        rank:
+          type: integer
+          minimum: 1
+        username:
+          $ref: "#/components/schemas/PublicUsername"
+        displayName:
+          type: string
+        avatarSeed:
+          type: [string, "null"]
+        targetLanguage:
+          $ref: "#/components/schemas/LanguageTag"
+        lifetimeScore:
+          type: integer
+          format: int64
+          minimum: 0
+        completedAttempts:
+          type: integer
+          minimum: 0
+    Leaderboard:
+      type: object
+      additionalProperties: false
+      required: [entries, generatedAt]
+      properties:
+        entries:
+          type: array
+          items:
+            $ref: "#/components/schemas/LeaderboardEntry"
+        generatedAt:
+          type: string
+          format: date-time
+    NotificationPreference:
+      type: object
+      additionalProperties: false
+      required: [learningReminders, courseUpdates, productAnnouncements, pushEnabled, emailEnabled, pushAvailable, emailAvailable, version]
+      properties:
+        learningReminders: { type: boolean }
+        courseUpdates: { type: boolean }
+        productAnnouncements: { type: boolean }
+        pushEnabled: { type: boolean }
+        emailEnabled: { type: boolean }
+        pushAvailable: { type: boolean }
+        emailAvailable: { type: boolean }
+        quietHoursStart:
+          type: [string, "null"]
+          format: time
+        quietHoursEnd:
+          type: [string, "null"]
+          format: time
+        version:
+          type: integer
+          format: int64
+          minimum: 0
+        updatedAt:
+          type: [string, "null"]
+          format: date-time
+    UpdateNotificationPreferenceRequest:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion, learningReminders, courseUpdates, productAnnouncements, pushEnabled, emailEnabled]
+      properties:
+        expectedVersion:
+          type: integer
+          format: int64
+          minimum: 0
+        learningReminders: { type: boolean }
+        courseUpdates: { type: boolean }
+        productAnnouncements: { type: boolean }
+        pushEnabled: { type: boolean }
+        emailEnabled: { type: boolean }
+        quietHoursStart:
+          type: [string, "null"]
+          format: time
+        quietHoursEnd:
+          type: [string, "null"]
+          format: time
+    AccountExport:
+      type: object
+      additionalProperties: false
+      required: [generatedAt, profile, enrollments, completedAttempts, scoreEvents, legalConsents]
+      properties:
+        generatedAt:
+          type: string
+          format: date-time
+        profile:
+          $ref: "#/components/schemas/AccountExportProfile"
+        enrollments:
+          type: array
+          items: { type: object, additionalProperties: true }
+        completedAttempts:
+          type: array
+          items: { type: object, additionalProperties: true }
+        scoreEvents:
+          type: array
+          items: { type: object, additionalProperties: true }
+        legalConsents:
+          type: array
+          items:
+            $ref: "#/components/schemas/LegalConsent"
+    AccountExportProfile:
+      type: object
+      additionalProperties: false
+      required: [id, displayName, appLocale, activeTargetLanguage, timeZone]
+      properties:
+        id: { $ref: "#/components/schemas/Id" }
+        email: { type: [string, "null"], format: email }
+        displayName: { type: string }
+        username: { type: [string, "null"] }
+        appLocale: { $ref: "#/components/schemas/LanguageTag" }
+        activeTargetLanguage: { $ref: "#/components/schemas/LanguageTag" }
+        preferredSupportLanguage:
+          type: [string, "null"]
+        timeZone: { $ref: "#/components/schemas/TimeZoneId" }
+    AccountDeletionRequest:
+      type: object
+      additionalProperties: false
+      required: [id, status, requestedAt, scheduledFor, created]
+      properties:
+        id: { $ref: "#/components/schemas/Id" }
+        status: { type: string, enum: [PENDING, CANCELLED, COMPLETED] }
+        requestedAt: { type: string, format: date-time }
+        scheduledFor: { type: string, format: date-time }
+        created: { type: boolean }
+    SessionRevocation:
+      type: object
+      additionalProperties: false
+      required: [revokedAt]
+      properties:
+        revokedAt: { type: string, format: date-time }
+    LegalConsent:
+      type: object
+      additionalProperties: false
+      required: [documentId, documentVersion, action, occurredAt]
+      properties:
+        documentId: { type: string }
+        documentVersion: { type: string }
+        action: { type: string, enum: [ACCEPTED, WITHDRAWN] }
+        occurredAt: { type: string, format: date-time }
+    CreateCourseInvitationRequest:
+      type: object
+      additionalProperties: false
+      required: [maxUses, expiresInHours]
+      properties:
+        maxUses: { type: integer, minimum: 1, maximum: 100, default: 1 }
+        expiresInHours: { type: integer, minimum: 1, maximum: 720, default: 168 }
+    CourseInvitationCreated:
+      type: object
+      additionalProperties: false
+      required: [id, courseId, token, maxUses, expiresAt]
+      properties:
+        id: { $ref: "#/components/schemas/Id" }
+        courseId: { $ref: "#/components/schemas/Id" }
+        token: { type: string, pattern: "^[A-Za-z0-9_-]{43}$" }
+        maxUses: { type: integer, minimum: 1, maximum: 100 }
+        expiresAt: { type: string, format: date-time }
+    AcceptCourseInvitationRequest:
+      type: object
+      additionalProperties: false
+      required: [supportLanguage]
+      properties:
+        supportLanguage: { $ref: "#/components/schemas/LanguageTag" }
+    CourseInvitationAccepted:
+      type: object
+      additionalProperties: false
+      required: [courseId, enrollmentId, supportLanguage, acceptedAt]
+      properties:
+        courseId: { $ref: "#/components/schemas/Id" }
+        enrollmentId: { $ref: "#/components/schemas/Id" }
+        supportLanguage: { $ref: "#/components/schemas/LanguageTag" }
+        acceptedAt: { type: string, format: date-time }
     ProfileSetupRequest:
       type: object
       additionalProperties: false
@@ -1363,6 +2394,89 @@ components:
         updatedAt:
           type: [string, "null"]
           format: date-time
+    LearningSummary:
+      type: object
+      additionalProperties: false
+      required: [activeScore, lifetimeScore, answeredQuestions, correctAnswers, completedAttempts, passedAttempts, enrolledCourses, completedCourses, currentStreakDays, history]
+      properties:
+        activeScore:
+          type: integer
+          format: int64
+          minimum: 0
+        lifetimeScore:
+          type: integer
+          format: int64
+          minimum: 0
+        answeredQuestions:
+          type: integer
+          minimum: 0
+        correctAnswers:
+          type: integer
+          minimum: 0
+        completedAttempts:
+          type: integer
+          minimum: 0
+        passedAttempts:
+          type: integer
+          minimum: 0
+        enrolledCourses:
+          type: integer
+          minimum: 0
+        completedCourses:
+          type: integer
+          minimum: 0
+        currentStreakDays:
+          type: integer
+          minimum: 0
+        history:
+          type: array
+          maxItems: 50
+          items:
+            $ref: "#/components/schemas/LearningHistoryItem"
+    LearningHistoryItem:
+      type: object
+      additionalProperties: false
+      required: [attemptId, courseId, courseName, testTitle, status, answeredCount, correctCount, totalQuestions, finishedAt]
+      properties:
+        attemptId:
+          $ref: "#/components/schemas/Id"
+        courseId:
+          $ref: "#/components/schemas/Id"
+        courseName:
+          type: string
+          minLength: 1
+          maxLength: 160
+        testTitle:
+          type: string
+          minLength: 1
+          maxLength: 160
+        status:
+          type: string
+          enum: [COMPLETED_PASS, COMPLETED_FAIL]
+        answeredCount:
+          type: integer
+          minimum: 0
+        correctCount:
+          type: integer
+          minimum: 0
+        totalQuestions:
+          type: integer
+          minimum: 1
+        finishedAt:
+          type: string
+          format: date-time
+    OfflinePackage:
+      type: object
+      additionalProperties: false
+      required: [courseId, courseReleaseId, supportLanguage, formatVersion, sha256, downloadUrl, expiresAt]
+      properties:
+        courseId: { $ref: "#/components/schemas/Id" }
+        courseReleaseId: { $ref: "#/components/schemas/Id" }
+        supportLanguage: { $ref: "#/components/schemas/LanguageTag" }
+        formatVersion: { type: integer, enum: [1] }
+        sha256: { type: string, pattern: "^[0-9a-f]{64}$" }
+        downloadUrl: { type: string, format: uri }
+        expiresAt: { type: string, format: date-time }
     TestSummary:
       type: object
       additionalProperties: false
@@ -2732,6 +3846,31 @@ components:
           type: string
           enum: [PENDING, FAILED, COMPLETED, DEAD]
         activatedAt:
+          type: string
+          format: date-time
+        created:
+          type: boolean
+    CourseReleaseAbandonmentResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - abandonmentId
+        - courseId
+        - releaseId
+        - releaseRevision
+        - abandonedAt
+        - created
+      properties:
+        abandonmentId:
+          $ref: "#/components/schemas/Id"
+        courseId:
+          $ref: "#/components/schemas/Id"
+        releaseId:
+          $ref: "#/components/schemas/Id"
+        releaseRevision:
+          type: integer
+          minimum: 1
+        abandonedAt:
           type: string
           format: date-time
         created:

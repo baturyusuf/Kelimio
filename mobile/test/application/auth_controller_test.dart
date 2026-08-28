@@ -12,6 +12,7 @@ void main() {
   test('signed-out restoration clears stale attempt recovery', () async {
     final store = MemoryRecoveryStore()
       ..value = fixtureRecovery(RecoveryPhase.presenting);
+    final offline = RecordingOfflinePackageRepository();
     final container = ProviderContainer(
       overrides: [
         authRepositoryProvider.overrideWithValue(RecordingAuthRepository()),
@@ -19,6 +20,7 @@ void main() {
         courseEditorRecoveryStoreProvider.overrideWithValue(
           MemoryCourseEditorRecoveryStore(),
         ),
+        offlinePackageRepositoryProvider.overrideWithValue(offline),
       ],
     );
     addTearDown(container.dispose);
@@ -26,6 +28,7 @@ void main() {
     expect(await container.read(authControllerProvider.future), isNull);
     expect(store.value, isNull);
     expect(store.clearCalls, 1);
+    expect(offline.clearCalls, 1);
   });
 
   test('sign out purges recovery before exposing a signed-out state', () async {
@@ -33,6 +36,7 @@ void main() {
     final auth = RecordingAuthRepository(restoredSession: session);
     final store = MemoryRecoveryStore()
       ..value = fixtureRecovery(RecoveryPhase.submitting);
+    final offline = RecordingOfflinePackageRepository();
     final container = ProviderContainer(
       overrides: [
         authRepositoryProvider.overrideWithValue(auth),
@@ -40,6 +44,7 @@ void main() {
         courseEditorRecoveryStoreProvider.overrideWithValue(
           MemoryCourseEditorRecoveryStore(),
         ),
+        offlinePackageRepositoryProvider.overrideWithValue(offline),
       ],
     );
     addTearDown(container.dispose);
@@ -49,6 +54,7 @@ void main() {
 
     expect(auth.signOutCalls, 1);
     expect(store.value, isNull);
+    expect(offline.clearCalls, 1);
     expect(container.read(authControllerProvider).value, isNull);
   });
 
@@ -56,6 +62,7 @@ void main() {
     const courseId = '00000000-0000-4000-8000-000000000101';
     final session = AuthSession(expiresAt: DateTime.utc(2030));
     final catalog = RecordingCatalogRepository();
+    final offline = RecordingOfflinePackageRepository();
     final container = ProviderContainer(
       overrides: [
         authRepositoryProvider.overrideWithValue(
@@ -68,6 +75,7 @@ void main() {
         courseEditorRecoveryStoreProvider.overrideWithValue(
           MemoryCourseEditorRecoveryStore(),
         ),
+        offlinePackageRepositoryProvider.overrideWithValue(offline),
       ],
     );
     addTearDown(container.dispose);
@@ -82,5 +90,6 @@ void main() {
 
     expect((await container.read(progress.future)).projectionVersion, 2);
     expect(catalog.progressCalls, 2);
+    expect(offline.clearCalls, 1);
   });
 }

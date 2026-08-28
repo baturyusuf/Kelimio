@@ -48,15 +48,15 @@ Please follow the [installation procedure](#installation--usage) and then run th
 import 'package:kelimio_api_client/kelimio_api_client.dart';
 
 
-final api = KelimioApiClient().getCatalogApi();
-final String courseId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
-final String xKelimioClientCapabilities = xKelimioClientCapabilities_example; // String | Comma-separated bounded capability tokens implemented by the client. Missing means the empty set; this is a compatibility signal, not authorization.
+final api = KelimioApiClient().getAccountApi();
+final String requestId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final String idempotencyKey = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String | Stable UUID generated once for the logical command.
 
 try {
-    final response = await api.getCourse(courseId, xKelimioClientCapabilities);
+    final response = await api.cancelAccountDeletion(requestId, idempotencyKey);
     print(response);
 } catch on DioException (e) {
-    print("Exception when calling CatalogApi->getCourse: $e\n");
+    print("Exception when calling AccountApi->cancelAccountDeletion: $e\n");
 }
 
 ```
@@ -67,6 +67,14 @@ All URIs are relative to *http://localhost*
 
 Class | Method | HTTP request | Description
 ------------ | ------------- | ------------- | -------------
+[*AccountApi*](doc/AccountApi.md) | [**cancelAccountDeletion**](doc/AccountApi.md#cancelaccountdeletion) | **POST** /v1/me/deletion-requests/{requestId}/cancel | Cancel a pending deletion request during its recovery window
+[*AccountApi*](doc/AccountApi.md) | [**exportOwnAccount**](doc/AccountApi.md#exportownaccount) | **GET** /v1/me/export | Export the authenticated user&#39;s portable account and learning facts
+[*AccountApi*](doc/AccountApi.md) | [**getNotificationPreferences**](doc/AccountApi.md#getnotificationpreferences) | **GET** /v1/me/notification-preferences | Read notification choices and real provider availability
+[*AccountApi*](doc/AccountApi.md) | [**listAccountDeletionRequests**](doc/AccountApi.md#listaccountdeletionrequests) | **GET** /v1/me/deletion-requests | List the current user&#39;s recent deletion requests
+[*AccountApi*](doc/AccountApi.md) | [**listLegalConsents**](doc/AccountApi.md#listlegalconsents) | **GET** /v1/me/legal-consents | List append-only legal-consent facts recorded for the current user
+[*AccountApi*](doc/AccountApi.md) | [**requestAccountDeletion**](doc/AccountApi.md#requestaccountdeletion) | **POST** /v1/me/deletion-requests | Request audited account deletion after a seven-day recovery window
+[*AccountApi*](doc/AccountApi.md) | [**revokeAllSessions**](doc/AccountApi.md#revokeallsessions) | **POST** /v1/me/session-revocations | Revoke all Cognito refresh sessions for the authenticated identity
+[*AccountApi*](doc/AccountApi.md) | [**updateNotificationPreferences**](doc/AccountApi.md#updatenotificationpreferences) | **PUT** /v1/me/notification-preferences | Optimistically update notification preferences
 [*CatalogApi*](doc/CatalogApi.md) | [**getCourse**](doc/CatalogApi.md#getcourse) | **GET** /v1/courses/{courseId} | Return course details visible to the authenticated user
 [*CatalogApi*](doc/CatalogApi.md) | [**listCatalogCourses**](doc/CatalogApi.md#listcatalogcourses) | **GET** /v1/catalog/courses | List public, published courses
 [*CourseImportApi*](doc/CourseImportApi.md) | [**approveCourseImport**](doc/CourseImportApi.md#approvecourseimport) | **POST** /v1/courses/imports/{importId}/approve | Approve one exact immutable preview and provenance tuple
@@ -77,6 +85,7 @@ Class | Method | HTTP request | Description
 [*CourseImportApi*](doc/CourseImportApi.md) | [**listCourseImportPreviewRows**](doc/CourseImportApi.md#listcourseimportpreviewrows) | **GET** /v1/courses/imports/{importId}/preview | Page through the immutable normalized owner preview
 [*CourseImportApi*](doc/CourseImportApi.md) | [**listCourseImportValidationIssues**](doc/CourseImportApi.md#listcourseimportvalidationissues) | **GET** /v1/courses/imports/{importId}/issues | Page through the immutable owner-scoped validation report
 [*CourseImportApi*](doc/CourseImportApi.md) | [**listCourseImports**](doc/CourseImportApi.md#listcourseimports) | **GET** /v1/courses/imports | Page through the current user&#39;s import sessions
+[*CourseReleaseApi*](doc/CourseReleaseApi.md) | [**abandonCourseRelease**](doc/CourseReleaseApi.md#abandoncourserelease) | **POST** /v1/courses/{courseId}/releases/{releaseId}/abandon | Mark an inactive draft release as abandoned without deleting its facts
 [*CourseReleaseApi*](doc/CourseReleaseApi.md) | [**activateCourseRelease**](doc/CourseReleaseApi.md#activatecourserelease) | **POST** /v1/courses/{courseId}/releases/{releaseId}/activate | Publish or roll back to an exact reviewed immutable release
 [*CourseReleaseApi*](doc/CourseReleaseApi.md) | [**getCourseReleaseImpact**](doc/CourseReleaseApi.md#getcoursereleaseimpact) | **GET** /v1/courses/{courseId}/releases/{releaseId}/impact | Review the exact owner-scoped impact of activating an immutable release
 [*DevelopmentApi*](doc/DevelopmentApi.md) | [**createLocalCourseEditorDraft**](doc/DevelopmentApi.md#createlocalcourseeditordraft) | **POST** /v1/development/courses/{courseId}/editor/drafts | Save one ETag-bound immutable local editor draft
@@ -84,21 +93,36 @@ Class | Method | HTTP request | Description
 [*DevelopmentApi*](doc/DevelopmentApi.md) | [**getLocalCourseEditor**](doc/DevelopmentApi.md#getlocalcourseeditor) | **GET** /v1/development/courses/{courseId}/editor | Read the owner-scoped local course editor document
 [*DevelopmentApi*](doc/DevelopmentApi.md) | [**installLocalStarterCourse**](doc/DevelopmentApi.md#installlocalstartercourse) | **POST** /v1/development/starter-course | Install the authenticated owner&#39;s local starter course idempotently
 [*EnergyApi*](doc/EnergyApi.md) | [**getEnergy**](doc/EnergyApi.md#getenergy) | **GET** /v1/energy | Return the lazily regenerated free-course energy account
+[*EnrollmentApi*](doc/EnrollmentApi.md) | [**acceptCourseInvitation**](doc/EnrollmentApi.md#acceptcourseinvitation) | **POST** /v1/course-invitations/{token}/accept | Accept an opaque invitation and create active course access
 [*EnrollmentApi*](doc/EnrollmentApi.md) | [**enrollInCourse**](doc/EnrollmentApi.md#enrollincourse) | **POST** /v1/courses/{courseId}/enrollments | Enroll the authenticated user in a free public course
 [*LearningApi*](doc/LearningApi.md) | [**finishAttempt**](doc/LearningApi.md#finishattempt) | **POST** /v1/attempts/{attemptId}/finish | Finish an attempt after all planned questions are answered
 [*LearningApi*](doc/LearningApi.md) | [**getCourseProgress**](doc/LearningApi.md#getcourseprogress) | **GET** /v1/courses/{courseId}/progress | Return the authenticated learner&#39;s rebuildable course progress projection
+[*LearningApi*](doc/LearningApi.md) | [**getLearningSummary**](doc/LearningApi.md#getlearningsummary) | **GET** /v1/me/learning-summary | Return authoritative aggregate progress, current streak, and recent completed attempts
+[*LearningApi*](doc/LearningApi.md) | [**getOfflineCoursePackage**](doc/LearningApi.md#getofflinecoursepackage) | **GET** /v1/courses/{courseId}/offline-package | Create or reuse an immutable scoreless-practice package and return a short-lived download URL
 [*LearningApi*](doc/LearningApi.md) | [**getRecordedAnswer**](doc/LearningApi.md#getrecordedanswer) | **GET** /v1/attempts/{attemptId}/answers/{submissionId} | Reconcile one previously committed answer owned by the current user
 [*LearningApi*](doc/LearningApi.md) | [**startAttempt**](doc/LearningApi.md#startattempt) | **POST** /v1/tests/{testId}/attempts | Start an online attempt for the current test revision
 [*LearningApi*](doc/LearningApi.md) | [**submitAnswer**](doc/LearningApi.md#submitanswer) | **POST** /v1/attempts/{attemptId}/answers | Record and evaluate one online answer exactly once
 [*ProfileApi*](doc/ProfileApi.md) | [**completeProfileSetup**](doc/ProfileApi.md#completeprofilesetup) | **POST** /v1/me/profile-setup | Complete the authenticated user&#39;s first-login profile setup
 [*ProfileApi*](doc/ProfileApi.md) | [**getMe**](doc/ProfileApi.md#getme) | **GET** /v1/me | Return the authenticated user&#39;s profile and language preferences
+[*SocialApi*](doc/SocialApi.md) | [**getGlobalLeaderboard**](doc/SocialApi.md#getgloballeaderboard) | **GET** /v1/leaderboards/global | List only users who explicitly opted in to public ranking
+[*SocialApi*](doc/SocialApi.md) | [**getOwnPublicProfile**](doc/SocialApi.md#getownpublicprofile) | **GET** /v1/me/public-profile | Read private settings and public-profile projection for the current user
+[*SocialApi*](doc/SocialApi.md) | [**getPublicProfile**](doc/SocialApi.md#getpublicprofile) | **GET** /v1/profiles/{username} | Read an explicitly enabled public profile
+[*SocialApi*](doc/SocialApi.md) | [**updateOwnPublicProfile**](doc/SocialApi.md#updateownpublicprofile) | **PUT** /v1/me/public-profile | Update public-profile fields and explicit visibility choices
 [*TeacherApi*](doc/TeacherApi.md) | [**acceptTeacherTerms**](doc/TeacherApi.md#acceptteacherterms) | **POST** /v1/teacher/access/terms-acceptance | Accept the exact current version of the production authoring terms
+[*TeacherApi*](doc/TeacherApi.md) | [**createCourseInvitation**](doc/TeacherApi.md#createcourseinvitation) | **POST** /v1/teacher/courses/{courseId}/invitations | Create an expiring private free-course invitation
+[*TeacherApi*](doc/TeacherApi.md) | [**createFullCourseEditorDraft**](doc/TeacherApi.md#createfullcourseeditordraft) | **POST** /v1/teacher/courses/{courseId}/editor/drafts | Save an ETag-bound complete immutable course draft
+[*TeacherApi*](doc/TeacherApi.md) | [**getFullCourseEditor**](doc/TeacherApi.md#getfullcourseeditor) | **GET** /v1/teacher/courses/{courseId}/editor | Read the active immutable release as a full owner-scoped editor document
 [*TeacherApi*](doc/TeacherApi.md) | [**getTeacherAccess**](doc/TeacherApi.md#getteacheraccess) | **GET** /v1/teacher/access | Return the authenticated user&#39;s production teacher access state
+[*TeacherApi*](doc/TeacherApi.md) | [**listTeacherCourses**](doc/TeacherApi.md#listteachercourses) | **GET** /v1/teacher/courses | List courses owned by the authenticated authorized teacher
 
 
 ## Documentation For Models
 
+ - [AcceptCourseInvitationRequest](doc/AcceptCourseInvitationRequest.md)
  - [AcceptTeacherTermsRequest](doc/AcceptTeacherTermsRequest.md)
+ - [AccountDeletionRequest](doc/AccountDeletionRequest.md)
+ - [AccountExport](doc/AccountExport.md)
+ - [AccountExportProfile](doc/AccountExportProfile.md)
  - [ActivateCourseReleaseRequest](doc/ActivateCourseReleaseRequest.md)
  - [AnswerOption](doc/AnswerOption.md)
  - [AnswerRecordedResponse](doc/AnswerRecordedResponse.md)
@@ -109,6 +133,13 @@ Class | Method | HTTP request | Description
  - [CompleteCourseImportUploadRequest](doc/CompleteCourseImportUploadRequest.md)
  - [CompletedCourseImportPart](doc/CompletedCourseImportPart.md)
  - [CourseDetail](doc/CourseDetail.md)
+ - [CourseEditorLevel](doc/CourseEditorLevel.md)
+ - [CourseEditorMatchingPair](doc/CourseEditorMatchingPair.md)
+ - [CourseEditorOption](doc/CourseEditorOption.md)
+ - [CourseEditorQuestion](doc/CourseEditorQuestion.md)
+ - [CourseEditorTest](doc/CourseEditorTest.md)
+ - [CourseEditorTopic](doc/CourseEditorTopic.md)
+ - [CourseEditorUnit](doc/CourseEditorUnit.md)
  - [CourseImportActivationSummary](doc/CourseImportActivationSummary.md)
  - [CourseImportApprovalResponse](doc/CourseImportApprovalResponse.md)
  - [CourseImportCommitResponse](doc/CourseImportCommitResponse.md)
@@ -128,31 +159,52 @@ Class | Method | HTTP request | Description
  - [CourseImportUploadInstructions](doc/CourseImportUploadInstructions.md)
  - [CourseImportUploadSessionResponse](doc/CourseImportUploadSessionResponse.md)
  - [CourseImportValidationIssue](doc/CourseImportValidationIssue.md)
+ - [CourseInvitationAccepted](doc/CourseInvitationAccepted.md)
+ - [CourseInvitationCreated](doc/CourseInvitationCreated.md)
  - [CoursePage](doc/CoursePage.md)
  - [CourseProgressResponse](doc/CourseProgressResponse.md)
+ - [CourseReleaseAbandonmentResponse](doc/CourseReleaseAbandonmentResponse.md)
  - [CourseReleaseActivationResponse](doc/CourseReleaseActivationResponse.md)
  - [CourseReleaseImpactResponse](doc/CourseReleaseImpactResponse.md)
  - [CourseReleaseOperation](doc/CourseReleaseOperation.md)
  - [CourseSummary](doc/CourseSummary.md)
  - [CreateCourseImportRequest](doc/CreateCourseImportRequest.md)
+ - [CreateCourseInvitationRequest](doc/CreateCourseInvitationRequest.md)
  - [CreateEnrollmentRequest](doc/CreateEnrollmentRequest.md)
  - [CreateLocalCourseEditorDraftRequest](doc/CreateLocalCourseEditorDraftRequest.md)
  - [CreateLocalCourseRevisionRequest](doc/CreateLocalCourseRevisionRequest.md)
  - [EnergyResponse](doc/EnergyResponse.md)
  - [EnrollmentResponse](doc/EnrollmentResponse.md)
  - [FinishAttemptResponse](doc/FinishAttemptResponse.md)
+ - [FullCourseEditorDocument](doc/FullCourseEditorDocument.md)
+ - [FullCourseEditorDraftResponse](doc/FullCourseEditorDraftResponse.md)
+ - [Leaderboard](doc/Leaderboard.md)
+ - [LeaderboardEntry](doc/LeaderboardEntry.md)
+ - [LearningHistoryItem](doc/LearningHistoryItem.md)
+ - [LearningSummary](doc/LearningSummary.md)
+ - [LegalConsent](doc/LegalConsent.md)
  - [LocalCourseEditorSnapshot](doc/LocalCourseEditorSnapshot.md)
  - [LocalStarterCourseResponse](doc/LocalStarterCourseResponse.md)
  - [MatchingItem](doc/MatchingItem.md)
  - [MatchingSelection](doc/MatchingSelection.md)
  - [MeResponse](doc/MeResponse.md)
+ - [NotificationPreference](doc/NotificationPreference.md)
+ - [OfflinePackage](doc/OfflinePackage.md)
+ - [OwnPublicProfile](doc/OwnPublicProfile.md)
  - [Problem](doc/Problem.md)
  - [ProfileSetupRequest](doc/ProfileSetupRequest.md)
+ - [PublicProfile](doc/PublicProfile.md)
  - [QuestionPayload](doc/QuestionPayload.md)
+ - [SaveFullCourseEditorDraftRequest](doc/SaveFullCourseEditorDraftRequest.md)
+ - [SessionRevocation](doc/SessionRevocation.md)
  - [SubmitAnswerRequest](doc/SubmitAnswerRequest.md)
  - [SubsequentCourseDraftResult](doc/SubsequentCourseDraftResult.md)
  - [TeacherAccessResponse](doc/TeacherAccessResponse.md)
+ - [TeacherCoursePage](doc/TeacherCoursePage.md)
+ - [TeacherCourseSummary](doc/TeacherCourseSummary.md)
  - [TestSummary](doc/TestSummary.md)
+ - [UpdateNotificationPreferenceRequest](doc/UpdateNotificationPreferenceRequest.md)
+ - [UpdatePublicProfileRequest](doc/UpdatePublicProfileRequest.md)
 
 
 ## Documentation For Authorization

@@ -16,20 +16,59 @@
 import * as runtime from '../runtime';
 import type {
   AcceptTeacherTermsRequest,
+  CourseInvitationCreated,
+  CreateCourseInvitationRequest,
+  FullCourseEditorDocument,
+  FullCourseEditorDraftResponse,
   Problem,
+  SaveFullCourseEditorDraftRequest,
   TeacherAccessResponse,
+  TeacherCoursePage,
 } from '../models/index';
 import {
     AcceptTeacherTermsRequestFromJSON,
     AcceptTeacherTermsRequestToJSON,
+    CourseInvitationCreatedFromJSON,
+    CourseInvitationCreatedToJSON,
+    CreateCourseInvitationRequestFromJSON,
+    CreateCourseInvitationRequestToJSON,
+    FullCourseEditorDocumentFromJSON,
+    FullCourseEditorDocumentToJSON,
+    FullCourseEditorDraftResponseFromJSON,
+    FullCourseEditorDraftResponseToJSON,
     ProblemFromJSON,
     ProblemToJSON,
+    SaveFullCourseEditorDraftRequestFromJSON,
+    SaveFullCourseEditorDraftRequestToJSON,
     TeacherAccessResponseFromJSON,
     TeacherAccessResponseToJSON,
+    TeacherCoursePageFromJSON,
+    TeacherCoursePageToJSON,
 } from '../models/index';
 
 export interface AcceptTeacherTermsOperationRequest {
     acceptTeacherTermsRequest: AcceptTeacherTermsRequest;
+}
+
+export interface CreateCourseInvitationOperationRequest {
+    courseId: string;
+    createCourseInvitationRequest: CreateCourseInvitationRequest;
+}
+
+export interface CreateFullCourseEditorDraftRequest {
+    courseId: string;
+    idempotencyKey: string;
+    ifMatch: string;
+    saveFullCourseEditorDraftRequest: SaveFullCourseEditorDraftRequest;
+}
+
+export interface GetFullCourseEditorRequest {
+    courseId: string;
+}
+
+export interface ListTeacherCoursesRequest {
+    cursor?: string;
+    limit?: number;
 }
 
 /**
@@ -56,6 +95,55 @@ export interface TeacherApiInterface {
     acceptTeacherTerms(requestParameters: AcceptTeacherTermsOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<TeacherAccessResponse>;
 
     /**
+     *
+     * @summary Create an expiring private free-course invitation
+     * @param {string} courseId
+     * @param {CreateCourseInvitationRequest} createCourseInvitationRequest
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof TeacherApiInterface
+     */
+    createCourseInvitationRaw(requestParameters: CreateCourseInvitationOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<CourseInvitationCreated>>;
+
+    /**
+     * Create an expiring private free-course invitation
+     */
+    createCourseInvitation(requestParameters: CreateCourseInvitationOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<CourseInvitationCreated>;
+
+    /**
+     *
+     * @summary Save an ETag-bound complete immutable course draft
+     * @param {string} courseId
+     * @param {string} idempotencyKey Stable UUID generated once for the logical command.
+     * @param {string} ifMatch Strong ETag returned by the current owner-scoped editor document.
+     * @param {SaveFullCourseEditorDraftRequest} saveFullCourseEditorDraftRequest
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof TeacherApiInterface
+     */
+    createFullCourseEditorDraftRaw(requestParameters: CreateFullCourseEditorDraftRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<FullCourseEditorDraftResponse>>;
+
+    /**
+     * Save an ETag-bound complete immutable course draft
+     */
+    createFullCourseEditorDraft(requestParameters: CreateFullCourseEditorDraftRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<FullCourseEditorDraftResponse>;
+
+    /**
+     *
+     * @summary Read the active immutable release as a full owner-scoped editor document
+     * @param {string} courseId
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof TeacherApiInterface
+     */
+    getFullCourseEditorRaw(requestParameters: GetFullCourseEditorRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<FullCourseEditorDocument>>;
+
+    /**
+     * Read the active immutable release as a full owner-scoped editor document
+     */
+    getFullCourseEditor(requestParameters: GetFullCourseEditorRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<FullCourseEditorDocument>;
+
+    /**
      * Reports server-authoritative feature enablement, Cognito group eligibility, and current versioned terms acceptance. A client flag never grants access.
      * @summary Return the authenticated user\'s production teacher access state
      * @param {*} [options] Override http request option.
@@ -69,6 +157,22 @@ export interface TeacherApiInterface {
      * Return the authenticated user\'s production teacher access state
      */
     getTeacherAccess(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<TeacherAccessResponse>;
+
+    /**
+     *
+     * @summary List courses owned by the authenticated authorized teacher
+     * @param {string} [cursor] Opaque tamper-evident cursor bound to the authenticated owner, import, immutable preview/report identity, and position. It contains no workbook text or storage coordinates.
+     * @param {number} [limit]
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof TeacherApiInterface
+     */
+    listTeacherCoursesRaw(requestParameters: ListTeacherCoursesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<TeacherCoursePage>>;
+
+    /**
+     * List courses owned by the authenticated authorized teacher
+     */
+    listTeacherCourses(requestParameters: ListTeacherCoursesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<TeacherCoursePage>;
 
 }
 
@@ -127,6 +231,183 @@ export class TeacherApi extends runtime.BaseAPI implements TeacherApiInterface {
     }
 
     /**
+     * Create an expiring private free-course invitation
+     */
+    async createCourseInvitationRaw(requestParameters: CreateCourseInvitationOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<CourseInvitationCreated>> {
+        if (requestParameters['courseId'] == null) {
+            throw new runtime.RequiredError(
+                'courseId',
+                'Required parameter "courseId" was null or undefined when calling createCourseInvitation().'
+            );
+        }
+
+        if (requestParameters['createCourseInvitationRequest'] == null) {
+            throw new runtime.RequiredError(
+                'createCourseInvitationRequest',
+                'Required parameter "createCourseInvitationRequest" was null or undefined when calling createCourseInvitation().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("bearerAuth", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/v1/teacher/courses/{courseId}/invitations`;
+        urlPath = urlPath.replace(`{${"courseId"}}`, encodeURIComponent(String(requestParameters['courseId'])));
+
+        const response = await this.request({
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: CreateCourseInvitationRequestToJSON(requestParameters['createCourseInvitationRequest']),
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => CourseInvitationCreatedFromJSON(jsonValue));
+    }
+
+    /**
+     * Create an expiring private free-course invitation
+     */
+    async createCourseInvitation(requestParameters: CreateCourseInvitationOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<CourseInvitationCreated> {
+        const response = await this.createCourseInvitationRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Save an ETag-bound complete immutable course draft
+     */
+    async createFullCourseEditorDraftRaw(requestParameters: CreateFullCourseEditorDraftRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<FullCourseEditorDraftResponse>> {
+        if (requestParameters['courseId'] == null) {
+            throw new runtime.RequiredError(
+                'courseId',
+                'Required parameter "courseId" was null or undefined when calling createFullCourseEditorDraft().'
+            );
+        }
+
+        if (requestParameters['idempotencyKey'] == null) {
+            throw new runtime.RequiredError(
+                'idempotencyKey',
+                'Required parameter "idempotencyKey" was null or undefined when calling createFullCourseEditorDraft().'
+            );
+        }
+
+        if (requestParameters['ifMatch'] == null) {
+            throw new runtime.RequiredError(
+                'ifMatch',
+                'Required parameter "ifMatch" was null or undefined when calling createFullCourseEditorDraft().'
+            );
+        }
+
+        if (requestParameters['saveFullCourseEditorDraftRequest'] == null) {
+            throw new runtime.RequiredError(
+                'saveFullCourseEditorDraftRequest',
+                'Required parameter "saveFullCourseEditorDraftRequest" was null or undefined when calling createFullCourseEditorDraft().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (requestParameters['idempotencyKey'] != null) {
+            headerParameters['Idempotency-Key'] = String(requestParameters['idempotencyKey']);
+        }
+
+        if (requestParameters['ifMatch'] != null) {
+            headerParameters['If-Match'] = String(requestParameters['ifMatch']);
+        }
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("bearerAuth", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/v1/teacher/courses/{courseId}/editor/drafts`;
+        urlPath = urlPath.replace(`{${"courseId"}}`, encodeURIComponent(String(requestParameters['courseId'])));
+
+        const response = await this.request({
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: SaveFullCourseEditorDraftRequestToJSON(requestParameters['saveFullCourseEditorDraftRequest']),
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => FullCourseEditorDraftResponseFromJSON(jsonValue));
+    }
+
+    /**
+     * Save an ETag-bound complete immutable course draft
+     */
+    async createFullCourseEditorDraft(requestParameters: CreateFullCourseEditorDraftRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<FullCourseEditorDraftResponse> {
+        const response = await this.createFullCourseEditorDraftRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Read the active immutable release as a full owner-scoped editor document
+     */
+    async getFullCourseEditorRaw(requestParameters: GetFullCourseEditorRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<FullCourseEditorDocument>> {
+        if (requestParameters['courseId'] == null) {
+            throw new runtime.RequiredError(
+                'courseId',
+                'Required parameter "courseId" was null or undefined when calling getFullCourseEditor().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("bearerAuth", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/v1/teacher/courses/{courseId}/editor`;
+        urlPath = urlPath.replace(`{${"courseId"}}`, encodeURIComponent(String(requestParameters['courseId'])));
+
+        const response = await this.request({
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => FullCourseEditorDocumentFromJSON(jsonValue));
+    }
+
+    /**
+     * Read the active immutable release as a full owner-scoped editor document
+     */
+    async getFullCourseEditor(requestParameters: GetFullCourseEditorRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<FullCourseEditorDocument> {
+        const response = await this.getFullCourseEditorRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
      * Reports server-authoritative feature enablement, Cognito group eligibility, and current versioned terms acceptance. A client flag never grants access.
      * Return the authenticated user\'s production teacher access state
      */
@@ -162,6 +443,51 @@ export class TeacherApi extends runtime.BaseAPI implements TeacherApiInterface {
      */
     async getTeacherAccess(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<TeacherAccessResponse> {
         const response = await this.getTeacherAccessRaw(initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * List courses owned by the authenticated authorized teacher
+     */
+    async listTeacherCoursesRaw(requestParameters: ListTeacherCoursesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<TeacherCoursePage>> {
+        const queryParameters: any = {};
+
+        if (requestParameters['cursor'] != null) {
+            queryParameters['cursor'] = requestParameters['cursor'];
+        }
+
+        if (requestParameters['limit'] != null) {
+            queryParameters['limit'] = requestParameters['limit'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("bearerAuth", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/v1/teacher/courses`;
+
+        const response = await this.request({
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => TeacherCoursePageFromJSON(jsonValue));
+    }
+
+    /**
+     * List courses owned by the authenticated authorized teacher
+     */
+    async listTeacherCourses(requestParameters: ListTeacherCoursesRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<TeacherCoursePage> {
+        const response = await this.listTeacherCoursesRaw(requestParameters, initOverrides);
         return await response.value();
     }
 

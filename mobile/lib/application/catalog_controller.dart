@@ -9,15 +9,28 @@ final catalogControllerProvider =
     );
 
 final class CatalogController extends AsyncNotifier<CatalogPage> {
+  String? _query;
+  CourseAccessType? _accessType;
+
   @override
   Future<CatalogPage> build() {
-    return ref.watch(catalogRepositoryProvider).listCourses();
+    return ref
+        .watch(catalogRepositoryProvider)
+        .listCourses(query: _query, accessType: _accessType);
+  }
+
+  Future<void> search(String query, CourseAccessType? accessType) async {
+    _query = query.trim().isEmpty ? null : query.trim();
+    _accessType = accessType;
+    await refresh();
   }
 
   Future<void> refresh() async {
     state = const AsyncLoading<CatalogPage>();
     state = await AsyncValue.guard(
-      ref.read(catalogRepositoryProvider).listCourses,
+      () => ref
+          .read(catalogRepositoryProvider)
+          .listCourses(query: _query, accessType: _accessType),
     );
   }
 
@@ -32,7 +45,9 @@ final class CatalogController extends AsyncNotifier<CatalogPage> {
           .installStarterCourse(
             commandId: ref.read(identifierFactoryProvider).create(),
           );
-      return ref.read(catalogRepositoryProvider).listCourses();
+      return ref
+          .read(catalogRepositoryProvider)
+          .listCourses(query: _query, accessType: _accessType);
     });
   }
 }

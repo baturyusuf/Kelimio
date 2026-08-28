@@ -39,6 +39,8 @@ export interface ListCatalogCoursesRequest {
     limit?: number;
     targetLanguage?: string;
     supportLanguage?: string;
+    q?: string;
+    accessType?: ListCatalogCoursesAccessTypeEnum;
 }
 
 /**
@@ -72,6 +74,8 @@ export interface CatalogApiInterface {
      * @param {number} [limit]
      * @param {string} [targetLanguage]
      * @param {string} [supportLanguage]
+     * @param {string} [q] Case-insensitive course name or description search.
+     * @param {'FREE' | 'PAID'} [accessType]
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof CatalogApiInterface
@@ -161,6 +165,14 @@ export class CatalogApi extends runtime.BaseAPI implements CatalogApiInterface {
             queryParameters['supportLanguage'] = requestParameters['supportLanguage'];
         }
 
+        if (requestParameters['q'] != null) {
+            queryParameters['q'] = requestParameters['q'];
+        }
+
+        if (requestParameters['accessType'] != null) {
+            queryParameters['accessType'] = requestParameters['accessType'];
+        }
+
         const headerParameters: runtime.HTTPHeaders = {};
 
         if (requestParameters['xKelimioClientCapabilities'] != null) {
@@ -197,3 +209,12 @@ export class CatalogApi extends runtime.BaseAPI implements CatalogApiInterface {
     }
 
 }
+
+/**
+ * @export
+ */
+export const ListCatalogCoursesAccessTypeEnum = {
+    Free: 'FREE',
+    Paid: 'PAID'
+} as const;
+export type ListCatalogCoursesAccessTypeEnum = typeof ListCatalogCoursesAccessTypeEnum[keyof typeof ListCatalogCoursesAccessTypeEnum];

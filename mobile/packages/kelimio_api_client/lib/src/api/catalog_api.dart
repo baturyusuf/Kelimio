@@ -115,6 +115,8 @@ class CatalogApi {
   /// * [limit]
   /// * [targetLanguage]
   /// * [supportLanguage]
+  /// * [q] - Case-insensitive course name or description search.
+  /// * [accessType]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -130,6 +132,8 @@ class CatalogApi {
     int? limit = 20,
     String? targetLanguage,
     String? supportLanguage,
+    String? q,
+    String? accessType,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -159,6 +163,8 @@ class CatalogApi {
       if (limit != null) r'limit': limit,
       if (targetLanguage != null) r'targetLanguage': targetLanguage,
       if (supportLanguage != null) r'supportLanguage': supportLanguage,
+      if (q != null) r'q': q,
+      if (accessType != null) r'accessType': accessType,
     };
 
     final _response = await _dio.request<Object>(

@@ -9,8 +9,52 @@ All URIs are relative to *http://localhost*
 
 Method | HTTP request | Description
 ------------- | ------------- | -------------
+[**acceptCourseInvitation**](EnrollmentApi.md#acceptcourseinvitation) | **POST** /v1/course-invitations/{token}/accept | Accept an opaque invitation and create active course access
 [**enrollInCourse**](EnrollmentApi.md#enrollincourse) | **POST** /v1/courses/{courseId}/enrollments | Enroll the authenticated user in a free public course
 
+
+# **acceptCourseInvitation**
+> CourseInvitationAccepted acceptCourseInvitation(token, acceptCourseInvitationRequest)
+
+Accept an opaque invitation and create active course access
+
+### Example
+```dart
+import 'package:kelimio_api_client/api.dart';
+
+final api = KelimioApiClient().getEnrollmentApi();
+final String token = token_example; // String |
+final AcceptCourseInvitationRequest acceptCourseInvitationRequest = ; // AcceptCourseInvitationRequest |
+
+try {
+    final response = api.acceptCourseInvitation(token, acceptCourseInvitationRequest);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling EnrollmentApi->acceptCourseInvitation: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **token** | **String**|  |
+ **acceptCourseInvitationRequest** | [**AcceptCourseInvitationRequest**](AcceptCourseInvitationRequest.md)|  |
+
+### Return type
+
+[**CourseInvitationAccepted**](CourseInvitationAccepted.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json, application/problem+json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **enrollInCourse**
 > EnrollmentResponse enrollInCourse(courseId, idempotencyKey, createEnrollmentRequest, xKelimioClientCapabilities)

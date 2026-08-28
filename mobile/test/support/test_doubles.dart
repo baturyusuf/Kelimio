@@ -6,6 +6,7 @@ import 'package:kelimio_mobile/domain/course_authoring/course_authoring.dart';
 import 'package:kelimio_mobile/domain/development/development.dart';
 import 'package:kelimio_mobile/domain/identifiers.dart';
 import 'package:kelimio_mobile/domain/learning/learning.dart';
+import 'package:kelimio_mobile/domain/offline/offline.dart';
 import 'package:kelimio_mobile/domain/profile/profile.dart';
 
 import 'fixtures.dart';
@@ -149,6 +150,34 @@ final class RecordingAuthRepository implements AuthRepository {
   }
 }
 
+final class RecordingOfflinePackageRepository
+    implements OfflinePackageRepository {
+  int clearCalls = 0;
+
+  @override
+  Future<void> clearPrivateData() async {
+    clearCalls += 1;
+  }
+
+  @override
+  Future<OfflineCoursePackage> download({
+    required String courseId,
+    required String supportLanguage,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<List<OfflinePracticeQuestion>> loadQuestions(
+    OfflineCoursePackage package,
+  ) => throw UnimplementedError();
+
+  @override
+  Future<void> recordPractice({
+    required OfflineCoursePackage package,
+    required int answered,
+    required int correct,
+  }) => throw UnimplementedError();
+}
+
 final class SequenceIdentifierFactory implements IdentifierFactory {
   SequenceIdentifierFactory(this._values);
 
@@ -174,7 +203,14 @@ final class RecordingCatalogRepository implements CatalogRepository {
   int progressCalls = 0;
 
   @override
-  Future<CatalogPage> listCourses({String? cursor, int limit = 20}) async {
+  Future<CatalogPage> listCourses({
+    String? cursor,
+    int limit = 20,
+    String? query,
+    String? targetLanguage,
+    String? supportLanguage,
+    CourseAccessType? accessType,
+  }) async {
     listCalls += 1;
     return CatalogPage(
       items:
@@ -193,6 +229,14 @@ final class RecordingCatalogRepository implements CatalogRepository {
                   ),
                 ]),
     );
+  }
+
+  @override
+  Future<String> acceptInvitation({
+    required String token,
+    required String supportLanguage,
+  }) {
+    throw UnimplementedError('Not used by this focused test');
   }
 
   @override

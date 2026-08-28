@@ -67,6 +67,12 @@ final class AuthController extends AsyncNotifier<AuthSession?> {
     } on Object catch (error, stackTrace) {
       failure ??= error;
       failureStackTrace ??= stackTrace;
+    }
+    try {
+      await ref.read(offlinePackageRepositoryProvider).clearPrivateData();
+    } on Object catch (error, stackTrace) {
+      failure ??= error;
+      failureStackTrace ??= stackTrace;
     } finally {
       ref.invalidate(attemptControllerProvider);
       ref.invalidate(catalogControllerProvider);
@@ -78,6 +84,7 @@ final class AuthController extends AsyncNotifier<AuthSession?> {
       ref.invalidate(dioProvider);
       ref.invalidate(recoveryStoreProvider);
       ref.invalidate(courseEditorRecoveryStoreProvider);
+      ref.invalidate(offlinePackageRepositoryProvider);
     }
     if (failure != null) {
       Error.throwWithStackTrace(

@@ -15,7 +15,7 @@ void main() {
 
     // List public, published courses
     //
-    //Future<CoursePage> listCatalogCourses({ String xKelimioClientCapabilities, String cursor, int limit, String targetLanguage, String supportLanguage }) async
+    //Future<CoursePage> listCatalogCourses({ String xKelimioClientCapabilities, String cursor, int limit, String targetLanguage, String supportLanguage, String q, String accessType }) async
     test('test listCatalogCourses', () async {
       // TODO
     });

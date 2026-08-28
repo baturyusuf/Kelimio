@@ -7,6 +7,7 @@ import 'package:kelimio_api_client/src/auth/api_key_auth.dart';
 import 'package:kelimio_api_client/src/auth/basic_auth.dart';
 import 'package:kelimio_api_client/src/auth/bearer_auth.dart';
 import 'package:kelimio_api_client/src/auth/oauth.dart';
+import 'package:kelimio_api_client/src/api/account_api.dart';
 import 'package:kelimio_api_client/src/api/catalog_api.dart';
 import 'package:kelimio_api_client/src/api/course_import_api.dart';
 import 'package:kelimio_api_client/src/api/course_release_api.dart';
@@ -15,6 +16,7 @@ import 'package:kelimio_api_client/src/api/energy_api.dart';
 import 'package:kelimio_api_client/src/api/enrollment_api.dart';
 import 'package:kelimio_api_client/src/api/learning_api.dart';
 import 'package:kelimio_api_client/src/api/profile_api.dart';
+import 'package:kelimio_api_client/src/api/social_api.dart';
 import 'package:kelimio_api_client/src/api/teacher_api.dart';
 
 class KelimioApiClient {
@@ -86,6 +88,12 @@ class KelimioApiClient {
     }
   }
 
+  /// Get AccountApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  AccountApi getAccountApi() {
+    return AccountApi(dio);
+  }
+
   /// Get CatalogApi instance, base route and serializer can be overridden by a given but be careful,
   /// by doing that all interceptors will not be executed
   CatalogApi getCatalogApi() {
@@ -132,6 +140,12 @@ class KelimioApiClient {
   /// by doing that all interceptors will not be executed
   ProfileApi getProfileApi() {
     return ProfileApi(dio);
+  }
+
+  /// Get SocialApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  SocialApi getSocialApi() {
+    return SocialApi(dio);
   }
 
   /// Get TeacherApi instance, base route and serializer can be overridden by a given but be careful,

@@ -151,6 +151,13 @@ final class RecordingCourseAuthoringRepository
   }
 
   @override
+  Future<void> abandonRelease({
+    required String courseId,
+    required String releaseId,
+    required String commandId,
+  }) async {}
+
+  @override
   Future<LocalCourseEditorDocument> getEditor(String courseId) async {
     getEditorCalls += 1;
     if (editorDocuments.isNotEmpty) return editorDocuments.removeAt(0);

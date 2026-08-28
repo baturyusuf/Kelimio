@@ -72,6 +72,20 @@ resource "aws_iam_role_policy" "api_import_execution" {
 
 data "aws_iam_policy_document" "api_import_task" {
   statement {
+    sid       = "InspectOfflinePackageBucket"
+    actions   = ["s3:GetBucketVersioning"]
+    resources = [var.offline_package_bucket_arn]
+  }
+  statement {
+    sid = "ManageImmutableOfflinePackages"
+    actions = [
+      "s3:GetObject",
+      "s3:GetObjectAttributes",
+      "s3:PutObject"
+    ]
+    resources = ["${var.offline_package_bucket_arn}/releases/*"]
+  }
+  statement {
     sid       = "InspectImportBuckets"
     actions   = ["s3:GetBucketVersioning", "s3:ListBucketVersions"]
     resources = [var.import_quarantine_bucket_arn, var.import_archive_bucket_arn]

@@ -385,6 +385,12 @@ abstract interface class CourseAuthoringRepository {
     required String commandId,
   });
 
+  Future<void> abandonRelease({
+    required String courseId,
+    required String releaseId,
+    required String commandId,
+  });
+
   Future<LocalCourseEditorDocument> getEditor(String courseId);
 
   Future<LocalCourseEditorDraftResult> createEditorDraft({

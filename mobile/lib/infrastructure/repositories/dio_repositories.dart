@@ -26,18 +26,32 @@ final class GeneratedCatalogRepository implements CatalogRepository {
   final DioFailureMapper _failures;
 
   @override
-  Future<CatalogPage> listCourses({String? cursor, int limit = 20}) =>
-      _guard(() async {
-        final response = await _catalog.listCatalogCourses(
-          cursor: cursor,
-          limit: limit,
-        );
-        final data = response.data;
-        if (data == null) {
-          throw const ProtocolFailure('Catalog response body was empty');
-        }
-        return mapCatalogPage(data);
-      });
+  Future<CatalogPage> listCourses({
+    String? cursor,
+    int limit = 20,
+    String? query,
+    String? targetLanguage,
+    String? supportLanguage,
+    CourseAccessType? accessType,
+  }) => _guard(() async {
+    final response = await _catalog.listCatalogCourses(
+      cursor: cursor,
+      limit: limit,
+      q: query,
+      targetLanguage: targetLanguage,
+      supportLanguage: supportLanguage,
+      accessType: accessType == null
+          ? null
+          : accessType == CourseAccessType.free
+          ? 'FREE'
+          : 'PAID',
+    );
+    final data = response.data;
+    if (data == null) {
+      throw const ProtocolFailure('Catalog response body was empty');
+    }
+    return mapCatalogPage(data);
+  });
 
   @override
   Future<CourseDetail> getCourse(String courseId) => _guard(() async {
@@ -90,6 +104,24 @@ final class GeneratedCatalogRepository implements CatalogRepository {
       throw const ProtocolFailure('Enrollment response body was empty');
     }
     return mapEnrollment(data);
+  });
+
+  @override
+  Future<String> acceptInvitation({
+    required String token,
+    required String supportLanguage,
+  }) => _guard(() async {
+    final response = await _enrollment.acceptCourseInvitation(
+      token: token,
+      acceptCourseInvitationRequest: api.AcceptCourseInvitationRequest(
+        supportLanguage: supportLanguage,
+      ),
+    );
+    final data = response.data;
+    if (data == null) {
+      throw const ProtocolFailure('Invitation response was empty');
+    }
+    return data.courseId;
   });
 
   Future<T> _guard<T>(Future<T> Function() request) async {

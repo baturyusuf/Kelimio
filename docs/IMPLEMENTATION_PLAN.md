@@ -193,6 +193,24 @@ Exit gate:
 
 Every mandatory checklist item has objective evidence, no critical/high defect or security finding remains open, production provider configuration is verified, restore evidence is current, and the accountable owner records a go decision. Otherwise the status remains **BLOCKED — NOT PUBLISH-READY**.
 
+## Priority beta product slice — 2026-08-28
+
+Status: implemented locally; production deployment and external-provider acceptance remain open.
+
+ADR-022 adds the owner course list/full editor, immutable draft publication and
+abandonment, catalog search/access filters, expiring private invitations,
+authoritative completion/streak/history, private-by-default profiles and opt-in
+leaderboard, release-pinned checksum-verified offline scoreless practice,
+notification and quiet-hour preferences, portable account export, deletion
+request/recovery, and Cognito-backed all-device session revocation.
+
+Google identity, SES delivery, Firebase push, approved deletion
+retention/anonymisation, moderation/legal policy, real-device acceptance, and
+production canaries remain explicit gates; no fake provider fallback is added.
+Verification includes the full backend suite, 139 Flutter tests, static
+analysis, OpenAPI/schema checks, generated clients, Terraform validation, and
+focused V15/V16 PostgreSQL migration tests.
+
 ## Deferred scale gates
 
 Do not add Kafka, Kubernetes, service mesh, OpenSearch, service-per-domain databases, or global active-active data merely because a later phase mentions growth. Require an ADR with measured latency/throughput, independent ownership or deploy/scale need, operational capacity, migration/rollback plan, and total-cost impact.

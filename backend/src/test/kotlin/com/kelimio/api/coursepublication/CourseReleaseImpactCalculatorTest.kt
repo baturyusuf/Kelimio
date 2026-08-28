@@ -75,6 +75,22 @@ class CourseReleaseImpactCalculatorTest {
             .isInstanceOf(ConflictProblem::class.java)
     }
 
+    @Test
+    fun `an abandoned target fails closed before impact calculation`() {
+        val state = state(
+            publicationStatus = "DRAFT",
+            activeReleaseId = null,
+            activeReleaseRevision = null,
+            targetStatus = "ABANDONED",
+            targetRevision = 1,
+            currentQuestions = emptyList(),
+            targetQuestions = listOf(ref(1, 101)),
+        )
+
+        assertThatThrownBy { CourseReleaseImpactCalculator.calculate(state) }
+            .isInstanceOf(ConflictProblem::class.java)
+    }
+
     private fun state(
         publicationStatus: String,
         activeReleaseId: UUID?,

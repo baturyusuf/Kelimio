@@ -70,6 +70,21 @@ class FullCourseEditorValidatorTest {
             .isNotEqualTo(FullCourseEditorEntityTag.from(courseId, releaseId, 2))
     }
 
+    @Test
+    fun `editor answer material is redacted from diagnostics`() {
+        val question = questions().first()
+
+        assertThat(question.toString())
+            .contains("[REDACTED]")
+            .doesNotContain("elma", "apple", "تفاحة")
+        assertThat(question.options.first().toString())
+            .contains("[REDACTED]")
+            .doesNotContain("apple")
+        assertThat(questions().last().matchingPairs.first().toString())
+            .contains("[REDACTED]")
+            .doesNotContain("elma", "apple")
+    }
+
     private fun document(): FullCourseEditorDocument {
         val levelId = UUID.randomUUID()
         val unitId = UUID.randomUUID()

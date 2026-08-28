@@ -15,11 +15,17 @@
 
 import * as runtime from '../runtime';
 import type {
+  AcceptCourseInvitationRequest,
+  CourseInvitationAccepted,
   CreateEnrollmentRequest,
   EnrollmentResponse,
   Problem,
 } from '../models/index';
 import {
+    AcceptCourseInvitationRequestFromJSON,
+    AcceptCourseInvitationRequestToJSON,
+    CourseInvitationAcceptedFromJSON,
+    CourseInvitationAcceptedToJSON,
     CreateEnrollmentRequestFromJSON,
     CreateEnrollmentRequestToJSON,
     EnrollmentResponseFromJSON,
@@ -27,6 +33,11 @@ import {
     ProblemFromJSON,
     ProblemToJSON,
 } from '../models/index';
+
+export interface AcceptCourseInvitationOperationRequest {
+    token: string;
+    acceptCourseInvitationRequest: AcceptCourseInvitationRequest;
+}
 
 export interface EnrollInCourseRequest {
     courseId: string;
@@ -42,6 +53,22 @@ export interface EnrollInCourseRequest {
  * @interface EnrollmentApiInterface
  */
 export interface EnrollmentApiInterface {
+    /**
+     *
+     * @summary Accept an opaque invitation and create active course access
+     * @param {string} token
+     * @param {AcceptCourseInvitationRequest} acceptCourseInvitationRequest
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof EnrollmentApiInterface
+     */
+    acceptCourseInvitationRaw(requestParameters: AcceptCourseInvitationOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<CourseInvitationAccepted>>;
+
+    /**
+     * Accept an opaque invitation and create active course access
+     */
+    acceptCourseInvitation(requestParameters: AcceptCourseInvitationOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<CourseInvitationAccepted>;
+
     /**
      *
      * @summary Enroll the authenticated user in a free public course
@@ -66,6 +93,61 @@ export interface EnrollmentApiInterface {
  *
  */
 export class EnrollmentApi extends runtime.BaseAPI implements EnrollmentApiInterface {
+
+    /**
+     * Accept an opaque invitation and create active course access
+     */
+    async acceptCourseInvitationRaw(requestParameters: AcceptCourseInvitationOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<CourseInvitationAccepted>> {
+        if (requestParameters['token'] == null) {
+            throw new runtime.RequiredError(
+                'token',
+                'Required parameter "token" was null or undefined when calling acceptCourseInvitation().'
+            );
+        }
+
+        if (requestParameters['acceptCourseInvitationRequest'] == null) {
+            throw new runtime.RequiredError(
+                'acceptCourseInvitationRequest',
+                'Required parameter "acceptCourseInvitationRequest" was null or undefined when calling acceptCourseInvitation().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("bearerAuth", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/v1/course-invitations/{token}/accept`;
+        urlPath = urlPath.replace(`{${"token"}}`, encodeURIComponent(String(requestParameters['token'])));
+
+        const response = await this.request({
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: AcceptCourseInvitationRequestToJSON(requestParameters['acceptCourseInvitationRequest']),
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => CourseInvitationAcceptedFromJSON(jsonValue));
+    }
+
+    /**
+     * Accept an opaque invitation and create active course access
+     */
+    async acceptCourseInvitation(requestParameters: AcceptCourseInvitationOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<CourseInvitationAccepted> {
+        const response = await this.acceptCourseInvitationRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
 
     /**
      * Enroll the authenticated user in a free public course

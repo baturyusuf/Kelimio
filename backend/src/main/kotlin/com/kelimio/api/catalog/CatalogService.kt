@@ -26,6 +26,8 @@ class CatalogService(
         cursor: String?,
         targetLanguage: String?,
         supportLanguage: String?,
+        query: String?,
+        accessType: String?,
         limit: Int,
         clientCapabilities: Set<String>,
     ): CatalogPage {
@@ -36,11 +38,21 @@ class CatalogService(
         }
         val canonicalTargetLanguage = targetLanguage?.let { normalizeLanguageTag(it, "targetLanguage") }
         val canonicalSupportLanguage = supportLanguage?.let { normalizeLanguageTag(it, "supportLanguage") }
+        val normalizedQuery = query?.trim()?.takeIf { it.isNotEmpty() }
+        if (normalizedQuery != null && normalizedQuery.length !in 2..80) {
+            throw UnprocessableProblem("q must contain between 2 and 80 characters.")
+        }
+        val normalizedAccessType = accessType?.trim()?.uppercase()
+        if (normalizedAccessType != null && normalizedAccessType !in setOf("FREE", "PAID")) {
+            throw UnprocessableProblem("accessType must be FREE or PAID.")
+        }
         val rows = repository.listPublicCourses(
             user.id,
             parsedCursor,
             canonicalTargetLanguage,
             canonicalSupportLanguage,
+            normalizedQuery,
+            normalizedAccessType,
             limit + 1,
             clientCapabilities,
         )

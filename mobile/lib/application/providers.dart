@@ -6,6 +6,7 @@ import 'package:kelimio_api_client/kelimio_api_client.dart' as api;
 import 'package:uuid/uuid.dart';
 
 import '../core/config/app_config.dart';
+import '../domain/account/account.dart';
 import '../domain/auth/auth.dart';
 import '../domain/catalog/catalog.dart';
 import '../domain/course_authoring/course_authoring.dart';
@@ -14,14 +15,23 @@ import '../domain/energy/energy.dart';
 import '../domain/failures.dart';
 import '../domain/identifiers.dart';
 import '../domain/learning/learning.dart';
+import '../domain/learning/learning_summary.dart';
+import '../domain/offline/offline.dart';
 import '../domain/profile/profile.dart';
+import '../domain/social/social.dart';
 import '../domain/teacher/teacher_access.dart';
+import '../domain/teacher/teacher_course.dart';
 import '../infrastructure/auth/app_auth_gateway.dart';
 import '../infrastructure/files/native_workbook_picker.dart';
 import '../infrastructure/network/failure_mapper.dart';
 import '../infrastructure/network/interceptors.dart';
+import '../infrastructure/repositories/account_repository.dart';
 import '../infrastructure/repositories/course_authoring_repository.dart';
 import '../infrastructure/repositories/dio_repositories.dart';
+import '../infrastructure/repositories/learning_summary_repository.dart';
+import '../infrastructure/repositories/offline_package_repository.dart';
+import '../infrastructure/repositories/social_repository.dart';
+import '../infrastructure/repositories/teacher_course_repository.dart';
 import '../infrastructure/storage/drift_attempt_recovery_store.dart';
 import '../infrastructure/storage/secure_course_editor_recovery_store.dart';
 
@@ -147,6 +157,63 @@ final teacherAccessRepositoryProvider = Provider<TeacherAccessRepository>((
     ref.watch(apiClientProvider).getTeacherApi(),
     const DioFailureMapper(),
   );
+});
+
+final teacherCourseRepositoryProvider = Provider<TeacherCourseRepository>((
+  ref,
+) {
+  return GeneratedTeacherCourseRepository(
+    ref.watch(apiClientProvider).getTeacherApi(),
+    const DioFailureMapper(),
+  );
+});
+
+final socialRepositoryProvider = Provider<SocialRepository>((ref) {
+  return GeneratedSocialRepository(
+    ref.watch(apiClientProvider).getSocialApi(),
+    const DioFailureMapper(),
+  );
+});
+
+final accountRepositoryProvider = Provider<AccountRepository>((ref) {
+  return GeneratedAccountRepository(
+    ref.watch(apiClientProvider).getAccountApi(),
+    const DioFailureMapper(),
+  );
+});
+
+final learningSummaryRepositoryProvider = Provider<LearningSummaryRepository>((
+  ref,
+) {
+  return GeneratedLearningSummaryRepository(
+    ref.watch(apiClientProvider).getLearningApi(),
+    const DioFailureMapper(),
+  );
+});
+
+final learningSummaryProvider = FutureProvider.autoDispose<LearningSummary>(
+  (ref) => ref.watch(learningSummaryRepositoryProvider).get(),
+);
+
+final notificationPreferencesProvider =
+    FutureProvider.autoDispose<NotificationPreferences>(
+      (ref) => ref.watch(accountRepositoryProvider).notificationPreferences(),
+    );
+
+final accountDeletionRequestsProvider =
+    FutureProvider.autoDispose<List<AccountDeletion>>(
+      (ref) => ref.watch(accountRepositoryProvider).deletionRequests(),
+    );
+
+final offlinePackageRepositoryProvider = Provider<OfflinePackageRepository>((
+  ref,
+) {
+  final repository = GeneratedOfflinePackageRepository(
+    ref.watch(apiClientProvider).getLearningApi(),
+    const DioFailureMapper(),
+  );
+  ref.onDispose(repository.close);
+  return repository;
 });
 
 final recoveryStoreProvider = FutureProvider<AttemptRecoveryStore>((ref) async {
