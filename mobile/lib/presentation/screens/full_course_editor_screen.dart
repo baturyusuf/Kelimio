@@ -24,7 +24,10 @@ final class _FullCourseEditorScreenState
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(teacherCourseEditorProvider(widget.courseId));
+    final provider = teacherCourseEditorProvider(widget.courseId);
+    final state = ref.watch(provider);
+    final notifier = ref.read(provider.notifier);
+    final conflict = notifier.conflict;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Kurs düzenleyici'),
@@ -32,7 +35,8 @@ final class _FullCourseEditorScreenState
           IconButton(
             key: const Key('full-editor-save'),
             tooltip: 'Değişmez taslak oluştur',
-            onPressed: _saving || (_draft ?? state.value) == null
+            onPressed:
+                _saving || conflict != null || (_draft ?? state.value) == null
                 ? null
                 : () => unawaited(_save()),
             icon: _saving
@@ -55,6 +59,19 @@ final class _FullCourseEditorScreenState
         ),
         data: (document) {
           _draft ??= document;
+          if (conflict != null) {
+            return _EditorConflictView(
+              conflict: conflict,
+              onUseLatest: () {
+                final resolved = notifier.useLatest();
+                if (resolved != null) setState(() => _draft = resolved);
+              },
+              onReapplyMine: () {
+                final resolved = notifier.reapplyMine();
+                if (resolved != null) setState(() => _draft = resolved);
+              },
+            );
+          }
           return _EditorForm(document: _draft!, onChanged: _replace);
         },
       ),
@@ -127,6 +144,127 @@ final class _FullCourseEditorScreenState
         Navigator.of(context).pop();
       }
     }
+  }
+}
+
+final class _EditorConflictView extends StatelessWidget {
+  const _EditorConflictView({
+    required this.conflict,
+    required this.onUseLatest,
+    required this.onReapplyMine,
+  });
+
+  final TeacherCourseEditorConflict conflict;
+  final VoidCallback onUseLatest;
+  final VoidCallback onReapplyMine;
+
+  @override
+  Widget build(BuildContext context) => ListView(
+    key: const Key('full-editor-conflict'),
+    padding: const EdgeInsets.all(16),
+    children: [
+      Icon(
+        Icons.sync_problem_outlined,
+        size: 48,
+        color: Theme.of(context).colorScheme.error,
+      ),
+      const SizedBox(height: 12),
+      Text(
+        'Kurs başka bir yerde değiştirildi',
+        textAlign: TextAlign.center,
+        style: Theme.of(context).textTheme.headlineSmall,
+      ),
+      const SizedBox(height: 8),
+      const Text(
+        'Hiçbir değişiklik kaydedilmedi. Aşağıdaki üç sürümü karşılaştırıp sunucudaki son sürümü kullanabilir veya kendi düzenlemelerini onun üzerine açıkça yeniden uygulayabilirsin.',
+        textAlign: TextAlign.center,
+      ),
+      const SizedBox(height: 16),
+      _ConflictVersionCard(
+        title: 'Düzenlemeye başladığın sürüm',
+        document: conflict.base,
+        changes: const [],
+      ),
+      _ConflictVersionCard(
+        title: 'Senin düzenlemelerin',
+        document: conflict.mine,
+        changes: conflict.mineChanges,
+      ),
+      _ConflictVersionCard(
+        title: 'Sunucudaki son sürüm',
+        document: conflict.latest,
+        changes: conflict.latestChanges,
+      ),
+      const SizedBox(height: 12),
+      OutlinedButton(
+        key: const Key('full-editor-use-latest'),
+        onPressed: onUseLatest,
+        child: const Text('Sunucudaki son sürümü kullan'),
+      ),
+      const SizedBox(height: 8),
+      FilledButton(
+        key: const Key('full-editor-reapply-mine'),
+        onPressed: onReapplyMine,
+        child: const Text('Düzenlemelerimi son sürüme yeniden uygula'),
+      ),
+    ],
+  );
+}
+
+final class _ConflictVersionCard extends StatelessWidget {
+  const _ConflictVersionCard({
+    required this.title,
+    required this.document,
+    required this.changes,
+  });
+
+  final String title;
+  final FullCourseEditorDocument document;
+  final List<String> changes;
+
+  @override
+  Widget build(BuildContext context) {
+    final questionCount = document.levels.fold<int>(
+      0,
+      (levelTotal, level) =>
+          levelTotal +
+          level.units.fold<int>(
+            0,
+            (unitTotal, unit) =>
+                unitTotal +
+                unit.topics.fold<int>(
+                  0,
+                  (topicTotal, topic) =>
+                      topicTotal +
+                      topic.tests.fold<int>(
+                        0,
+                        (testTotal, test) => testTotal + test.questions.length,
+                      ),
+                ),
+          ),
+    );
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title, style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 4),
+            Text(
+              '${document.name} · ${document.levels.length} seviye · $questionCount soru · sürüm ${document.releaseRevision}',
+            ),
+            if (changes.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text('${changes.length} değişiklik:'),
+              for (final path in changes.take(12)) Text('• $path'),
+              if (changes.length > 12)
+                Text('• ${changes.length - 12} değişiklik daha'),
+            ],
+          ],
+        ),
+      ),
+    );
   }
 }
 
