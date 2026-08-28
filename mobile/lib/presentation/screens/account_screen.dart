@@ -11,6 +11,7 @@ import '../../application/social_controller.dart';
 import '../../domain/account/account.dart';
 import '../../domain/social/social.dart';
 import '../widgets/async_error_view.dart';
+import '../widgets/localization.dart';
 
 final class AccountScreen extends ConsumerWidget {
   const AccountScreen({super.key});
@@ -24,10 +25,10 @@ final class AccountScreen extends ConsumerWidget {
     final deletionRequests = ref.watch(accountDeletionRequestsProvider);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Profil'),
+        title: Text(context.l10n.accountProfileTitle),
         actions: [
           IconButton(
-            tooltip: 'Çıkış yap',
+            tooltip: context.l10n.signOut,
             onPressed: () =>
                 unawaited(ref.read(authControllerProvider.notifier).signOut()),
             icon: const Icon(Icons.logout),
@@ -59,15 +60,23 @@ final class AccountScreen extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Öğrenme özeti',
+                      context.l10n.accountLearningSummary,
                       style: Theme.of(context).textTheme.titleLarge,
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      '${value.lifetimeScore} puan · ${value.currentStreakDays} günlük seri',
+                      context.l10n.accountScoreAndStreak(
+                        value.currentStreakDays,
+                        value.lifetimeScore,
+                      ),
                     ),
                     Text(
-                      '${value.passedAttempts}/${value.completedAttempts} başarılı test · ${value.completedCourses}/${value.enrolledCourses} aktif kurs',
+                      context.l10n.accountTestAndCourseSummary(
+                        value.completedAttempts,
+                        value.completedCourses,
+                        value.enrolledCourses,
+                        value.passedAttempts,
+                      ),
                     ),
                     const Divider(),
                     for (final item in value.history.take(10))
@@ -80,7 +89,10 @@ final class AccountScreen extends ConsumerWidget {
                         ),
                         title: Text('${item.courseName} · ${item.testTitle}'),
                         subtitle: Text(
-                          '${item.correctCount}/${item.totalQuestions} doğru',
+                          context.l10n.accountCorrectAnswers(
+                            item.correctCount,
+                            item.totalQuestions,
+                          ),
                         ),
                       ),
                   ],
@@ -105,19 +117,19 @@ final class AccountScreen extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text(
-                    'Hesap verileri',
+                    context.l10n.accountData,
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                   const SizedBox(height: 8),
                   OutlinedButton.icon(
                     onPressed: () => unawaited(_export(context, ref)),
                     icon: const Icon(Icons.download_outlined),
-                    label: const Text('Verilerimi JSON olarak dışa aktar'),
+                    label: Text(context.l10n.accountExportJson),
                   ),
                   OutlinedButton.icon(
                     onPressed: () => unawaited(_revokeSessions(context, ref)),
                     icon: const Icon(Icons.phonelink_erase_outlined),
-                    label: const Text('Tüm cihazlardan çıkış yap'),
+                    label: Text(context.l10n.accountRevokeAllSessions),
                   ),
                   TextButton.icon(
                     onPressed:
@@ -128,15 +140,13 @@ final class AccountScreen extends ConsumerWidget {
                         ? null
                         : () => unawaited(_delete(context, ref)),
                     icon: const Icon(Icons.delete_forever_outlined),
-                    label: const Text('Hesabımı silme talebi oluştur'),
+                    label: Text(context.l10n.accountRequestDeletion),
                   ),
-                  const Text(
-                    'Silme talebi, yanlışlıkla silmeye karşı 7 günlük kurtarma süresiyle kaydedilir.',
-                  ),
+                  Text(context.l10n.accountDeletionRecovery),
                   deletionRequests.when(
                     loading: () => const LinearProgressIndicator(),
                     error: (error, stackTrace) =>
-                        Text('Silme talepleri okunamadı: $error'),
+                        Text(context.l10n.accountDeletionReadFailed('$error')),
                     data: (requests) {
                       final pending = requests
                           .where((request) => request.status == 'PENDING')
@@ -144,15 +154,17 @@ final class AccountScreen extends ConsumerWidget {
                       if (pending == null) return const SizedBox.shrink();
                       return ListTile(
                         contentPadding: EdgeInsets.zero,
-                        title: const Text('Bekleyen silme talebi'),
+                        title: Text(context.l10n.accountPendingDeletion),
                         subtitle: Text(
-                          '${pending.scheduledFor.toLocal()} tarihine kadar iptal edilebilir.',
+                          context.l10n.accountDeletionCancelableUntil(
+                            pending.scheduledFor.toLocal(),
+                          ),
                         ),
                         trailing: TextButton(
                           onPressed: () => unawaited(
                             _cancelDeletion(context, ref, pending.id),
                           ),
-                          child: const Text('İptal et'),
+                          child: Text(context.l10n.accountCancelDeletion),
                         ),
                       );
                     },
@@ -163,13 +175,11 @@ final class AccountScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 24),
           Text(
-            'Liderlik tablosu',
+            context.l10n.accountLeaderboard,
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: 8),
-          const Text(
-            'Yalnızca açıkça katılmayı seçen herkese açık profiller gösterilir.',
-          ),
+          Text(context.l10n.accountLeaderboardPrivacy),
           const SizedBox(height: 8),
           leaderboard.when(
             loading: () => const LinearProgressIndicator(),
@@ -178,7 +188,7 @@ final class AccountScreen extends ConsumerWidget {
               onRetry: () => ref.invalidate(leaderboardProvider),
             ),
             data: (entries) => entries.isEmpty
-                ? const ListTile(title: Text('Henüz katılımcı yok.'))
+                ? ListTile(title: Text(context.l10n.accountNoParticipants))
                 : Column(
                     children: entries
                         .map(
@@ -186,9 +196,14 @@ final class AccountScreen extends ConsumerWidget {
                             leading: CircleAvatar(child: Text('${entry.rank}')),
                             title: Text(entry.displayName),
                             subtitle: Text(
-                              '@${entry.username} · ${entry.completedAttempts} tamamlanan test',
+                              context.l10n.accountCompletedTests(
+                                entry.completedAttempts,
+                                entry.username,
+                              ),
                             ),
-                            trailing: Text('${entry.lifetimeScore} puan'),
+                            trailing: Text(
+                              context.l10n.accountPoints(entry.lifetimeScore),
+                            ),
                           ),
                         )
                         .toList(growable: false),
@@ -215,13 +230,13 @@ final class AccountScreen extends ConsumerWidget {
       ).saveTo(location.path);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Veri dışa aktarımı kaydedildi.')),
+          SnackBar(content: Text(context.l10n.accountExportSaved)),
         );
       }
     } on Object catch (error) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Dışa aktarma kaydedilemedi: $error')),
+          SnackBar(content: Text(context.l10n.accountExportFailed('$error'))),
         );
       }
     }
@@ -242,13 +257,15 @@ final class AccountScreen extends ConsumerWidget {
       ref.invalidate(accountDeletionRequestsProvider);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Hesap silme talebi iptal edildi.')),
+          SnackBar(content: Text(context.l10n.accountDeletionCancelled)),
         );
       }
     } on Object catch (error) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Talep iptal edilemedi: $error')),
+          SnackBar(
+            content: Text(context.l10n.accountDeletionCancelFailed('$error')),
+          ),
         );
       }
     }
@@ -258,18 +275,16 @@ final class AccountScreen extends ConsumerWidget {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Silme talebi oluşturulsun mu?'),
-        content: const Text(
-          'Talep 7 gün sonra işlenmek üzere güvenli biçimde kaydedilir. Bu işlem puan ve öğrenme geçmişi saklama kurallarını değiştirmez.',
-        ),
+        title: Text(context.l10n.accountDeletionDialogTitle),
+        content: Text(context.l10n.accountDeletionDialogBody),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Vazgeç'),
+            child: Text(context.l10n.cancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Talep oluştur'),
+            child: Text(context.l10n.accountCreateRequest),
           ),
         ],
       ),
@@ -286,7 +301,9 @@ final class AccountScreen extends ConsumerWidget {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Silme talebi ${result.scheduledFor.toLocal()} için kaydedildi.',
+              context.l10n.accountDeletionScheduled(
+                result.scheduledFor.toLocal(),
+              ),
             ),
           ),
         );
@@ -294,9 +311,11 @@ final class AccountScreen extends ConsumerWidget {
       await ref.read(authControllerProvider.notifier).signOut();
     } on Object catch (error) {
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Talep oluşturulamadı: $error')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(context.l10n.accountDeletionRequestFailed('$error')),
+          ),
+        );
       }
     }
   }
@@ -305,18 +324,16 @@ final class AccountScreen extends ConsumerWidget {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Tüm oturumlar kapatılsın mı?'),
-        content: const Text(
-          'Bu cihaz dahil tüm cihazlardaki yenileme oturumları AWS Cognito üzerinde iptal edilir.',
-        ),
+        title: Text(context.l10n.accountRevokeDialogTitle),
+        content: Text(context.l10n.accountRevokeDialogBody),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Vazgeç'),
+            child: Text(context.l10n.cancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Tümünden çıkış yap'),
+            child: Text(context.l10n.accountRevokeConfirm),
           ),
         ],
       ),
@@ -328,7 +345,7 @@ final class AccountScreen extends ConsumerWidget {
     } on Object catch (error) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Oturumlar kapatılamadı: $error')),
+          SnackBar(content: Text(context.l10n.accountRevokeFailed('$error'))),
         );
       }
     }
@@ -353,33 +370,36 @@ final class _NotificationEditorState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Bildirimler', style: Theme.of(context).textTheme.titleLarge),
+          Text(
+            context.l10n.accountNotifications,
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
             value: value.learningReminders,
-            title: const Text('Öğrenme hatırlatmaları'),
+            title: Text(context.l10n.accountLearningReminders),
             onChanged: (enabled) => _replace(learning: enabled),
           ),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
             value: value.courseUpdates,
-            title: const Text('Kurs güncellemeleri'),
+            title: Text(context.l10n.accountCourseUpdates),
             onChanged: (enabled) => _replace(course: enabled),
           ),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
             value: value.productAnnouncements,
-            title: const Text('Ürün duyuruları'),
+            title: Text(context.l10n.accountProductAnnouncements),
             onChanged: (enabled) => _replace(product: enabled),
           ),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
             value: value.pushEnabled,
-            title: const Text('Anlık bildirim'),
+            title: Text(context.l10n.accountPushNotification),
             subtitle: Text(
               value.pushAvailable
-                  ? 'Kullanılabilir'
-                  : 'Firebase sağlayıcısı henüz yapılandırılmadı',
+                  ? context.l10n.accountAvailable
+                  : context.l10n.accountPushUnavailable,
             ),
             onChanged: value.pushAvailable
                 ? (enabled) => _replace(push: enabled)
@@ -388,11 +408,11 @@ final class _NotificationEditorState
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
             value: value.emailEnabled,
-            title: const Text('E-posta bildirimi'),
+            title: Text(context.l10n.accountEmailNotification),
             subtitle: Text(
               value.emailAvailable
-                  ? 'Kullanılabilir'
-                  : 'Doğrulanmış üretim göndericisi henüz yapılandırılmadı',
+                  ? context.l10n.accountAvailable
+                  : context.l10n.accountEmailUnavailable,
             ),
             onChanged: value.emailAvailable
                 ? (enabled) => _replace(email: enabled)
@@ -401,10 +421,10 @@ final class _NotificationEditorState
           ListTile(
             contentPadding: EdgeInsets.zero,
             leading: const Icon(Icons.bedtime_outlined),
-            title: const Text('Sessiz saatler'),
+            title: Text(context.l10n.accountQuietHours),
             subtitle: Text(
               value.quietHoursStart == null
-                  ? 'Kapalı'
+                  ? context.l10n.accountDisabled
                   : '${value.quietHoursStart!.substring(0, 5)}–${value.quietHoursEnd!.substring(0, 5)}',
             ),
             trailing: Row(
@@ -412,7 +432,7 @@ final class _NotificationEditorState
               children: [
                 if (value.quietHoursStart != null)
                   IconButton(
-                    tooltip: 'Sessiz saatleri kapat',
+                    tooltip: context.l10n.accountDisableQuietHours,
                     onPressed: () => setState(
                       () => value = NotificationPreferences(
                         learningReminders: value.learningReminders,
@@ -428,7 +448,7 @@ final class _NotificationEditorState
                     icon: const Icon(Icons.clear),
                   ),
                 IconButton(
-                  tooltip: 'Sessiz saatleri ayarla',
+                  tooltip: context.l10n.accountSetQuietHours,
                   onPressed: () => unawaited(_pickQuietHours()),
                   icon: const Icon(Icons.schedule),
                 ),
@@ -439,7 +459,7 @@ final class _NotificationEditorState
             alignment: Alignment.centerRight,
             child: FilledButton(
               onPressed: () => unawaited(_save()),
-              child: const Text('Bildirimleri kaydet'),
+              child: Text(context.l10n.accountSaveNotifications),
             ),
           ),
         ],
@@ -475,13 +495,17 @@ final class _NotificationEditorState
       ref.invalidate(notificationPreferencesProvider);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Bildirim tercihleri kaydedildi.')),
+          SnackBar(content: Text(context.l10n.accountNotificationsSaved)),
         );
       }
     } on Object catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Tercihler kaydedilemedi: $error')),
+          SnackBar(
+            content: Text(
+              context.l10n.accountNotificationsSaveFailed('$error'),
+            ),
+          ),
         );
       }
     }
@@ -493,7 +517,7 @@ final class _NotificationEditorState
       initialTime:
           _parseTime(value.quietHoursStart) ??
           const TimeOfDay(hour: 22, minute: 0),
-      helpText: 'Sessiz saat başlangıcı',
+      helpText: context.l10n.accountQuietHoursStart,
     );
     if (start == null || !mounted) return;
     final end = await showTimePicker(
@@ -501,7 +525,7 @@ final class _NotificationEditorState
       initialTime:
           _parseTime(value.quietHoursEnd) ??
           const TimeOfDay(hour: 8, minute: 0),
-      helpText: 'Sessiz saat bitişi',
+      helpText: context.l10n.accountQuietHoursEnd,
     );
     if (end == null || !mounted) return;
     setState(
@@ -573,16 +597,21 @@ final class _ProfileEditorState extends ConsumerState<_ProfileEditor> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Hesabım', style: Theme.of(context).textTheme.titleLarge),
+          Text(
+            context.l10n.accountMyAccount,
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
           const SizedBox(height: 12),
           TextFormField(
             controller: _displayName,
-            decoration: const InputDecoration(labelText: 'Görünen ad'),
+            decoration: InputDecoration(
+              labelText: context.l10n.accountDisplayName,
+            ),
           ),
           TextFormField(
             controller: _username,
-            decoration: const InputDecoration(
-              labelText: 'Kullanıcı adı',
+            decoration: InputDecoration(
+              labelText: context.l10n.accountUsername,
               prefixText: '@',
             ),
           ),
@@ -590,13 +619,13 @@ final class _ProfileEditorState extends ConsumerState<_ProfileEditor> {
             controller: _bio,
             maxLength: 280,
             maxLines: 3,
-            decoration: const InputDecoration(labelText: 'Kısa tanıtım'),
+            decoration: InputDecoration(labelText: context.l10n.accountBio),
           ),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
             value: _publicEnabled,
-            title: const Text('Herkese açık profil'),
-            subtitle: const Text('Varsayılan olarak kapalıdır.'),
+            title: Text(context.l10n.accountPublicProfile),
+            subtitle: Text(context.l10n.accountPublicProfileDefault),
             onChanged: (value) => setState(() {
               _publicEnabled = value;
               if (!value) _leaderboardOptIn = false;
@@ -605,7 +634,7 @@ final class _ProfileEditorState extends ConsumerState<_ProfileEditor> {
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
             value: _leaderboardOptIn,
-            title: const Text('Liderlik tablosuna katıl'),
+            title: Text(context.l10n.accountJoinLeaderboard),
             onChanged: _publicEnabled
                 ? (value) => setState(() => _leaderboardOptIn = value)
                 : null,
@@ -614,12 +643,15 @@ final class _ProfileEditorState extends ConsumerState<_ProfileEditor> {
             children: [
               Expanded(
                 child: Text(
-                  '${widget.profile.lifetimeScore} toplam puan · ${widget.profile.completedAttempts} test',
+                  context.l10n.accountProfileStats(
+                    widget.profile.lifetimeScore,
+                    widget.profile.completedAttempts,
+                  ),
                 ),
               ),
               FilledButton(
                 onPressed: () => unawaited(_save()),
-                child: const Text('Kaydet'),
+                child: Text(context.l10n.accountSave),
               ),
             ],
           ),
@@ -643,7 +675,7 @@ final class _ProfileEditorState extends ConsumerState<_ProfileEditor> {
     if (mounted && ok) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Profil kaydedildi.')));
+      ).showSnackBar(SnackBar(content: Text(context.l10n.accountProfileSaved)));
     }
   }
 }

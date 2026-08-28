@@ -969,4 +969,304 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get matching => 'Matching';
+
+  @override
+  String get useCourseInvitation => 'Use course invitation';
+
+  @override
+  String get courseInvitationTitle => 'Course invitation';
+
+  @override
+  String get invitationCode => 'Invitation code';
+
+  @override
+  String get cancel => 'Cancel';
+
+  @override
+  String get continueAction => 'Continue';
+
+  @override
+  String get searchCourses => 'Search courses';
+
+  @override
+  String get accessFilter => 'Access filter';
+
+  @override
+  String get allCourses => 'All courses';
+
+  @override
+  String get acceptInvitationQuestion =>
+      'Would you like to accept this private course invitation?';
+
+  @override
+  String get acceptInvitation => 'Accept invitation';
+
+  @override
+  String invitationAcceptFailed(Object error) {
+    return 'The invitation could not be accepted: $error';
+  }
+
+  @override
+  String get downloadOfflinePractice => 'Download scoreless offline practice';
+
+  @override
+  String offlinePackageDownloadFailed(Object error) {
+    return 'The offline package could not be downloaded: $error';
+  }
+
+  @override
+  String get offlinePracticeTitle => 'Scoreless offline practice';
+
+  @override
+  String offlinePracticeProgress(Object current, Object total) {
+    return '$current/$total · This practice does not award score or energy.';
+  }
+
+  @override
+  String get yourAnswer => 'Your answer';
+
+  @override
+  String offlineCorrectAnswer(Object answer) {
+    return 'Correct answer: $answer';
+  }
+
+  @override
+  String get practiceAgain => 'I need more practice';
+
+  @override
+  String get knewMatchingPairs => 'I knew the matches';
+
+  @override
+  String get next => 'Next';
+
+  @override
+  String get checkAnswer => 'Check answer';
+
+  @override
+  String get offlinePracticeComplete => 'Offline practice complete';
+
+  @override
+  String offlinePracticeResult(Object correct, Object total) {
+    return '$correct/$total correct. This result was stored only on this device and was not sent to your online score.';
+  }
+
+  @override
+  String get accountProfileTitle => 'Profile';
+
+  @override
+  String get accountLearningSummary => 'Learning summary';
+
+  @override
+  String accountScoreAndStreak(Object days, Object score) {
+    return '$score points · $days-day streak';
+  }
+
+  @override
+  String accountTestAndCourseSummary(
+    Object attempts,
+    Object completed,
+    Object enrolled,
+    Object passed,
+  ) {
+    return '$passed/$attempts passed tests · $completed/$enrolled active courses';
+  }
+
+  @override
+  String accountCorrectAnswers(Object correct, Object total) {
+    return '$correct/$total correct';
+  }
+
+  @override
+  String get accountData => 'Account data';
+
+  @override
+  String get accountExportJson => 'Export my data as JSON';
+
+  @override
+  String get accountRevokeAllSessions => 'Sign out from all devices';
+
+  @override
+  String get accountRequestDeletion => 'Request account deletion';
+
+  @override
+  String get accountDeletionRecovery =>
+      'Deletion requests include a 7-day recovery period to protect against mistakes.';
+
+  @override
+  String accountDeletionReadFailed(Object error) {
+    return 'Deletion requests could not be loaded: $error';
+  }
+
+  @override
+  String get accountPendingDeletion => 'Pending deletion request';
+
+  @override
+  String accountDeletionCancelableUntil(Object date) {
+    return 'Can be cancelled until $date.';
+  }
+
+  @override
+  String get accountCancelDeletion => 'Cancel';
+
+  @override
+  String get accountLeaderboard => 'Leaderboard';
+
+  @override
+  String get accountLeaderboardPrivacy =>
+      'Only public profiles whose owners explicitly opted in are shown.';
+
+  @override
+  String get accountNoParticipants => 'No participants yet.';
+
+  @override
+  String accountCompletedTests(Object count, Object username) {
+    return '@$username · $count completed tests';
+  }
+
+  @override
+  String accountPoints(Object score) {
+    return '$score points';
+  }
+
+  @override
+  String get accountExportSaved => 'Data export saved.';
+
+  @override
+  String accountExportFailed(Object error) {
+    return 'The export could not be saved: $error';
+  }
+
+  @override
+  String get accountDeletionCancelled =>
+      'The account deletion request was cancelled.';
+
+  @override
+  String accountDeletionCancelFailed(Object error) {
+    return 'The request could not be cancelled: $error';
+  }
+
+  @override
+  String get accountDeletionDialogTitle => 'Create a deletion request?';
+
+  @override
+  String get accountDeletionDialogBody =>
+      'The request will be stored securely for processing after 7 days. This does not change score and learning-history retention rules.';
+
+  @override
+  String get accountCreateRequest => 'Create request';
+
+  @override
+  String accountDeletionScheduled(Object date) {
+    return 'The deletion request was scheduled for $date.';
+  }
+
+  @override
+  String accountDeletionRequestFailed(Object error) {
+    return 'The request could not be created: $error';
+  }
+
+  @override
+  String get accountRevokeDialogTitle => 'Close all sessions?';
+
+  @override
+  String get accountRevokeDialogBody =>
+      'Refresh sessions on every device, including this one, will be revoked in AWS Cognito.';
+
+  @override
+  String get accountRevokeConfirm => 'Sign out everywhere';
+
+  @override
+  String accountRevokeFailed(Object error) {
+    return 'Sessions could not be closed: $error';
+  }
+
+  @override
+  String get accountNotifications => 'Notifications';
+
+  @override
+  String get accountLearningReminders => 'Learning reminders';
+
+  @override
+  String get accountCourseUpdates => 'Course updates';
+
+  @override
+  String get accountProductAnnouncements => 'Product announcements';
+
+  @override
+  String get accountPushNotification => 'Push notifications';
+
+  @override
+  String get accountEmailNotification => 'Email notifications';
+
+  @override
+  String get accountAvailable => 'Available';
+
+  @override
+  String get accountPushUnavailable =>
+      'The Firebase provider is not configured yet';
+
+  @override
+  String get accountEmailUnavailable =>
+      'A verified production sender is not configured yet';
+
+  @override
+  String get accountQuietHours => 'Quiet hours';
+
+  @override
+  String get accountDisabled => 'Off';
+
+  @override
+  String get accountDisableQuietHours => 'Turn off quiet hours';
+
+  @override
+  String get accountSetQuietHours => 'Set quiet hours';
+
+  @override
+  String get accountSaveNotifications => 'Save notifications';
+
+  @override
+  String get accountNotificationsSaved => 'Notification preferences saved.';
+
+  @override
+  String accountNotificationsSaveFailed(Object error) {
+    return 'Preferences could not be saved: $error';
+  }
+
+  @override
+  String get accountQuietHoursStart => 'Quiet hours start';
+
+  @override
+  String get accountQuietHoursEnd => 'Quiet hours end';
+
+  @override
+  String get accountMyAccount => 'My account';
+
+  @override
+  String get accountDisplayName => 'Display name';
+
+  @override
+  String get accountUsername => 'Username';
+
+  @override
+  String get accountBio => 'Short bio';
+
+  @override
+  String get accountPublicProfile => 'Public profile';
+
+  @override
+  String get accountPublicProfileDefault => 'It is off by default.';
+
+  @override
+  String get accountJoinLeaderboard => 'Join the leaderboard';
+
+  @override
+  String accountProfileStats(Object score, Object tests) {
+    return '$score total points · $tests tests';
+  }
+
+  @override
+  String get accountSave => 'Save';
+
+  @override
+  String get accountProfileSaved => 'Profile saved.';
 }

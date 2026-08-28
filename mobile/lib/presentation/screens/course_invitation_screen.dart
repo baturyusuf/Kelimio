@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../application/catalog_controller.dart';
 import '../../application/profile_controller.dart';
 import '../../application/providers.dart';
+import '../widgets/localization.dart';
 
 final class CourseInvitationScreen extends ConsumerStatefulWidget {
   const CourseInvitationScreen({required this.token, super.key});
@@ -23,7 +24,7 @@ final class _CourseInvitationScreenState
   Widget build(BuildContext context) {
     final profile = ref.watch(profileControllerProvider).value;
     return Scaffold(
-      appBar: AppBar(title: const Text('Kurs daveti')),
+      appBar: AppBar(title: Text(context.l10n.courseInvitationTitle)),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -32,8 +33,8 @@ final class _CourseInvitationScreenState
             children: [
               const Icon(Icons.mark_email_read_outlined, size: 64),
               const SizedBox(height: 16),
-              const Text(
-                'Bu özel kurs davetini kabul etmek ister misiniz?',
+              Text(
+                context.l10n.acceptInvitationQuestion,
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 16),
@@ -45,7 +46,7 @@ final class _CourseInvitationScreenState
                       ),
                 child: _busy
                     ? const CircularProgressIndicator()
-                    : const Text('Daveti kabul et'),
+                    : Text(context.l10n.acceptInvitation),
               ),
             ],
           ),
@@ -68,7 +69,9 @@ final class _CourseInvitationScreenState
     } on Object catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Davet kabul edilemedi: $error')),
+          SnackBar(
+            content: Text(context.l10n.invitationAcceptFailed('$error')),
+          ),
         );
       }
     } finally {

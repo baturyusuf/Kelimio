@@ -206,7 +206,7 @@ final class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : const Icon(Icons.download_for_offline_outlined),
-            label: const Text('Çevrimdışı puansız çalışma indir'),
+            label: Text(context.l10n.downloadOfflinePractice),
           ),
           const SizedBox(height: 20),
         ],
@@ -280,7 +280,9 @@ final class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
     } on Object catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Çevrimdışı paket indirilemedi: $error')),
+          SnackBar(
+            content: Text(context.l10n.offlinePackageDownloadFailed('$error')),
+          ),
         );
       }
     } finally {

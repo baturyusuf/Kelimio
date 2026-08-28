@@ -29,7 +29,7 @@ final class CatalogScreen extends ConsumerWidget {
         title: Text(context.l10n.catalog),
         actions: [
           IconButton(
-            tooltip: 'Kurs daveti kullan',
+            tooltip: context.l10n.useCourseInvitation,
             onPressed: () => unawaited(_openInvitation(context)),
             icon: const Icon(Icons.mark_email_unread_outlined),
           ),
@@ -152,19 +152,19 @@ final class CatalogScreen extends ConsumerWidget {
     final token = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Kurs daveti'),
+        title: Text(context.l10n.courseInvitationTitle),
         content: TextField(
           controller: controller,
-          decoration: const InputDecoration(labelText: 'Davet kodu'),
+          decoration: InputDecoration(labelText: context.l10n.invitationCode),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Vazgeç'),
+            child: Text(context.l10n.cancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, controller.text.trim()),
-            child: const Text('Devam et'),
+            child: Text(context.l10n.continueAction),
           ),
         ],
       ),
@@ -201,7 +201,7 @@ final class _CatalogFiltersState extends ConsumerState<_CatalogFilters> {
         Expanded(
           child: SearchBar(
             controller: _query,
-            hintText: 'Kurs ara',
+            hintText: context.l10n.searchCourses,
             leading: const Icon(Icons.search),
             trailing: [
               if (_query.text.isNotEmpty)
@@ -218,19 +218,22 @@ final class _CatalogFiltersState extends ConsumerState<_CatalogFilters> {
         ),
         const SizedBox(width: 8),
         PopupMenuButton<CourseAccessType?>(
-          tooltip: 'Erişim filtresi',
+          tooltip: context.l10n.accessFilter,
           initialValue: _accessType,
           onSelected: (value) {
             setState(() => _accessType = value);
             _apply();
           },
-          itemBuilder: (context) => const [
-            PopupMenuItem(value: null, child: Text('Tüm kurslar')),
+          itemBuilder: (context) => [
+            PopupMenuItem(value: null, child: Text(context.l10n.allCourses)),
             PopupMenuItem(
               value: CourseAccessType.free,
-              child: Text('Ücretsiz'),
+              child: Text(context.l10n.free),
             ),
-            PopupMenuItem(value: CourseAccessType.paid, child: Text('Ücretli')),
+            PopupMenuItem(
+              value: CourseAccessType.paid,
+              child: Text(context.l10n.paid),
+            ),
           ],
           icon: const Icon(Icons.filter_list),
         ),
