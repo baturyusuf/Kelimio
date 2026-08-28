@@ -10,6 +10,7 @@ import '../../application/providers.dart';
 import '../../domain/catalog/catalog.dart';
 import '../widgets/async_error_view.dart';
 import '../widgets/localization.dart';
+import 'offline_practice_screen.dart';
 
 final class CourseDetailScreen extends ConsumerStatefulWidget {
   const CourseDetailScreen({required this.courseId, super.key});
@@ -25,6 +26,7 @@ final class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
   String? _enrollmentCommandId;
   bool _enrolling = false;
   Object? _enrollmentError;
+  bool _offlineDownloading = false;
 
   @override
   Widget build(BuildContext context) {
@@ -194,6 +196,19 @@ final class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
             ),
           ),
           const SizedBox(height: 20),
+          OutlinedButton.icon(
+            onPressed: _offlineDownloading || selected == null
+                ? null
+                : () => unawaited(_downloadOffline(selected)),
+            icon: _offlineDownloading
+                ? const SizedBox.square(
+                    dimension: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.download_for_offline_outlined),
+            label: const Text('Çevrimdışı puansız çalışma indir'),
+          ),
+          const SizedBox(height: 20),
         ],
         Text(context.l10n.tests, style: Theme.of(context).textTheme.titleLarge),
         const SizedBox(height: 10),
@@ -242,6 +257,35 @@ final class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
     } finally {
       if (mounted) {
         setState(() => _enrolling = false);
+      }
+    }
+  }
+
+  Future<void> _downloadOffline(String supportLanguage) async {
+    setState(() => _offlineDownloading = true);
+    try {
+      final package = await ref
+          .read(offlinePackageRepositoryProvider)
+          .download(
+            courseId: widget.courseId,
+            supportLanguage: supportLanguage,
+          );
+      if (mounted) {
+        await Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => OfflinePracticeScreen(package: package),
+          ),
+        );
+      }
+    } on Object catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Çevrimdışı paket indirilemedi: $error')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _offlineDownloading = false);
       }
     }
   }

@@ -109,7 +109,14 @@ final class Enrollment {
 enum EnrollmentStatus { active, archived }
 
 abstract interface class CatalogRepository {
-  Future<CatalogPage> listCourses({String? cursor, int limit = 20});
+  Future<CatalogPage> listCourses({
+    String? cursor,
+    int limit = 20,
+    String? query,
+    String? targetLanguage,
+    String? supportLanguage,
+    CourseAccessType? accessType,
+  });
 
   Future<CourseDetail> getCourse(String courseId);
 
@@ -119,5 +126,10 @@ abstract interface class CatalogRepository {
     required String courseId,
     required String supportLanguage,
     required String commandId,
+  });
+
+  Future<String> acceptInvitation({
+    required String token,
+    required String supportLanguage,
   });
 }

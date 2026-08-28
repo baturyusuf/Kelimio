@@ -11,6 +11,8 @@ Method | HTTP request | Description
 ------------- | ------------- | -------------
 [**finishAttempt**](LearningApi.md#finishattempt) | **POST** /v1/attempts/{attemptId}/finish | Finish an attempt after all planned questions are answered
 [**getCourseProgress**](LearningApi.md#getcourseprogress) | **GET** /v1/courses/{courseId}/progress | Return the authenticated learner&#39;s rebuildable course progress projection
+[**getLearningSummary**](LearningApi.md#getlearningsummary) | **GET** /v1/me/learning-summary | Return authoritative aggregate progress, current streak, and recent completed attempts
+[**getOfflineCoursePackage**](LearningApi.md#getofflinecoursepackage) | **GET** /v1/courses/{courseId}/offline-package | Create or reuse an immutable scoreless-practice package and return a short-lived download URL
 [**getRecordedAnswer**](LearningApi.md#getrecordedanswer) | **GET** /v1/attempts/{attemptId}/answers/{submissionId} | Reconcile one previously committed answer owned by the current user
 [**startAttempt**](LearningApi.md#startattempt) | **POST** /v1/tests/{testId}/attempts | Start an online attempt for the current test revision
 [**submitAnswer**](LearningApi.md#submitanswer) | **POST** /v1/attempts/{attemptId}/answers | Record and evaluate one online answer exactly once
@@ -92,6 +94,86 @@ Name | Type | Description  | Notes
 ### Return type
 
 [**CourseProgressResponse**](CourseProgressResponse.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json, application/problem+json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **getLearningSummary**
+> LearningSummary getLearningSummary()
+
+Return authoritative aggregate progress, current streak, and recent completed attempts
+
+### Example
+```dart
+import 'package:kelimio_api_client/api.dart';
+
+final api = KelimioApiClient().getLearningApi();
+
+try {
+    final response = api.getLearningSummary();
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling LearningApi->getLearningSummary: $e\n');
+}
+```
+
+### Parameters
+This endpoint does not need any parameter.
+
+### Return type
+
+[**LearningSummary**](LearningSummary.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json, application/problem+json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **getOfflineCoursePackage**
+> OfflinePackage getOfflineCoursePackage(courseId, supportLanguage)
+
+Create or reuse an immutable scoreless-practice package and return a short-lived download URL
+
+### Example
+```dart
+import 'package:kelimio_api_client/api.dart';
+
+final api = KelimioApiClient().getLearningApi();
+final String courseId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final String supportLanguage = supportLanguage_example; // String |
+
+try {
+    final response = api.getOfflineCoursePackage(courseId, supportLanguage);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling LearningApi->getOfflineCoursePackage: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **courseId** | **String**|  |
+ **supportLanguage** | **String**|  |
+
+### Return type
+
+[**OfflinePackage**](OfflinePackage.md)
 
 ### Authorization
 

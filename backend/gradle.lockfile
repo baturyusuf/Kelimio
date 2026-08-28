@@ -172,6 +172,7 @@ software.amazon.awssdk:aws-xml-protocol:2.50.2=compileClasspath,productionRuntim
 software.amazon.awssdk:bom:2.50.2=compileClasspath,productionRuntimeClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath
 software.amazon.awssdk:checksums-spi:2.50.2=compileClasspath,productionRuntimeClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath
 software.amazon.awssdk:checksums:2.50.2=compileClasspath,productionRuntimeClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath
+software.amazon.awssdk:cognitoidentityprovider:2.50.2=compileClasspath,productionRuntimeClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath
 software.amazon.awssdk:crt-core:2.50.2=compileClasspath,productionRuntimeClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath
 software.amazon.awssdk:endpoints-spi:2.50.2=compileClasspath,productionRuntimeClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath
 software.amazon.awssdk:http-auth-aws-eventstream:2.50.2=compileClasspath,productionRuntimeClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath

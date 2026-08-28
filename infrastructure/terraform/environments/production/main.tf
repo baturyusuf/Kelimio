@@ -105,6 +105,8 @@ module "runtime" {
   import_quarantine_bucket_arn        = module.foundation.bucket_arns["import-quarantine"]
   import_archive_bucket_name          = module.foundation.bucket_names["import-archive"]
   import_archive_bucket_arn           = module.foundation.bucket_arns["import-archive"]
+  offline_package_bucket_name         = module.foundation.bucket_names["offline-packages"]
+  offline_package_bucket_arn          = module.foundation.bucket_arns["offline-packages"]
   import_queue_name                   = module.foundation.import_queue_name
   import_queue_arn                    = module.foundation.import_queue_arn
   import_dlq_name                     = module.foundation.import_dlq_name
@@ -119,6 +121,8 @@ module "runtime" {
   oidc_issuer                         = module.identity.issuer
   oidc_jwk_set_uri                    = module.identity.jwk_set_uri
   oidc_client_id                      = module.identity.android_client_id
+  cognito_user_pool_id                = module.identity.user_pool_id
+  cognito_user_pool_arn               = module.identity.user_pool_arn
   operations_topic_arn                = module.cost_controls.operations_topic_arn
   database_secret_version             = var.database_secret_version
   worker_database_secret_version      = var.worker_database_secret_version

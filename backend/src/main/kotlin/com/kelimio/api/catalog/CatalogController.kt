@@ -38,12 +38,16 @@ class CatalogController(
         targetLanguage: String?,
         @RequestParam(required = false) @Pattern(regexp = CANONICAL_LANGUAGE_TAG_PATTERN)
         supportLanguage: String?,
+        @RequestParam(required = false) q: String?,
+        @RequestParam(required = false) accessType: String?,
         @RequestHeader(ClientCapabilityPolicy.HEADER_NAME, required = false) capabilities: String?,
     ): CoursePageResponse = catalogService.list(
         currentUserService.requireCompleted(jwt),
         cursor,
         targetLanguage,
         supportLanguage,
+        q,
+        accessType,
         limit,
         ClientCapabilityPolicy.parse(capabilities),
     ).toResponse()

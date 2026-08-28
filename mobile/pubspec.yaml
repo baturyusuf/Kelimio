@@ -24,6 +24,7 @@ dependencies:
   intl: any
   kelimio_api_client:
     path: packages/kelimio_api_client
+  path_provider: 2.1.6
   uuid: ^4.6.0
 
 dev_dependencies:

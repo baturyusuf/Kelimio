@@ -57,7 +57,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **listCatalogCourses**
-> CoursePage listCatalogCourses(xKelimioClientCapabilities, cursor, limit, targetLanguage, supportLanguage)
+> CoursePage listCatalogCourses(xKelimioClientCapabilities, cursor, limit, targetLanguage, supportLanguage, q, accessType)
 
 List public, published courses
 
@@ -71,9 +71,11 @@ final String cursor = cursor_example; // String | Opaque tamper-evident cursor b
 final int limit = 56; // int |
 final String targetLanguage = targetLanguage_example; // String |
 final String supportLanguage = supportLanguage_example; // String |
+final String q = q_example; // String | Case-insensitive course name or description search.
+final String accessType = accessType_example; // String |
 
 try {
-    final response = api.listCatalogCourses(xKelimioClientCapabilities, cursor, limit, targetLanguage, supportLanguage);
+    final response = api.listCatalogCourses(xKelimioClientCapabilities, cursor, limit, targetLanguage, supportLanguage, q, accessType);
     print(response);
 } catch on DioException (e) {
     print('Exception when calling CatalogApi->listCatalogCourses: $e\n');
@@ -89,6 +91,8 @@ Name | Type | Description  | Notes
  **limit** | **int**|  | [optional] [default to 20]
  **targetLanguage** | **String**|  | [optional]
  **supportLanguage** | **String**|  | [optional]
+ **q** | **String**| Case-insensitive course name or description search. | [optional]
+ **accessType** | **String**|  | [optional]
 
 ### Return type
 

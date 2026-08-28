@@ -58,6 +58,19 @@ internal class CourseReleaseController(
         return noStore(if (response.created) HttpStatus.CREATED else HttpStatus.OK, response)
     }
 
+    @PostMapping("/{releaseId}/abandon")
+    fun abandon(
+        @AuthenticationPrincipal jwt: Jwt,
+        @PathVariable courseId: UUID,
+        @PathVariable releaseId: UUID,
+        @RequestHeader("Idempotency-Key") idempotencyKey: UUID,
+    ): ResponseEntity<CourseReleaseAbandonmentResponse> {
+        val user = currentUserService.requireCompleted(jwt)
+        teacherAccessService.requireAuthorized(jwt, user)
+        val response = service.abandon(user, courseId, releaseId, idempotencyKey)
+        return noStore(if (response.created) HttpStatus.CREATED else HttpStatus.OK, response)
+    }
+
     private fun <T> noStore(status: HttpStatus, body: T): ResponseEntity<T> = ResponseEntity.status(status)
         .cacheControl(CacheControl.noStore())
         .body(body)

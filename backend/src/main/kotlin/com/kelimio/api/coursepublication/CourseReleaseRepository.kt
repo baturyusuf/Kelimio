@@ -285,6 +285,66 @@ class CourseReleaseRepository(
         ) { "Release reprojection job was not inserted" }
     }
 
+    fun abandon(
+        abandonmentId: UUID,
+        courseId: UUID,
+        releaseId: UUID,
+        actorUserId: UUID,
+        outboxEventId: UUID,
+        abandonedAt: OffsetDateTime,
+        correlationId: String,
+    ) {
+        check(
+            dsl.execute(
+                "update course_release set status = 'ABANDONED' where id = ? and course_id = ? and status = 'DRAFT'",
+                releaseId,
+                courseId,
+            ) == 1,
+        ) { "The draft release changed during abandonment" }
+        check(
+            dsl.execute(
+                """
+                insert into course_release_abandonment(
+                    id, course_id, course_release_id, actor_user_id,
+                    outbox_event_id, abandoned_at, correlation_id
+                ) values (?, ?, ?, ?, ?, cast(? as timestamptz), ?)
+                """.trimIndent(),
+                abandonmentId,
+                courseId,
+                releaseId,
+                actorUserId,
+                outboxEventId,
+                abandonedAt,
+                correlationId,
+            ) == 1,
+        )
+    }
+
+    fun abandonment(
+        abandonmentId: UUID,
+        actorUserId: UUID,
+        created: Boolean,
+    ): CourseReleaseAbandonmentResponse? = dsl.fetchOne(
+        """
+        select abandonment.id, abandonment.course_id, abandonment.course_release_id,
+               release_row.revision_number, abandonment.abandoned_at
+          from course_release_abandonment abandonment
+          join course_release release_row on release_row.id = abandonment.course_release_id
+         where abandonment.id = ? and abandonment.actor_user_id = ?
+        """.trimIndent(),
+        abandonmentId,
+        actorUserId,
+    )?.let {
+        CourseReleaseAbandonmentResponse(
+            abandonmentId = it.get("id", UUID::class.java)!!,
+            courseId = it.get("course_id", UUID::class.java)!!,
+            releaseId = it.get("course_release_id", UUID::class.java)!!,
+            releaseRevision = it.get("revision_number", Int::class.java)!!,
+            abandonedAt = it.get("abandoned_at", OffsetDateTime::class.java)!!,
+            created = created,
+        )
+    }
+
     fun activation(activationId: UUID, actorUserId: UUID): CourseReleaseActivationRecord? = dsl.fetchOne(
         """
         select activation.id, activation.course_id, activation.target_release_id,

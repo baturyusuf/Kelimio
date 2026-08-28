@@ -16,6 +16,7 @@
 import * as runtime from '../runtime';
 import type {
   ActivateCourseReleaseRequest,
+  CourseReleaseAbandonmentResponse,
   CourseReleaseActivationResponse,
   CourseReleaseImpactResponse,
   Problem,
@@ -23,6 +24,8 @@ import type {
 import {
     ActivateCourseReleaseRequestFromJSON,
     ActivateCourseReleaseRequestToJSON,
+    CourseReleaseAbandonmentResponseFromJSON,
+    CourseReleaseAbandonmentResponseToJSON,
     CourseReleaseActivationResponseFromJSON,
     CourseReleaseActivationResponseToJSON,
     CourseReleaseImpactResponseFromJSON,
@@ -30,6 +33,12 @@ import {
     ProblemFromJSON,
     ProblemToJSON,
 } from '../models/index';
+
+export interface AbandonCourseReleaseRequest {
+    courseId: string;
+    releaseId: string;
+    idempotencyKey: string;
+}
 
 export interface ActivateCourseReleaseOperationRequest {
     courseId: string;
@@ -50,6 +59,24 @@ export interface GetCourseReleaseImpactRequest {
  * @interface CourseReleaseApiInterface
  */
 export interface CourseReleaseApiInterface {
+    /**
+     * Atomically changes only a DRAFT release to ABANDONED and appends an owner-scoped abandonment fact plus an outbox event. Active and historical releases cannot be abandoned.
+     * @summary Mark an inactive draft release as abandoned without deleting its facts
+     * @param {string} courseId
+     * @param {string} releaseId
+     * @param {string} idempotencyKey Stable UUID generated once for the logical command.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof CourseReleaseApiInterface
+     */
+    abandonCourseReleaseRaw(requestParameters: AbandonCourseReleaseRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<CourseReleaseAbandonmentResponse>>;
+
+    /**
+     * Atomically changes only a DRAFT release to ABANDONED and appends an owner-scoped abandonment fact plus an outbox event. Active and historical releases cannot be abandoned.
+     * Mark an inactive draft release as abandoned without deleting its facts
+     */
+    abandonCourseRelease(requestParameters: AbandonCourseReleaseRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<CourseReleaseAbandonmentResponse>;
+
     /**
      * Atomically activates the reviewed release, appends the activation and outbox facts, and creates a cutoff-bound progress reprojection job. In production this endpoint additionally requires the server-side teacher feature gate, Cognito teacher-group eligibility, and current versioned authoring-terms acceptance.
      * @summary Publish or roll back to an exact reviewed immutable release
@@ -92,6 +119,72 @@ export interface CourseReleaseApiInterface {
  *
  */
 export class CourseReleaseApi extends runtime.BaseAPI implements CourseReleaseApiInterface {
+
+    /**
+     * Atomically changes only a DRAFT release to ABANDONED and appends an owner-scoped abandonment fact plus an outbox event. Active and historical releases cannot be abandoned.
+     * Mark an inactive draft release as abandoned without deleting its facts
+     */
+    async abandonCourseReleaseRaw(requestParameters: AbandonCourseReleaseRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<CourseReleaseAbandonmentResponse>> {
+        if (requestParameters['courseId'] == null) {
+            throw new runtime.RequiredError(
+                'courseId',
+                'Required parameter "courseId" was null or undefined when calling abandonCourseRelease().'
+            );
+        }
+
+        if (requestParameters['releaseId'] == null) {
+            throw new runtime.RequiredError(
+                'releaseId',
+                'Required parameter "releaseId" was null or undefined when calling abandonCourseRelease().'
+            );
+        }
+
+        if (requestParameters['idempotencyKey'] == null) {
+            throw new runtime.RequiredError(
+                'idempotencyKey',
+                'Required parameter "idempotencyKey" was null or undefined when calling abandonCourseRelease().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (requestParameters['idempotencyKey'] != null) {
+            headerParameters['Idempotency-Key'] = String(requestParameters['idempotencyKey']);
+        }
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("bearerAuth", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/v1/courses/{courseId}/releases/{releaseId}/abandon`;
+        urlPath = urlPath.replace(`{${"courseId"}}`, encodeURIComponent(String(requestParameters['courseId'])));
+        urlPath = urlPath.replace(`{${"releaseId"}}`, encodeURIComponent(String(requestParameters['releaseId'])));
+
+        const response = await this.request({
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => CourseReleaseAbandonmentResponseFromJSON(jsonValue));
+    }
+
+    /**
+     * Atomically changes only a DRAFT release to ABANDONED and appends an owner-scoped abandonment fact plus an outbox event. Active and historical releases cannot be abandoned.
+     * Mark an inactive draft release as abandoned without deleting its facts
+     */
+    async abandonCourseRelease(requestParameters: AbandonCourseReleaseRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<CourseReleaseAbandonmentResponse> {
+        const response = await this.abandonCourseReleaseRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
 
     /**
      * Atomically activates the reviewed release, appends the activation and outbox facts, and creates a cutoff-bound progress reprojection job. In production this endpoint additionally requires the server-side teacher feature gate, Cognito teacher-group eligibility, and current versioned authoring-terms acceptance.

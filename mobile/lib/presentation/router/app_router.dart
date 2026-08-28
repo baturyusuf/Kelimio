@@ -5,10 +5,13 @@ import 'package:go_router/go_router.dart';
 import '../../application/auth_controller.dart';
 import '../../application/profile_controller.dart';
 import '../../application/providers.dart';
+import '../screens/account_screen.dart';
 import '../screens/attempt_screen.dart';
 import '../screens/catalog_screen.dart';
 import '../screens/course_detail_screen.dart';
+import '../screens/course_invitation_screen.dart';
 import '../screens/energy_screen.dart';
+import '../screens/full_course_editor_screen.dart';
 import '../screens/profile_setup_screen.dart';
 import '../screens/sign_in_screen.dart';
 import '../screens/splash_screen.dart';
@@ -19,6 +22,7 @@ final _rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
 final _catalogNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'catalog');
 final _energyNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'energy');
 final _teacherNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'teacher');
+final _accountNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'account');
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   final courseAuthoringEnabled = ref
@@ -120,9 +124,26 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 GoRoute(
                   path: '/teacher',
                   builder: (context, state) => const TeacherGateScreen(),
+                  routes: [
+                    GoRoute(
+                      path: 'course/:courseId',
+                      builder: (context, state) => FullCourseEditorScreen(
+                        courseId: state.pathParameters['courseId']!,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
+          StatefulShellBranch(
+            navigatorKey: _accountNavigatorKey,
+            routes: [
+              GoRoute(
+                path: '/account',
+                builder: (context, state) => const AccountScreen(),
+              ),
+            ],
+          ),
         ],
       ),
       GoRoute(
@@ -130,6 +151,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) =>
             AttemptScreen(testId: state.pathParameters['testId']!),
+      ),
+      GoRoute(
+        path: '/course-invitation/:token',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) =>
+            CourseInvitationScreen(token: state.pathParameters['token']!),
       ),
     ],
   );
@@ -172,6 +199,11 @@ final class AppShell extends ConsumerWidget {
               selectedIcon: const Icon(Icons.school),
               label: context.l10n.teacher,
             ),
+          const NavigationDestination(
+            icon: Icon(Icons.person_outline),
+            selectedIcon: Icon(Icons.person),
+            label: 'Profil',
+          ),
         ],
       ),
     );

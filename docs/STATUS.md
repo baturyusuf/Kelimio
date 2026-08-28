@@ -1,12 +1,14 @@
 # Project Status
 
-Last updated: 2026-08-27
+Last updated: 2026-08-28
 
 ## Overall status
 
 **BLOCKED — external owner action required; NOT PUBLISH-READY**
 
 Kelimio now has a locally buildable Phase 0 foundation, a healthy Docker-backed development stack, a verified Android debug runtime, a real-service-tested Excel intake with deterministic Type-D composition and explicit audited publication, a conflict-safe one-question subsequent-release editor, and a partial Phase 1 auth-to-answer implementation. ADR-018's Cognito identity broker, PostgreSQL/Fargate/API Gateway runtime, short-lived GitHub deployment role, guarded migration workflow, and cost brakes are deployed in the owner's production-only AWS account. On 2026-08-10 the guarded internal-test release activated one ECS API task behind the HTTPS API Gateway endpoint. On 2026-08-27 ADR-021's controlled production teacher eligibility, API import path, separate worker/scanner, and zero-to-one scaling topology were deployed; exact images passed high/critical scanning, migration/readiness succeeded, an empty-queue Fargate health proof passed, and the follow-up plan reported no changes. This is controlled internal-test infrastructure, not a public release: no production-signed store artifact exists, Google identity and the approved transactional sender remain unconfigured, the native auth-to-answer and real production workbook canaries are still outstanding, and recovery, public authoring, privacy, child-safety, operational, provider, legal, and store gates remain open. Evidence is retained in `docs/evidence/production-internal-test-activation-2026-08-10.md` and `docs/evidence/production-teacher-import-deployment-2026-08-27.md`.
+
+ADR-022's 2026-08-28 priority beta slice now adds the immutable full-tree course editor, owner course management, invitations, student discovery/history/social controls, release-pinned offline scoreless practice, notification preferences, account export/deletion recovery, and Cognito global session revocation. These changes are locally verified but not yet production evidence; external provider, policy, legal, physical-device, and rollout gates remain open.
 
 ## Current phase
 
@@ -17,11 +19,18 @@ Kelimio now has a locally buildable Phase 0 foundation, a healthy Docker-backed 
 | Version and supply-chain baseline | Implemented and reproduced in CI | Modern Gradle wrappers, lockfiles, exact runtime pins, immutable CI action SHAs, generator image digest, and image SBOM/scan steps exist. ADR-019 records Flutter 3.44's SwiftPM-only iOS graph, removes the stale CocoaPods input, and commits both Xcode-generated AppAuth-iOS resolution files; the unsigned macOS build passes and now rejects future resolution drift. |
 | Monorepo application scaffold | Implemented; Phase 0 remains open | Backend, mobile, two web deployments, contracts, local services, Terraform, and CI exist and pass the available static/build checks |
 | Real auth-to-answer vertical slice | Local real-service path verified through Type D; production pre-traffic gate open | OIDC resource server, real PKCE protocol exchange, explicit first-login profile setup, catalog, enrollment, authoritative Type-A/Type-B/Type-C/Type-D runtime, idempotent answer/reconciliation, score/energy facts, outbox write, and rebuildable progress pass the updated eight-question Android E2E. Native AppAuth sign-in UI and no-public-traffic production proof remain open |
-| Student product | In progress beyond the first slice | All four question types run locally, including accessible two-stage Type-D matching; Flutter analysis and 134/134 tests pass; the repository-managed API 24/30/36 emulator matrix passes 15/15, while supported physical-device, native OIDC, performance, and the rest of the Phase 2 exit gate remain open |
-| Teacher import, authoring, and release | Controlled production initial-course import deployed; production workbook canary open | ADR-021's server-authoritative Cognito teacher eligibility, versioned terms acceptance, generated mobile contracts, resumable internal-test operator, exact-version S3 intake, API-owned transactional-outbox dispatch, separate least-privilege database/IAM worker, digest-pinned ClamAV, and SQS-driven scale-to-zero ECS execution are applied. The owner account is in the managed teacher group and the empty-queue Fargate worker/scanner health proof passed. The reviewed production workbook/malware/archive/scale-down canaries and public UGC, moderation, full tree editor, and legal approval remain open. |
+| Student product | Priority beta surface implemented; production proof open | Catalog search/access filters, private-course invitation acceptance, authoritative learning history/streak/completion, private-by-default profiles and opt-in leaderboard, release-pinned checksum-verified and atomically installed offline scoreless practice with sign-out/account-switch purge, notification preferences, portable export, deletion recovery, and Cognito global session revocation are implemented. All four question types run locally. Physical-device, production-provider, performance, policy, and Phase 2 exit gates remain open. |
+| Teacher import, authoring, and release | Controlled production import deployed; expanded release pending | ADR-021's controlled import topology remains applied. ADR-022 adds owner course listing, private invitations, a full immutable hierarchy/question editor with add/remove/reorder, ETag/If-Match, impact review, publication, and append-only draft abandonment. Production workbook/malware/archive/scale-down canaries, the expanded API deployment, conflict reapply UX, public UGC/moderation, and legal approval remain open. |
 | Commerce, ads, earnings, and payout | Not started | Phase 4 exit gate and owner/provider actions |
 | Admin, infrastructure, and operations | Controlled internal-test API and on-demand import topology active | ADR-018 selects account `923300948109`, `eu-central-1`, no persistent cloud staging, a USD 30-35 target/USD 50 budget, and early conservation/read-only/suspension controls. The protected three-image ADR-021 deployment passed exact-image scanning, migration, promotion, readiness, scale-zero worker health, and a no-drift follow-up plan. The real import canaries, WAF/custom DNS, independent approval, and operational acceptance remain open. |
 | Hardening and store release | Not started | Phase 6 and `docs/RELEASE_CHECKLIST.md` |
+
+## ADR-022 priority beta evidence
+
+- Flyway V15/V16 add notification choices/events, deletion request recovery, legal-consent facts, expiring hashed invitations, and non-destructive release abandonment.
+- Versioned contracts and generated clients cover teacher course management/full editing, search/access filters, invitations, learning summary, private opt-in social surfaces, offline packages, notifications, export/deletion, and all-device session revocation.
+- Editor answer material is redacted from generated and backend diagnostics. PostgreSQL migration tests prove one pending deletion request with retained history and immutable abandoned-release facts.
+- The implementation branch passes the full backend suite, 139 Flutter tests, static analysis, OpenAPI/schema checks, generated clients, and all Terraform formatting/validation roots.
 
 ## Implemented evidence
 

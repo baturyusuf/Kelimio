@@ -370,6 +370,12 @@ resource "aws_iam_role" "api_task" {
 
 data "aws_iam_policy_document" "api_task" {
   statement {
+    sid       = "RevokeOwnedCognitoSessions"
+    actions   = ["cognito-idp:AdminUserGlobalSignOut"]
+    resources = [var.cognito_user_pool_arn]
+  }
+
+  statement {
     sid       = "ReadOperatingMode"
     actions   = ["ssm:GetParameter"]
     resources = ["arn:${data.aws_partition.current.partition}:ssm:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:parameter${var.operating_mode_parameter_name}"]
@@ -546,6 +552,8 @@ resource "aws_ecs_task_definition" "api" {
       { name = "KELIMIO_CLAMAV_MIN_ENGINE_VERSION", value = "1.4.0" },
       { name = "KELIMIO_CLAMAV_MIN_SIGNATURE_NUMBER", value = "1" },
       { name = "KELIMIO_COURSE_RELEASE_ENABLED", value = tostring(var.production_teacher_features_enabled) },
+      { name = "KELIMIO_COGNITO_SESSION_MANAGEMENT_ENABLED", value = "true" },
+      { name = "KELIMIO_COGNITO_USER_POOL_ID", value = var.cognito_user_pool_id },
       { name = "KELIMIO_DB_MAX_POOL_SIZE", value = "4" },
       { name = "KELIMIO_DB_MIN_IDLE", value = "1" },
       { name = "KELIMIO_DB_URL", value = local.database_url },
@@ -558,12 +566,15 @@ resource "aws_ecs_task_definition" "api" {
       { name = "KELIMIO_IMPORT_QUEUE_NAME", value = var.import_queue_name },
       { name = "KELIMIO_LOCAL_COURSE_AUTHORING_ENABLED", value = "false" },
       { name = "KELIMIO_LOCAL_STARTER_COURSE_ENABLED", value = "false" },
+      { name = "KELIMIO_KMS_KEY_ARN", value = var.kms_key_arn },
       { name = "KELIMIO_MATCHING_REPLAY_ACTIVE_KEY_VERSION", value = local.matching_key_version },
       { name = "KELIMIO_OIDC_AUDIENCE", value = var.oidc_client_id },
       { name = "KELIMIO_OIDC_ISSUER", value = var.oidc_issuer },
       { name = "KELIMIO_OIDC_JWK_SET_URI", value = var.oidc_jwk_set_uri },
       { name = "KELIMIO_OIDC_TOKEN_PROFILE", value = "cognito-access" },
       { name = "KELIMIO_OPERATING_MODE_PARAMETER", value = var.operating_mode_parameter_name },
+      { name = "KELIMIO_OFFLINE_PACKAGE_BUCKET", value = var.offline_package_bucket_name },
+      { name = "KELIMIO_OFFLINE_PACKAGES_ENABLED", value = "true" },
       { name = "KELIMIO_PROJECTION_ENABLED", value = "true" },
       { name = "KELIMIO_PRODUCTION_TEACHER_FEATURES_ENABLED", value = tostring(var.production_teacher_features_enabled) },
       { name = "KELIMIO_RUNTIME_ROLE", value = "api" },

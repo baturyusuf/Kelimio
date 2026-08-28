@@ -8,7 +8,7 @@ import '../../application/teacher_access_controller.dart';
 import '../../domain/teacher/teacher_access.dart';
 import '../widgets/async_error_view.dart';
 import '../widgets/localization.dart';
-import 'teacher_import_screen.dart';
+import 'teacher_home_screen.dart';
 
 final class TeacherGateScreen extends ConsumerWidget {
   const TeacherGateScreen({super.key});
@@ -16,12 +16,12 @@ final class TeacherGateScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     if (ref.watch(appConfigProvider).localDevelopmentToolsEnabled) {
-      return const TeacherImportScreen();
+      return const TeacherHomeScreen();
     }
     final access = ref.watch(teacherAccessControllerProvider);
     return access.when(
       data: (value) => value.authorized
-          ? const TeacherImportScreen()
+          ? const TeacherHomeScreen()
           : _TeacherAccessView(access: value),
       loading: () => Scaffold(
         appBar: AppBar(title: Text(context.l10n.teacher)),

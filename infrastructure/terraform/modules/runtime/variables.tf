@@ -76,6 +76,8 @@ variable "import_quarantine_bucket_name" { type = string }
 variable "import_quarantine_bucket_arn" { type = string }
 variable "import_archive_bucket_name" { type = string }
 variable "import_archive_bucket_arn" { type = string }
+variable "offline_package_bucket_name" { type = string }
+variable "offline_package_bucket_arn" { type = string }
 variable "import_queue_name" { type = string }
 variable "import_queue_arn" { type = string }
 variable "import_dlq_name" { type = string }
@@ -144,6 +146,14 @@ variable "oidc_jwk_set_uri" {
 }
 
 variable "oidc_client_id" {
+  type = string
+}
+
+variable "cognito_user_pool_id" {
+  type = string
+}
+
+variable "cognito_user_pool_arn" {
   type = string
 }
 

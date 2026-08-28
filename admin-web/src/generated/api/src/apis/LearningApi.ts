@@ -19,6 +19,8 @@ import type {
   AttemptResponse,
   CourseProgressResponse,
   FinishAttemptResponse,
+  LearningSummary,
+  OfflinePackage,
   Problem,
   SubmitAnswerRequest,
 } from '../models/index';
@@ -31,6 +33,10 @@ import {
     CourseProgressResponseToJSON,
     FinishAttemptResponseFromJSON,
     FinishAttemptResponseToJSON,
+    LearningSummaryFromJSON,
+    LearningSummaryToJSON,
+    OfflinePackageFromJSON,
+    OfflinePackageToJSON,
     ProblemFromJSON,
     ProblemToJSON,
     SubmitAnswerRequestFromJSON,
@@ -45,6 +51,11 @@ export interface FinishAttemptRequest {
 
 export interface GetCourseProgressRequest {
     courseId: string;
+}
+
+export interface GetOfflineCoursePackageRequest {
+    courseId: string;
+    supportLanguage: string;
 }
 
 export interface GetRecordedAnswerRequest {
@@ -105,6 +116,36 @@ export interface LearningApiInterface {
      * Return the authenticated learner\'s rebuildable course progress projection
      */
     getCourseProgress(requestParameters: GetCourseProgressRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<CourseProgressResponse>;
+
+    /**
+     *
+     * @summary Return authoritative aggregate progress, current streak, and recent completed attempts
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof LearningApiInterface
+     */
+    getLearningSummaryRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<LearningSummary>>;
+
+    /**
+     * Return authoritative aggregate progress, current streak, and recent completed attempts
+     */
+    getLearningSummary(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<LearningSummary>;
+
+    /**
+     *
+     * @summary Create or reuse an immutable scoreless-practice package and return a short-lived download URL
+     * @param {string} courseId
+     * @param {string} supportLanguage
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof LearningApiInterface
+     */
+    getOfflineCoursePackageRaw(requestParameters: GetOfflineCoursePackageRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<OfflinePackage>>;
+
+    /**
+     * Create or reuse an immutable scoreless-practice package and return a short-lived download URL
+     */
+    getOfflineCoursePackage(requestParameters: GetOfflineCoursePackageRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<OfflinePackage>;
 
     /**
      * Returns the immutable committed result only when both the attempt and submission belong to the authenticated user. Missing or non-owned records are indistinguishable and return not found.
@@ -271,6 +312,99 @@ export class LearningApi extends runtime.BaseAPI implements LearningApiInterface
      */
     async getCourseProgress(requestParameters: GetCourseProgressRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<CourseProgressResponse> {
         const response = await this.getCourseProgressRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Return authoritative aggregate progress, current streak, and recent completed attempts
+     */
+    async getLearningSummaryRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<LearningSummary>> {
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("bearerAuth", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/v1/me/learning-summary`;
+
+        const response = await this.request({
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => LearningSummaryFromJSON(jsonValue));
+    }
+
+    /**
+     * Return authoritative aggregate progress, current streak, and recent completed attempts
+     */
+    async getLearningSummary(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<LearningSummary> {
+        const response = await this.getLearningSummaryRaw(initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Create or reuse an immutable scoreless-practice package and return a short-lived download URL
+     */
+    async getOfflineCoursePackageRaw(requestParameters: GetOfflineCoursePackageRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<OfflinePackage>> {
+        if (requestParameters['courseId'] == null) {
+            throw new runtime.RequiredError(
+                'courseId',
+                'Required parameter "courseId" was null or undefined when calling getOfflineCoursePackage().'
+            );
+        }
+
+        if (requestParameters['supportLanguage'] == null) {
+            throw new runtime.RequiredError(
+                'supportLanguage',
+                'Required parameter "supportLanguage" was null or undefined when calling getOfflineCoursePackage().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['supportLanguage'] != null) {
+            queryParameters['supportLanguage'] = requestParameters['supportLanguage'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("bearerAuth", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/v1/courses/{courseId}/offline-package`;
+        urlPath = urlPath.replace(`{${"courseId"}}`, encodeURIComponent(String(requestParameters['courseId'])));
+
+        const response = await this.request({
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => OfflinePackageFromJSON(jsonValue));
+    }
+
+    /**
+     * Create or reuse an immutable scoreless-practice package and return a short-lived download URL
+     */
+    async getOfflineCoursePackage(requestParameters: GetOfflineCoursePackageRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<OfflinePackage> {
+        const response = await this.getOfflineCoursePackageRaw(requestParameters, initOverrides);
         return await response.value();
     }
 

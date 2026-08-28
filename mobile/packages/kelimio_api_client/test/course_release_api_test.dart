@@ -6,6 +6,15 @@ void main() {
   final instance = KelimioApiClient().getCourseReleaseApi();
 
   group(CourseReleaseApi, () {
+    // Mark an inactive draft release as abandoned without deleting its facts
+    //
+    // Atomically changes only a DRAFT release to ABANDONED and appends an owner-scoped abandonment fact plus an outbox event. Active and historical releases cannot be abandoned.
+    //
+    //Future<CourseReleaseAbandonmentResponse> abandonCourseRelease(String courseId, String releaseId, String idempotencyKey) async
+    test('test abandonCourseRelease', () async {
+      // TODO
+    });
+
     // Publish or roll back to an exact reviewed immutable release
     //
     // Atomically activates the reviewed release, appends the activation and outbox facts, and creates a cutoff-bound progress reprojection job. In production this endpoint additionally requires the server-side teacher feature gate, Cognito teacher-group eligibility, and current versioned authoring-terms acceptance.

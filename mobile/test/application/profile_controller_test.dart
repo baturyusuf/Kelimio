@@ -71,6 +71,9 @@ void main() {
           courseEditorRecoveryStoreProvider.overrideWithValue(
             MemoryCourseEditorRecoveryStore(),
           ),
+          offlinePackageRepositoryProvider.overrideWithValue(
+            RecordingOfflinePackageRepository(),
+          ),
           identifierFactoryProvider.overrideWithValue(
             SequenceIdentifierFactory([
               'first-user-command',
