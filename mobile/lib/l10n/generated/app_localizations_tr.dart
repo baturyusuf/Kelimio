@@ -963,4 +963,303 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get matching => 'Eşleşme';
+
+  @override
+  String get useCourseInvitation => 'Kurs daveti kullan';
+
+  @override
+  String get courseInvitationTitle => 'Kurs daveti';
+
+  @override
+  String get invitationCode => 'Davet kodu';
+
+  @override
+  String get cancel => 'Vazgeç';
+
+  @override
+  String get continueAction => 'Devam et';
+
+  @override
+  String get searchCourses => 'Kurs ara';
+
+  @override
+  String get accessFilter => 'Erişim filtresi';
+
+  @override
+  String get allCourses => 'Tüm kurslar';
+
+  @override
+  String get acceptInvitationQuestion =>
+      'Bu özel kurs davetini kabul etmek ister misiniz?';
+
+  @override
+  String get acceptInvitation => 'Daveti kabul et';
+
+  @override
+  String invitationAcceptFailed(Object error) {
+    return 'Davet kabul edilemedi: $error';
+  }
+
+  @override
+  String get downloadOfflinePractice => 'Çevrimdışı puansız çalışma indir';
+
+  @override
+  String offlinePackageDownloadFailed(Object error) {
+    return 'Çevrimdışı paket indirilemedi: $error';
+  }
+
+  @override
+  String get offlinePracticeTitle => 'Çevrimdışı puansız çalışma';
+
+  @override
+  String offlinePracticeProgress(Object current, Object total) {
+    return '$current/$total · Bu çalışma puan ve enerji kazandırmaz.';
+  }
+
+  @override
+  String get yourAnswer => 'Cevabınız';
+
+  @override
+  String offlineCorrectAnswer(Object answer) {
+    return 'Doğru cevap: $answer';
+  }
+
+  @override
+  String get practiceAgain => 'Tekrar çalışmalıyım';
+
+  @override
+  String get knewMatchingPairs => 'Eşleştirmeleri biliyordum';
+
+  @override
+  String get next => 'Sonraki';
+
+  @override
+  String get checkAnswer => 'Cevabı kontrol et';
+
+  @override
+  String get offlinePracticeComplete => 'Çevrimdışı çalışma tamamlandı';
+
+  @override
+  String offlinePracticeResult(Object correct, Object total) {
+    return '$correct/$total doğru. Bu sonuç yalnızca cihazda tutuldu ve çevrimiçi puana gönderilmedi.';
+  }
+
+  @override
+  String get accountProfileTitle => 'Profil';
+
+  @override
+  String get accountLearningSummary => 'Öğrenme özeti';
+
+  @override
+  String accountScoreAndStreak(Object days, Object score) {
+    return '$score puan · $days günlük seri';
+  }
+
+  @override
+  String accountTestAndCourseSummary(
+    Object attempts,
+    Object completed,
+    Object enrolled,
+    Object passed,
+  ) {
+    return '$passed/$attempts başarılı test · $completed/$enrolled aktif kurs';
+  }
+
+  @override
+  String accountCorrectAnswers(Object correct, Object total) {
+    return '$correct/$total doğru';
+  }
+
+  @override
+  String get accountData => 'Hesap verileri';
+
+  @override
+  String get accountExportJson => 'Verilerimi JSON olarak dışa aktar';
+
+  @override
+  String get accountRevokeAllSessions => 'Tüm cihazlardan çıkış yap';
+
+  @override
+  String get accountRequestDeletion => 'Hesabımı silme talebi oluştur';
+
+  @override
+  String get accountDeletionRecovery =>
+      'Silme talebi, yanlışlıkla silmeye karşı 7 günlük kurtarma süresiyle kaydedilir.';
+
+  @override
+  String accountDeletionReadFailed(Object error) {
+    return 'Silme talepleri okunamadı: $error';
+  }
+
+  @override
+  String get accountPendingDeletion => 'Bekleyen silme talebi';
+
+  @override
+  String accountDeletionCancelableUntil(Object date) {
+    return '$date tarihine kadar iptal edilebilir.';
+  }
+
+  @override
+  String get accountCancelDeletion => 'İptal et';
+
+  @override
+  String get accountLeaderboard => 'Liderlik tablosu';
+
+  @override
+  String get accountLeaderboardPrivacy =>
+      'Yalnızca açıkça katılmayı seçen herkese açık profiller gösterilir.';
+
+  @override
+  String get accountNoParticipants => 'Henüz katılımcı yok.';
+
+  @override
+  String accountCompletedTests(Object count, Object username) {
+    return '@$username · $count tamamlanan test';
+  }
+
+  @override
+  String accountPoints(Object score) {
+    return '$score puan';
+  }
+
+  @override
+  String get accountExportSaved => 'Veri dışa aktarımı kaydedildi.';
+
+  @override
+  String accountExportFailed(Object error) {
+    return 'Dışa aktarma kaydedilemedi: $error';
+  }
+
+  @override
+  String get accountDeletionCancelled => 'Hesap silme talebi iptal edildi.';
+
+  @override
+  String accountDeletionCancelFailed(Object error) {
+    return 'Talep iptal edilemedi: $error';
+  }
+
+  @override
+  String get accountDeletionDialogTitle => 'Silme talebi oluşturulsun mu?';
+
+  @override
+  String get accountDeletionDialogBody =>
+      'Talep 7 gün sonra işlenmek üzere güvenli biçimde kaydedilir. Bu işlem puan ve öğrenme geçmişi saklama kurallarını değiştirmez.';
+
+  @override
+  String get accountCreateRequest => 'Talep oluştur';
+
+  @override
+  String accountDeletionScheduled(Object date) {
+    return 'Silme talebi $date için kaydedildi.';
+  }
+
+  @override
+  String accountDeletionRequestFailed(Object error) {
+    return 'Talep oluşturulamadı: $error';
+  }
+
+  @override
+  String get accountRevokeDialogTitle => 'Tüm oturumlar kapatılsın mı?';
+
+  @override
+  String get accountRevokeDialogBody =>
+      'Bu cihaz dahil tüm cihazlardaki yenileme oturumları AWS Cognito üzerinde iptal edilir.';
+
+  @override
+  String get accountRevokeConfirm => 'Tümünden çıkış yap';
+
+  @override
+  String accountRevokeFailed(Object error) {
+    return 'Oturumlar kapatılamadı: $error';
+  }
+
+  @override
+  String get accountNotifications => 'Bildirimler';
+
+  @override
+  String get accountLearningReminders => 'Öğrenme hatırlatmaları';
+
+  @override
+  String get accountCourseUpdates => 'Kurs güncellemeleri';
+
+  @override
+  String get accountProductAnnouncements => 'Ürün duyuruları';
+
+  @override
+  String get accountPushNotification => 'Anlık bildirim';
+
+  @override
+  String get accountEmailNotification => 'E-posta bildirimi';
+
+  @override
+  String get accountAvailable => 'Kullanılabilir';
+
+  @override
+  String get accountPushUnavailable =>
+      'Firebase sağlayıcısı henüz yapılandırılmadı';
+
+  @override
+  String get accountEmailUnavailable =>
+      'Doğrulanmış üretim göndericisi henüz yapılandırılmadı';
+
+  @override
+  String get accountQuietHours => 'Sessiz saatler';
+
+  @override
+  String get accountDisabled => 'Kapalı';
+
+  @override
+  String get accountDisableQuietHours => 'Sessiz saatleri kapat';
+
+  @override
+  String get accountSetQuietHours => 'Sessiz saatleri ayarla';
+
+  @override
+  String get accountSaveNotifications => 'Bildirimleri kaydet';
+
+  @override
+  String get accountNotificationsSaved => 'Bildirim tercihleri kaydedildi.';
+
+  @override
+  String accountNotificationsSaveFailed(Object error) {
+    return 'Tercihler kaydedilemedi: $error';
+  }
+
+  @override
+  String get accountQuietHoursStart => 'Sessiz saat başlangıcı';
+
+  @override
+  String get accountQuietHoursEnd => 'Sessiz saat bitişi';
+
+  @override
+  String get accountMyAccount => 'Hesabım';
+
+  @override
+  String get accountDisplayName => 'Görünen ad';
+
+  @override
+  String get accountUsername => 'Kullanıcı adı';
+
+  @override
+  String get accountBio => 'Kısa tanıtım';
+
+  @override
+  String get accountPublicProfile => 'Herkese açık profil';
+
+  @override
+  String get accountPublicProfileDefault => 'Varsayılan olarak kapalıdır.';
+
+  @override
+  String get accountJoinLeaderboard => 'Liderlik tablosuna katıl';
+
+  @override
+  String accountProfileStats(Object score, Object tests) {
+    return '$score toplam puan · $tests test';
+  }
+
+  @override
+  String get accountSave => 'Kaydet';
+
+  @override
+  String get accountProfileSaved => 'Profil kaydedildi.';
 }

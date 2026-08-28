@@ -956,4 +956,300 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get matching => 'المطابقة';
+
+  @override
+  String get useCourseInvitation => 'استخدام دعوة دورة';
+
+  @override
+  String get courseInvitationTitle => 'دعوة دورة';
+
+  @override
+  String get invitationCode => 'رمز الدعوة';
+
+  @override
+  String get cancel => 'إلغاء';
+
+  @override
+  String get continueAction => 'متابعة';
+
+  @override
+  String get searchCourses => 'البحث في الدورات';
+
+  @override
+  String get accessFilter => 'تصفية الوصول';
+
+  @override
+  String get allCourses => 'كل الدورات';
+
+  @override
+  String get acceptInvitationQuestion => 'هل تريد قبول دعوة هذه الدورة الخاصة؟';
+
+  @override
+  String get acceptInvitation => 'قبول الدعوة';
+
+  @override
+  String invitationAcceptFailed(Object error) {
+    return 'تعذّر قبول الدعوة: $error';
+  }
+
+  @override
+  String get downloadOfflinePractice => 'تنزيل تدريب دون اتصال ومن دون نقاط';
+
+  @override
+  String offlinePackageDownloadFailed(Object error) {
+    return 'تعذّر تنزيل حزمة العمل دون اتصال: $error';
+  }
+
+  @override
+  String get offlinePracticeTitle => 'تدريب دون اتصال ومن دون نقاط';
+
+  @override
+  String offlinePracticeProgress(Object current, Object total) {
+    return '$current/$total · هذا التدريب لا يمنح نقاطًا أو طاقة.';
+  }
+
+  @override
+  String get yourAnswer => 'إجابتك';
+
+  @override
+  String offlineCorrectAnswer(Object answer) {
+    return 'الإجابة الصحيحة: $answer';
+  }
+
+  @override
+  String get practiceAgain => 'أحتاج إلى مزيد من التدريب';
+
+  @override
+  String get knewMatchingPairs => 'كنت أعرف المطابقات';
+
+  @override
+  String get next => 'التالي';
+
+  @override
+  String get checkAnswer => 'تحقق من الإجابة';
+
+  @override
+  String get offlinePracticeComplete => 'اكتمل التدريب دون اتصال';
+
+  @override
+  String offlinePracticeResult(Object correct, Object total) {
+    return '$correct/$total صحيحة. حُفظت هذه النتيجة على هذا الجهاز فقط ولم تُرسل إلى نتيجتك عبر الإنترنت.';
+  }
+
+  @override
+  String get accountProfileTitle => 'الملف الشخصي';
+
+  @override
+  String get accountLearningSummary => 'ملخص التعلم';
+
+  @override
+  String accountScoreAndStreak(Object days, Object score) {
+    return '$score نقطة · سلسلة $days أيام';
+  }
+
+  @override
+  String accountTestAndCourseSummary(
+    Object attempts,
+    Object completed,
+    Object enrolled,
+    Object passed,
+  ) {
+    return '$passed/$attempts اختبارات ناجحة · $completed/$enrolled دورات نشطة';
+  }
+
+  @override
+  String accountCorrectAnswers(Object correct, Object total) {
+    return '$correct/$total صحيحة';
+  }
+
+  @override
+  String get accountData => 'بيانات الحساب';
+
+  @override
+  String get accountExportJson => 'تصدير بياناتي بصيغة JSON';
+
+  @override
+  String get accountRevokeAllSessions => 'تسجيل الخروج من جميع الأجهزة';
+
+  @override
+  String get accountRequestDeletion => 'طلب حذف حسابي';
+
+  @override
+  String get accountDeletionRecovery =>
+      'يتضمن طلب الحذف فترة استرداد مدتها 7 أيام للحماية من الحذف بالخطأ.';
+
+  @override
+  String accountDeletionReadFailed(Object error) {
+    return 'تعذّر تحميل طلبات الحذف: $error';
+  }
+
+  @override
+  String get accountPendingDeletion => 'طلب حذف معلّق';
+
+  @override
+  String accountDeletionCancelableUntil(Object date) {
+    return 'يمكن إلغاؤه حتى $date.';
+  }
+
+  @override
+  String get accountCancelDeletion => 'إلغاء';
+
+  @override
+  String get accountLeaderboard => 'لوحة المتصدرين';
+
+  @override
+  String get accountLeaderboardPrivacy =>
+      'لا تظهر إلا الملفات العامة التي اختار أصحابها المشاركة صراحةً.';
+
+  @override
+  String get accountNoParticipants => 'لا يوجد مشاركون بعد.';
+
+  @override
+  String accountCompletedTests(Object count, Object username) {
+    return '@$username · $count اختبارات مكتملة';
+  }
+
+  @override
+  String accountPoints(Object score) {
+    return '$score نقطة';
+  }
+
+  @override
+  String get accountExportSaved => 'تم حفظ تصدير البيانات.';
+
+  @override
+  String accountExportFailed(Object error) {
+    return 'تعذّر حفظ التصدير: $error';
+  }
+
+  @override
+  String get accountDeletionCancelled => 'تم إلغاء طلب حذف الحساب.';
+
+  @override
+  String accountDeletionCancelFailed(Object error) {
+    return 'تعذّر إلغاء الطلب: $error';
+  }
+
+  @override
+  String get accountDeletionDialogTitle => 'إنشاء طلب حذف؟';
+
+  @override
+  String get accountDeletionDialogBody =>
+      'سيُحفظ الطلب بأمان لمعالجته بعد 7 أيام. لا يغيّر ذلك قواعد الاحتفاظ بالنقاط وسجل التعلم.';
+
+  @override
+  String get accountCreateRequest => 'إنشاء الطلب';
+
+  @override
+  String accountDeletionScheduled(Object date) {
+    return 'تمت جدولة طلب الحذف في $date.';
+  }
+
+  @override
+  String accountDeletionRequestFailed(Object error) {
+    return 'تعذّر إنشاء الطلب: $error';
+  }
+
+  @override
+  String get accountRevokeDialogTitle => 'إغلاق كل الجلسات؟';
+
+  @override
+  String get accountRevokeDialogBody =>
+      'سيتم إلغاء جلسات التحديث في AWS Cognito على جميع الأجهزة، بما فيها هذا الجهاز.';
+
+  @override
+  String get accountRevokeConfirm => 'تسجيل الخروج من الجميع';
+
+  @override
+  String accountRevokeFailed(Object error) {
+    return 'تعذّر إغلاق الجلسات: $error';
+  }
+
+  @override
+  String get accountNotifications => 'الإشعارات';
+
+  @override
+  String get accountLearningReminders => 'تذكيرات التعلم';
+
+  @override
+  String get accountCourseUpdates => 'تحديثات الدورات';
+
+  @override
+  String get accountProductAnnouncements => 'إعلانات المنتج';
+
+  @override
+  String get accountPushNotification => 'الإشعارات الفورية';
+
+  @override
+  String get accountEmailNotification => 'إشعارات البريد الإلكتروني';
+
+  @override
+  String get accountAvailable => 'متاح';
+
+  @override
+  String get accountPushUnavailable => 'لم تتم تهيئة موفّر Firebase بعد';
+
+  @override
+  String get accountEmailUnavailable => 'لم تتم تهيئة مرسل إنتاج موثّق بعد';
+
+  @override
+  String get accountQuietHours => 'ساعات الهدوء';
+
+  @override
+  String get accountDisabled => 'متوقفة';
+
+  @override
+  String get accountDisableQuietHours => 'إيقاف ساعات الهدوء';
+
+  @override
+  String get accountSetQuietHours => 'ضبط ساعات الهدوء';
+
+  @override
+  String get accountSaveNotifications => 'حفظ الإشعارات';
+
+  @override
+  String get accountNotificationsSaved => 'تم حفظ تفضيلات الإشعارات.';
+
+  @override
+  String accountNotificationsSaveFailed(Object error) {
+    return 'تعذّر حفظ التفضيلات: $error';
+  }
+
+  @override
+  String get accountQuietHoursStart => 'بداية ساعات الهدوء';
+
+  @override
+  String get accountQuietHoursEnd => 'نهاية ساعات الهدوء';
+
+  @override
+  String get accountMyAccount => 'حسابي';
+
+  @override
+  String get accountDisplayName => 'الاسم المعروض';
+
+  @override
+  String get accountUsername => 'اسم المستخدم';
+
+  @override
+  String get accountBio => 'نبذة قصيرة';
+
+  @override
+  String get accountPublicProfile => 'ملف شخصي عام';
+
+  @override
+  String get accountPublicProfileDefault => 'يكون متوقفًا افتراضيًا.';
+
+  @override
+  String get accountJoinLeaderboard => 'الانضمام إلى لوحة المتصدرين';
+
+  @override
+  String accountProfileStats(Object score, Object tests) {
+    return '$score مجموع النقاط · $tests اختبارات';
+  }
+
+  @override
+  String get accountSave => 'حفظ';
+
+  @override
+  String get accountProfileSaved => 'تم حفظ الملف الشخصي.';
 }

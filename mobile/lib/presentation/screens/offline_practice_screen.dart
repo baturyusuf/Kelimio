@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../application/providers.dart';
 import '../../domain/offline/offline.dart';
+import '../widgets/localization.dart';
 
 final class OfflinePracticeScreen extends ConsumerStatefulWidget {
   const OfflinePracticeScreen({required this.package, super.key});
@@ -32,7 +33,7 @@ final class _OfflinePracticeScreenState
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Çevrimdışı puansız çalışma')),
+    appBar: AppBar(title: Text(context.l10n.offlinePracticeTitle)),
     body: FutureBuilder<List<OfflinePracticeQuestion>>(
       future: _questions,
       builder: (context, snapshot) {
@@ -46,7 +47,10 @@ final class _OfflinePracticeScreenState
           padding: const EdgeInsets.all(24),
           children: [
             Text(
-              '${_index + 1}/${questions.length} · Bu çalışma puan ve enerji kazandırmaz.',
+              context.l10n.offlinePracticeProgress(
+                _index + 1,
+                questions.length,
+              ),
               style: Theme.of(context).textTheme.bodySmall,
             ),
             const SizedBox(height: 20),
@@ -76,14 +80,16 @@ final class _OfflinePracticeScreenState
               TextField(
                 enabled: !_revealed,
                 onChanged: (value) => _selected = value,
-                decoration: const InputDecoration(labelText: 'Cevabın'),
+                decoration: InputDecoration(labelText: context.l10n.yourAnswer),
               ),
             const SizedBox(height: 16),
             if (_revealed)
               Card(
                 child: Padding(
                   padding: const EdgeInsets.all(16),
-                  child: Text('Doğru cevap: ${question.correctAnswer}'),
+                  child: Text(
+                    context.l10n.offlineCorrectAnswer(question.correctAnswer),
+                  ),
                 ),
               ),
             if (_revealed && question.matchingPairs.isNotEmpty)
@@ -92,7 +98,7 @@ final class _OfflinePracticeScreenState
                   Expanded(
                     child: OutlinedButton(
                       onPressed: () => _next(questions.length),
-                      child: const Text('Tekrar çalışmalıyım'),
+                      child: Text(context.l10n.practiceAgain),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -100,7 +106,7 @@ final class _OfflinePracticeScreenState
                     child: FilledButton(
                       onPressed: () =>
                           _next(questions.length, matchingCorrect: true),
-                      child: const Text('Eşleştirmeleri biliyordum'),
+                      child: Text(context.l10n.knewMatchingPairs),
                     ),
                   ),
                 ],
@@ -110,7 +116,9 @@ final class _OfflinePracticeScreenState
                 onPressed: _revealed
                     ? () => _next(questions.length)
                     : () => _reveal(question),
-                child: Text(_revealed ? 'Sonraki' : 'Cevabı kontrol et'),
+                child: Text(
+                  _revealed ? context.l10n.next : context.l10n.checkAnswer,
+                ),
               ),
           ],
         );
@@ -161,12 +169,12 @@ final class _OfflinePracticeScreenState
           const Icon(Icons.offline_bolt_outlined, size: 64),
           const SizedBox(height: 16),
           Text(
-            'Çevrimdışı çalışma tamamlandı',
+            context.l10n.offlinePracticeComplete,
             style: Theme.of(context).textTheme.headlineSmall,
           ),
           const SizedBox(height: 8),
           Text(
-            '$_correct/$total doğru. Bu sonuç yalnızca cihazda tutuldu ve çevrimiçi puana gönderilmedi.',
+            context.l10n.offlinePracticeResult(_correct, total),
             textAlign: TextAlign.center,
           ),
         ],

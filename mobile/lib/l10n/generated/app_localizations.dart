@@ -1692,6 +1692,509 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Matching'**
   String get matching;
+
+  /// No description provided for @useCourseInvitation.
+  ///
+  /// In en, this message translates to:
+  /// **'Use course invitation'**
+  String get useCourseInvitation;
+
+  /// No description provided for @courseInvitationTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Course invitation'**
+  String get courseInvitationTitle;
+
+  /// No description provided for @invitationCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Invitation code'**
+  String get invitationCode;
+
+  /// No description provided for @cancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get cancel;
+
+  /// No description provided for @continueAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get continueAction;
+
+  /// No description provided for @searchCourses.
+  ///
+  /// In en, this message translates to:
+  /// **'Search courses'**
+  String get searchCourses;
+
+  /// No description provided for @accessFilter.
+  ///
+  /// In en, this message translates to:
+  /// **'Access filter'**
+  String get accessFilter;
+
+  /// No description provided for @allCourses.
+  ///
+  /// In en, this message translates to:
+  /// **'All courses'**
+  String get allCourses;
+
+  /// No description provided for @acceptInvitationQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Would you like to accept this private course invitation?'**
+  String get acceptInvitationQuestion;
+
+  /// No description provided for @acceptInvitation.
+  ///
+  /// In en, this message translates to:
+  /// **'Accept invitation'**
+  String get acceptInvitation;
+
+  /// No description provided for @invitationAcceptFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The invitation could not be accepted: {error}'**
+  String invitationAcceptFailed(Object error);
+
+  /// No description provided for @downloadOfflinePractice.
+  ///
+  /// In en, this message translates to:
+  /// **'Download scoreless offline practice'**
+  String get downloadOfflinePractice;
+
+  /// No description provided for @offlinePackageDownloadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The offline package could not be downloaded: {error}'**
+  String offlinePackageDownloadFailed(Object error);
+
+  /// No description provided for @offlinePracticeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Scoreless offline practice'**
+  String get offlinePracticeTitle;
+
+  /// No description provided for @offlinePracticeProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'{current}/{total} · This practice does not award score or energy.'**
+  String offlinePracticeProgress(Object current, Object total);
+
+  /// No description provided for @yourAnswer.
+  ///
+  /// In en, this message translates to:
+  /// **'Your answer'**
+  String get yourAnswer;
+
+  /// No description provided for @offlineCorrectAnswer.
+  ///
+  /// In en, this message translates to:
+  /// **'Correct answer: {answer}'**
+  String offlineCorrectAnswer(Object answer);
+
+  /// No description provided for @practiceAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'I need more practice'**
+  String get practiceAgain;
+
+  /// No description provided for @knewMatchingPairs.
+  ///
+  /// In en, this message translates to:
+  /// **'I knew the matches'**
+  String get knewMatchingPairs;
+
+  /// No description provided for @next.
+  ///
+  /// In en, this message translates to:
+  /// **'Next'**
+  String get next;
+
+  /// No description provided for @checkAnswer.
+  ///
+  /// In en, this message translates to:
+  /// **'Check answer'**
+  String get checkAnswer;
+
+  /// No description provided for @offlinePracticeComplete.
+  ///
+  /// In en, this message translates to:
+  /// **'Offline practice complete'**
+  String get offlinePracticeComplete;
+
+  /// No description provided for @offlinePracticeResult.
+  ///
+  /// In en, this message translates to:
+  /// **'{correct}/{total} correct. This result was stored only on this device and was not sent to your online score.'**
+  String offlinePracticeResult(Object correct, Object total);
+
+  /// No description provided for @accountProfileTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile'**
+  String get accountProfileTitle;
+
+  /// No description provided for @accountLearningSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Learning summary'**
+  String get accountLearningSummary;
+
+  /// No description provided for @accountScoreAndStreak.
+  ///
+  /// In en, this message translates to:
+  /// **'{score} points · {days}-day streak'**
+  String accountScoreAndStreak(Object days, Object score);
+
+  /// No description provided for @accountTestAndCourseSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'{passed}/{attempts} passed tests · {completed}/{enrolled} active courses'**
+  String accountTestAndCourseSummary(
+    Object attempts,
+    Object completed,
+    Object enrolled,
+    Object passed,
+  );
+
+  /// No description provided for @accountCorrectAnswers.
+  ///
+  /// In en, this message translates to:
+  /// **'{correct}/{total} correct'**
+  String accountCorrectAnswers(Object correct, Object total);
+
+  /// No description provided for @accountData.
+  ///
+  /// In en, this message translates to:
+  /// **'Account data'**
+  String get accountData;
+
+  /// No description provided for @accountExportJson.
+  ///
+  /// In en, this message translates to:
+  /// **'Export my data as JSON'**
+  String get accountExportJson;
+
+  /// No description provided for @accountRevokeAllSessions.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign out from all devices'**
+  String get accountRevokeAllSessions;
+
+  /// No description provided for @accountRequestDeletion.
+  ///
+  /// In en, this message translates to:
+  /// **'Request account deletion'**
+  String get accountRequestDeletion;
+
+  /// No description provided for @accountDeletionRecovery.
+  ///
+  /// In en, this message translates to:
+  /// **'Deletion requests include a 7-day recovery period to protect against mistakes.'**
+  String get accountDeletionRecovery;
+
+  /// No description provided for @accountDeletionReadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Deletion requests could not be loaded: {error}'**
+  String accountDeletionReadFailed(Object error);
+
+  /// No description provided for @accountPendingDeletion.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending deletion request'**
+  String get accountPendingDeletion;
+
+  /// No description provided for @accountDeletionCancelableUntil.
+  ///
+  /// In en, this message translates to:
+  /// **'Can be cancelled until {date}.'**
+  String accountDeletionCancelableUntil(Object date);
+
+  /// No description provided for @accountCancelDeletion.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get accountCancelDeletion;
+
+  /// No description provided for @accountLeaderboard.
+  ///
+  /// In en, this message translates to:
+  /// **'Leaderboard'**
+  String get accountLeaderboard;
+
+  /// No description provided for @accountLeaderboardPrivacy.
+  ///
+  /// In en, this message translates to:
+  /// **'Only public profiles whose owners explicitly opted in are shown.'**
+  String get accountLeaderboardPrivacy;
+
+  /// No description provided for @accountNoParticipants.
+  ///
+  /// In en, this message translates to:
+  /// **'No participants yet.'**
+  String get accountNoParticipants;
+
+  /// No description provided for @accountCompletedTests.
+  ///
+  /// In en, this message translates to:
+  /// **'@{username} · {count} completed tests'**
+  String accountCompletedTests(Object count, Object username);
+
+  /// No description provided for @accountPoints.
+  ///
+  /// In en, this message translates to:
+  /// **'{score} points'**
+  String accountPoints(Object score);
+
+  /// No description provided for @accountExportSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Data export saved.'**
+  String get accountExportSaved;
+
+  /// No description provided for @accountExportFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The export could not be saved: {error}'**
+  String accountExportFailed(Object error);
+
+  /// No description provided for @accountDeletionCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'The account deletion request was cancelled.'**
+  String get accountDeletionCancelled;
+
+  /// No description provided for @accountDeletionCancelFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The request could not be cancelled: {error}'**
+  String accountDeletionCancelFailed(Object error);
+
+  /// No description provided for @accountDeletionDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create a deletion request?'**
+  String get accountDeletionDialogTitle;
+
+  /// No description provided for @accountDeletionDialogBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The request will be stored securely for processing after 7 days. This does not change score and learning-history retention rules.'**
+  String get accountDeletionDialogBody;
+
+  /// No description provided for @accountCreateRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'Create request'**
+  String get accountCreateRequest;
+
+  /// No description provided for @accountDeletionScheduled.
+  ///
+  /// In en, this message translates to:
+  /// **'The deletion request was scheduled for {date}.'**
+  String accountDeletionScheduled(Object date);
+
+  /// No description provided for @accountDeletionRequestFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The request could not be created: {error}'**
+  String accountDeletionRequestFailed(Object error);
+
+  /// No description provided for @accountRevokeDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Close all sessions?'**
+  String get accountRevokeDialogTitle;
+
+  /// No description provided for @accountRevokeDialogBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh sessions on every device, including this one, will be revoked in AWS Cognito.'**
+  String get accountRevokeDialogBody;
+
+  /// No description provided for @accountRevokeConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign out everywhere'**
+  String get accountRevokeConfirm;
+
+  /// No description provided for @accountRevokeFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Sessions could not be closed: {error}'**
+  String accountRevokeFailed(Object error);
+
+  /// No description provided for @accountNotifications.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications'**
+  String get accountNotifications;
+
+  /// No description provided for @accountLearningReminders.
+  ///
+  /// In en, this message translates to:
+  /// **'Learning reminders'**
+  String get accountLearningReminders;
+
+  /// No description provided for @accountCourseUpdates.
+  ///
+  /// In en, this message translates to:
+  /// **'Course updates'**
+  String get accountCourseUpdates;
+
+  /// No description provided for @accountProductAnnouncements.
+  ///
+  /// In en, this message translates to:
+  /// **'Product announcements'**
+  String get accountProductAnnouncements;
+
+  /// No description provided for @accountPushNotification.
+  ///
+  /// In en, this message translates to:
+  /// **'Push notifications'**
+  String get accountPushNotification;
+
+  /// No description provided for @accountEmailNotification.
+  ///
+  /// In en, this message translates to:
+  /// **'Email notifications'**
+  String get accountEmailNotification;
+
+  /// No description provided for @accountAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Available'**
+  String get accountAvailable;
+
+  /// No description provided for @accountPushUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'The Firebase provider is not configured yet'**
+  String get accountPushUnavailable;
+
+  /// No description provided for @accountEmailUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'A verified production sender is not configured yet'**
+  String get accountEmailUnavailable;
+
+  /// No description provided for @accountQuietHours.
+  ///
+  /// In en, this message translates to:
+  /// **'Quiet hours'**
+  String get accountQuietHours;
+
+  /// No description provided for @accountDisabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Off'**
+  String get accountDisabled;
+
+  /// No description provided for @accountDisableQuietHours.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn off quiet hours'**
+  String get accountDisableQuietHours;
+
+  /// No description provided for @accountSetQuietHours.
+  ///
+  /// In en, this message translates to:
+  /// **'Set quiet hours'**
+  String get accountSetQuietHours;
+
+  /// No description provided for @accountSaveNotifications.
+  ///
+  /// In en, this message translates to:
+  /// **'Save notifications'**
+  String get accountSaveNotifications;
+
+  /// No description provided for @accountNotificationsSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Notification preferences saved.'**
+  String get accountNotificationsSaved;
+
+  /// No description provided for @accountNotificationsSaveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Preferences could not be saved: {error}'**
+  String accountNotificationsSaveFailed(Object error);
+
+  /// No description provided for @accountQuietHoursStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Quiet hours start'**
+  String get accountQuietHoursStart;
+
+  /// No description provided for @accountQuietHoursEnd.
+  ///
+  /// In en, this message translates to:
+  /// **'Quiet hours end'**
+  String get accountQuietHoursEnd;
+
+  /// No description provided for @accountMyAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'My account'**
+  String get accountMyAccount;
+
+  /// No description provided for @accountDisplayName.
+  ///
+  /// In en, this message translates to:
+  /// **'Display name'**
+  String get accountDisplayName;
+
+  /// No description provided for @accountUsername.
+  ///
+  /// In en, this message translates to:
+  /// **'Username'**
+  String get accountUsername;
+
+  /// No description provided for @accountBio.
+  ///
+  /// In en, this message translates to:
+  /// **'Short bio'**
+  String get accountBio;
+
+  /// No description provided for @accountPublicProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Public profile'**
+  String get accountPublicProfile;
+
+  /// No description provided for @accountPublicProfileDefault.
+  ///
+  /// In en, this message translates to:
+  /// **'It is off by default.'**
+  String get accountPublicProfileDefault;
+
+  /// No description provided for @accountJoinLeaderboard.
+  ///
+  /// In en, this message translates to:
+  /// **'Join the leaderboard'**
+  String get accountJoinLeaderboard;
+
+  /// No description provided for @accountProfileStats.
+  ///
+  /// In en, this message translates to:
+  /// **'{score} total points · {tests} tests'**
+  String accountProfileStats(Object score, Object tests);
+
+  /// No description provided for @accountSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get accountSave;
+
+  /// No description provided for @accountProfileSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile saved.'**
+  String get accountProfileSaved;
 }
 
 class _AppLocalizationsDelegate
