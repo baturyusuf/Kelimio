@@ -52,6 +52,27 @@ These artifacts are for owner-operated physical-device testing. They are not
 production-signed Google Play artifacts and do not close store-signing,
 Play-record, physical-device, authenticated feature-canary, or rollout gates.
 
+### Multilingual follow-up artifact
+
+After PRs #68 and #69 passed Android, iOS, filesystem, secret, and container
+checks and merged as `66bfe15831e1bf18545487ad3527bddc2051d756`, the public
+prerelease
+[Kelimio AWS Multilingual Beta — 2026-08-28](https://github.com/baturyusuf/Kelimio/releases/tag/internal-apk-2026-08-28-multilingual-beta)
+was built with the same production HTTPS API, Cognito issuer/client, and
+internal-test boundary. It adds localized teacher, catalog, invitation,
+offline-practice, profile, privacy, account, and notification surfaces plus the
+full-editor conflict flow. Profile-mode ABI splitting reduces the owner-download
+size while retaining Android debug signing for direct installation.
+
+- ARM64 (recommended, 34,679,959 bytes):
+  `sha256:9f08d6026616f06410ab1503ed77055f7f785371ff71568b2fd949a35290893f`.
+- ARMv7 (older 32-bit devices, 32,500,577 bytes):
+  `sha256:b62911721b773ee66baba8074418d9cf3f3ee10c14809e324c0560f754e7522b`.
+
+APK Signature Scheme v2 verification passed with the local Android debug
+certificate. The smaller artifacts remain internal-test packages and do not
+change any store-signing or release-readiness claim.
+
 ## Gates deliberately left open
 
 Google identity still requires the Google OAuth client and secret, SES remains
