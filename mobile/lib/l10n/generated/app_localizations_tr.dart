@@ -644,4 +644,323 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get keepEditing => 'Daha sonrası için tut';
+
+  @override
+  String get myCourses => 'Kurslarım';
+
+  @override
+  String get newCourseFromExcel => 'Excel ile yeni kurs';
+
+  @override
+  String get noTeacherCourses =>
+      'Henüz bir kursunuz yok. İlk kursu Excel dosyanızdan oluşturabilirsiniz.';
+
+  @override
+  String courseRevision(Object language, Object revision) {
+    return '$language · sürüm $revision';
+  }
+
+  @override
+  String get unpublishedDraftAvailable => 'yayımlanmamış taslak var';
+
+  @override
+  String get createInvitation => 'Davet oluştur';
+
+  @override
+  String get courseInvitationReady => 'Kurs daveti hazır';
+
+  @override
+  String get courseInvitationShare =>
+      'Bu tek kullanımlık kodu öğrencinizle güvenli biçimde paylaşın:';
+
+  @override
+  String get copy => 'Kopyala';
+
+  @override
+  String invitationCreateFailed(Object error) {
+    return 'Davet oluşturulamadı: $error';
+  }
+
+  @override
+  String draftReleaseTitle(Object revision) {
+    return 'Taslak sürüm $revision';
+  }
+
+  @override
+  String get close => 'Kapat';
+
+  @override
+  String get abandonDraft => 'Taslağı terk et';
+
+  @override
+  String get draftAbandoned => 'Taslak güvenle terk edildi.';
+
+  @override
+  String get courseRevisionPublished => 'Kursun yeni sürümü yayımlandı.';
+
+  @override
+  String draftPublishFailed(Object error) {
+    return 'Taslak yayımlanamadı: $error';
+  }
+
+  @override
+  String get fullCourseEditorTitle => 'Kurs düzenleyici';
+
+  @override
+  String publishRevisionTitle(Object revision) {
+    return 'Sürüm $revision yayımlansın mı?';
+  }
+
+  @override
+  String get later => 'Daha sonra';
+
+  @override
+  String revisionPublished(Object revision) {
+    return 'Sürüm $revision yayımlandı.';
+  }
+
+  @override
+  String get fullEditorConflictHeading => 'Kurs başka bir yerde değiştirildi';
+
+  @override
+  String get fullEditorConflictBody =>
+      'Hiçbir değişiklik kaydedilmedi. Aşağıdaki üç sürümü karşılaştırıp sunucudaki son sürümü kullanabilir veya kendi düzenlemelerinizi onun üzerine açıkça yeniden uygulayabilirsiniz.';
+
+  @override
+  String get fullEditorBaseVersion => 'Düzenlemeye başladığınız sürüm';
+
+  @override
+  String get fullEditorMineVersion => 'Sizin düzenlemeleriniz';
+
+  @override
+  String get fullEditorLatestVersion => 'Sunucudaki son sürüm';
+
+  @override
+  String get fullEditorUseLatest => 'Sunucudaki son sürümü kullan';
+
+  @override
+  String get fullEditorReapplyMine =>
+      'Düzenlemelerimi son sürüme yeniden uygula';
+
+  @override
+  String fullEditorVersionSummary(
+    Object levels,
+    Object name,
+    Object questions,
+    Object revision,
+  ) {
+    return '$name · $levels seviye · $questions soru · sürüm $revision';
+  }
+
+  @override
+  String editorChanges(Object count) {
+    return '$count değişiklik:';
+  }
+
+  @override
+  String editorMoreChanges(Object count) {
+    return '$count değişiklik daha';
+  }
+
+  @override
+  String get courseName => 'Kurs adı';
+
+  @override
+  String get description => 'Açıklama';
+
+  @override
+  String get visibility => 'Görünürlük';
+
+  @override
+  String get publicVisibility => 'Herkese açık';
+
+  @override
+  String get privateVisibility => 'Özel';
+
+  @override
+  String targetAndSupportLanguages(Object support, Object target) {
+    return '$target · destek: $support';
+  }
+
+  @override
+  String get addLevel => 'Seviye ekle';
+
+  @override
+  String get level => 'Seviye';
+
+  @override
+  String get addUnit => 'Ünite ekle';
+
+  @override
+  String get unit => 'Ünite';
+
+  @override
+  String get addTopic => 'Konu ekle';
+
+  @override
+  String get topic => 'Konu';
+
+  @override
+  String get addTest => 'Test ekle';
+
+  @override
+  String get test => 'Test';
+
+  @override
+  String get addQuestion => 'Soru ekle';
+
+  @override
+  String get questionTypeWordMultipleChoice => 'Kelime çoktan seçmeli';
+
+  @override
+  String get questionTypeMultipleChoiceCloze => 'Boşluk doldurma · seçenekli';
+
+  @override
+  String get questionTypeTypedCloze => 'Boşluk doldurma · yazılı';
+
+  @override
+  String get questionTypeMatching => 'Eşleştirme';
+
+  @override
+  String questionTitle(Object type) {
+    return 'Soru · $type';
+  }
+
+  @override
+  String get questionPrompt => 'Soru metni';
+
+  @override
+  String get alternativeCorrectAnswer => 'Alternatif doğru cevap';
+
+  @override
+  String translationLanguage(Object language) {
+    return 'Çeviri ($language)';
+  }
+
+  @override
+  String get addMatchingPair => 'Eşleştirme çifti ekle';
+
+  @override
+  String get moveOptionUp => 'Seçeneği yukarı taşı';
+
+  @override
+  String get moveOptionDown => 'Seçeneği aşağı taşı';
+
+  @override
+  String get correctOption => 'Doğru seçenek';
+
+  @override
+  String get option => 'Seçenek';
+
+  @override
+  String optionTranslation(Object language) {
+    return 'Seçenek çevirisi ($language)';
+  }
+
+  @override
+  String get matchingTarget => 'Eşleştirme hedefi';
+
+  @override
+  String matchingText(Object language) {
+    return 'Eşleşen metin ($language)';
+  }
+
+  @override
+  String get moveUp => 'Yukarı taşı';
+
+  @override
+  String get moveDown => 'Aşağı taşı';
+
+  @override
+  String get delete => 'Sil';
+
+  @override
+  String newLevel(Object ordinal) {
+    return 'Yeni seviye $ordinal';
+  }
+
+  @override
+  String newUnit(Object ordinal) {
+    return 'Yeni ünite $ordinal';
+  }
+
+  @override
+  String newTopic(Object ordinal) {
+    return 'Yeni konu $ordinal';
+  }
+
+  @override
+  String newTest(Object ordinal) {
+    return 'Yeni test $ordinal';
+  }
+
+  @override
+  String newTarget(Object ordinal) {
+    return 'Hedef $ordinal';
+  }
+
+  @override
+  String newMatch(Object language, Object ordinal) {
+    return 'Eşleşme $ordinal $language';
+  }
+
+  @override
+  String newWord(Object ordinal) {
+    return 'Yeni kelime $ordinal';
+  }
+
+  @override
+  String newSentence(Object ordinal) {
+    return 'Yeni cümle --- $ordinal';
+  }
+
+  @override
+  String newAnswer(Object ordinal) {
+    return 'cevap$ordinal';
+  }
+
+  @override
+  String newWrongAnswer(Object option, Object ordinal) {
+    return 'yanlış$ordinal$option';
+  }
+
+  @override
+  String newTranslation(Object ordinal) {
+    return 'Çeviri $ordinal';
+  }
+
+  @override
+  String newOption(Object option, Object ordinal) {
+    return 'Seçenek $ordinal.$option';
+  }
+
+  @override
+  String get course => 'Kurs';
+
+  @override
+  String get identifier => 'kimlik';
+
+  @override
+  String get title => 'başlık';
+
+  @override
+  String get order => 'sıra';
+
+  @override
+  String get passThreshold => 'geçme eşiği';
+
+  @override
+  String get type => 'tür';
+
+  @override
+  String get text => 'metin';
+
+  @override
+  String get correctValue => 'doğru';
+
+  @override
+  String get question => 'Soru';
+
+  @override
+  String get matching => 'Eşleşme';
 }

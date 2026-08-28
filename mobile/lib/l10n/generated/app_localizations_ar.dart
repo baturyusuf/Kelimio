@@ -638,4 +638,322 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get keepEditing => 'الاحتفاظ به لوقت لاحق';
+
+  @override
+  String get myCourses => 'دوراتي';
+
+  @override
+  String get newCourseFromExcel => 'دورة جديدة من Excel';
+
+  @override
+  String get noTeacherCourses =>
+      'ليست لديك دورة بعد. يمكنك إنشاء دورتك الأولى من ملف Excel.';
+
+  @override
+  String courseRevision(Object language, Object revision) {
+    return '$language · الإصدار $revision';
+  }
+
+  @override
+  String get unpublishedDraftAvailable => 'توجد مسودة غير منشورة';
+
+  @override
+  String get createInvitation => 'إنشاء دعوة';
+
+  @override
+  String get courseInvitationReady => 'دعوة الدورة جاهزة';
+
+  @override
+  String get courseInvitationShare =>
+      'شارك هذا الرمز المخصص للاستخدام مرة واحدة بأمان مع المتعلم:';
+
+  @override
+  String get copy => 'نسخ';
+
+  @override
+  String invitationCreateFailed(Object error) {
+    return 'تعذر إنشاء الدعوة: $error';
+  }
+
+  @override
+  String draftReleaseTitle(Object revision) {
+    return 'الإصدار المسودة $revision';
+  }
+
+  @override
+  String get close => 'إغلاق';
+
+  @override
+  String get abandonDraft => 'التخلي عن المسودة';
+
+  @override
+  String get draftAbandoned => 'تم التخلي عن المسودة بأمان.';
+
+  @override
+  String get courseRevisionPublished => 'تم نشر الإصدار الجديد للدورة.';
+
+  @override
+  String draftPublishFailed(Object error) {
+    return 'تعذر نشر المسودة: $error';
+  }
+
+  @override
+  String get fullCourseEditorTitle => 'محرر الدورة';
+
+  @override
+  String publishRevisionTitle(Object revision) {
+    return 'هل تريد نشر الإصدار $revision؟';
+  }
+
+  @override
+  String get later => 'لاحقًا';
+
+  @override
+  String revisionPublished(Object revision) {
+    return 'تم نشر الإصدار $revision.';
+  }
+
+  @override
+  String get fullEditorConflictHeading => 'تغيرت الدورة في مكان آخر';
+
+  @override
+  String get fullEditorConflictBody =>
+      'لم يُحفظ أي تغيير. قارن الإصدارات الثلاثة أدناه، ثم استخدم أحدث إصدار على الخادم أو أعد تطبيق تعديلاتك عليه بشكل صريح.';
+
+  @override
+  String get fullEditorBaseVersion => 'الإصدار الذي بدأت تحريره';
+
+  @override
+  String get fullEditorMineVersion => 'تعديلاتك';
+
+  @override
+  String get fullEditorLatestVersion => 'أحدث إصدار على الخادم';
+
+  @override
+  String get fullEditorUseLatest => 'استخدام أحدث إصدار على الخادم';
+
+  @override
+  String get fullEditorReapplyMine => 'إعادة تطبيق تعديلاتي على أحدث إصدار';
+
+  @override
+  String fullEditorVersionSummary(
+    Object levels,
+    Object name,
+    Object questions,
+    Object revision,
+  ) {
+    return '$name · $levels مستويات · $questions أسئلة · الإصدار $revision';
+  }
+
+  @override
+  String editorChanges(Object count) {
+    return '$count تغييرات:';
+  }
+
+  @override
+  String editorMoreChanges(Object count) {
+    return '$count تغييرات أخرى';
+  }
+
+  @override
+  String get courseName => 'اسم الدورة';
+
+  @override
+  String get description => 'الوصف';
+
+  @override
+  String get visibility => 'مستوى الظهور';
+
+  @override
+  String get publicVisibility => 'عامة';
+
+  @override
+  String get privateVisibility => 'خاصة';
+
+  @override
+  String targetAndSupportLanguages(Object support, Object target) {
+    return '$target · الدعم: $support';
+  }
+
+  @override
+  String get addLevel => 'إضافة مستوى';
+
+  @override
+  String get level => 'المستوى';
+
+  @override
+  String get addUnit => 'إضافة وحدة';
+
+  @override
+  String get unit => 'الوحدة';
+
+  @override
+  String get addTopic => 'إضافة موضوع';
+
+  @override
+  String get topic => 'الموضوع';
+
+  @override
+  String get addTest => 'إضافة اختبار';
+
+  @override
+  String get test => 'الاختبار';
+
+  @override
+  String get addQuestion => 'إضافة سؤال';
+
+  @override
+  String get questionTypeWordMultipleChoice => 'اختيار متعدد للكلمة';
+
+  @override
+  String get questionTypeMultipleChoiceCloze => 'فراغ متعدد الخيارات';
+
+  @override
+  String get questionTypeTypedCloze => 'فراغ كتابي';
+
+  @override
+  String get questionTypeMatching => 'مطابقة';
+
+  @override
+  String questionTitle(Object type) {
+    return 'سؤال · $type';
+  }
+
+  @override
+  String get questionPrompt => 'نص السؤال';
+
+  @override
+  String get alternativeCorrectAnswer => 'إجابة صحيحة بديلة';
+
+  @override
+  String translationLanguage(Object language) {
+    return 'الترجمة ($language)';
+  }
+
+  @override
+  String get addMatchingPair => 'إضافة زوج مطابقة';
+
+  @override
+  String get moveOptionUp => 'نقل الخيار لأعلى';
+
+  @override
+  String get moveOptionDown => 'نقل الخيار لأسفل';
+
+  @override
+  String get correctOption => 'الخيار الصحيح';
+
+  @override
+  String get option => 'الخيار';
+
+  @override
+  String optionTranslation(Object language) {
+    return 'ترجمة الخيار ($language)';
+  }
+
+  @override
+  String get matchingTarget => 'هدف المطابقة';
+
+  @override
+  String matchingText(Object language) {
+    return 'نص المطابقة ($language)';
+  }
+
+  @override
+  String get moveUp => 'نقل لأعلى';
+
+  @override
+  String get moveDown => 'نقل لأسفل';
+
+  @override
+  String get delete => 'حذف';
+
+  @override
+  String newLevel(Object ordinal) {
+    return 'مستوى جديد $ordinal';
+  }
+
+  @override
+  String newUnit(Object ordinal) {
+    return 'وحدة جديدة $ordinal';
+  }
+
+  @override
+  String newTopic(Object ordinal) {
+    return 'موضوع جديد $ordinal';
+  }
+
+  @override
+  String newTest(Object ordinal) {
+    return 'اختبار جديد $ordinal';
+  }
+
+  @override
+  String newTarget(Object ordinal) {
+    return 'هدف $ordinal';
+  }
+
+  @override
+  String newMatch(Object language, Object ordinal) {
+    return 'مطابقة $ordinal $language';
+  }
+
+  @override
+  String newWord(Object ordinal) {
+    return 'كلمة جديدة $ordinal';
+  }
+
+  @override
+  String newSentence(Object ordinal) {
+    return 'جملة جديدة --- $ordinal';
+  }
+
+  @override
+  String newAnswer(Object ordinal) {
+    return 'إجابة$ordinal';
+  }
+
+  @override
+  String newWrongAnswer(Object option, Object ordinal) {
+    return 'خاطئ$ordinal$option';
+  }
+
+  @override
+  String newTranslation(Object ordinal) {
+    return 'ترجمة $ordinal';
+  }
+
+  @override
+  String newOption(Object option, Object ordinal) {
+    return 'خيار $ordinal.$option';
+  }
+
+  @override
+  String get course => 'الدورة';
+
+  @override
+  String get identifier => 'المعرّف';
+
+  @override
+  String get title => 'العنوان';
+
+  @override
+  String get order => 'الترتيب';
+
+  @override
+  String get passThreshold => 'حد النجاح';
+
+  @override
+  String get type => 'النوع';
+
+  @override
+  String get text => 'النص';
+
+  @override
+  String get correctValue => 'صحيح';
+
+  @override
+  String get question => 'السؤال';
+
+  @override
+  String get matching => 'المطابقة';
 }

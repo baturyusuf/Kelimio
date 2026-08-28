@@ -9,6 +9,7 @@ import '../../application/providers.dart';
 import '../../application/teacher_course_controller.dart';
 import '../../domain/teacher/teacher_course.dart';
 import '../widgets/async_error_view.dart';
+import '../widgets/localization.dart';
 import 'teacher_import_screen.dart';
 
 final class TeacherHomeScreen extends ConsumerWidget {
@@ -18,14 +19,14 @@ final class TeacherHomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final courses = ref.watch(teacherCoursesProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Kurslarım')),
+      appBar: AppBar(title: Text(context.l10n.myCourses)),
       floatingActionButton: FloatingActionButton.extended(
         key: const Key('teacher-new-course'),
         onPressed: () => Navigator.of(context).push(
           MaterialPageRoute<void>(builder: (_) => const TeacherImportScreen()),
         ),
         icon: const Icon(Icons.upload_file),
-        label: const Text('Excel ile yeni kurs'),
+        label: Text(context.l10n.newCourseFromExcel),
       ),
       body: courses.when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -40,11 +41,11 @@ final class TeacherHomeScreen extends ConsumerWidget {
               ? ListView(
                   physics: const AlwaysScrollableScrollPhysics(),
                   padding: const EdgeInsets.all(32),
-                  children: const [
-                    Icon(Icons.school_outlined, size: 64),
-                    SizedBox(height: 16),
+                  children: [
+                    const Icon(Icons.school_outlined, size: 64),
+                    const SizedBox(height: 16),
                     Text(
-                      'Henüz bir kursunuz yok. İlk kursu Excel dosyanızdan oluşturabilirsiniz.',
+                      context.l10n.noTeacherCourses,
                       textAlign: TextAlign.center,
                     ),
                   ],
@@ -60,8 +61,8 @@ final class TeacherHomeScreen extends ConsumerWidget {
                         key: Key('teacher-course-${course.id}'),
                         title: Text(course.name),
                         subtitle: Text(
-                          '${course.targetLanguage.toUpperCase()} · sürüm ${course.activeReleaseRevision}'
-                          '${course.hasOpenDraft ? ' · yayımlanmamış taslak var' : ''}',
+                          '${context.l10n.courseRevision(course.targetLanguage.toUpperCase(), course.activeReleaseRevision)}'
+                          '${course.hasOpenDraft ? ' · ${context.l10n.unpublishedDraftAvailable}' : ''}',
                         ),
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -69,7 +70,7 @@ final class TeacherHomeScreen extends ConsumerWidget {
                             if (course.visibility ==
                                 TeacherCourseVisibility.private)
                               IconButton(
-                                tooltip: 'Davet oluştur',
+                                tooltip: context.l10n.createInvitation,
                                 onPressed: () =>
                                     unawaited(_invite(context, ref, course.id)),
                                 icon: const Icon(
@@ -107,14 +108,12 @@ final class TeacherHomeScreen extends ConsumerWidget {
       await showDialog<void>(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('Kurs daveti hazır'),
+          title: Text(context.l10n.courseInvitationReady),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Bu tek kullanımlık kodu öğrencinizle güvenli biçimde paylaşın:',
-              ),
+              Text(context.l10n.courseInvitationShare),
               const SizedBox(height: 8),
               SelectableText(link),
             ],
@@ -127,16 +126,18 @@ final class TeacherHomeScreen extends ConsumerWidget {
                   Navigator.pop(context);
                 }
               },
-              child: const Text('Kopyala'),
+              child: Text(context.l10n.copy),
             ),
           ],
         ),
       );
     } on Object catch (error) {
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Davet oluşturulamadı: $error')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(context.l10n.invitationCreateFailed('$error')),
+          ),
+        );
       }
     }
   }
@@ -160,22 +161,28 @@ final class TeacherHomeScreen extends ConsumerWidget {
       final action = await showDialog<String>(
         context: context,
         builder: (context) => AlertDialog(
-          title: Text('Taslak sürüm ${impact.releaseRevision}'),
+          title: Text(context.l10n.draftReleaseTitle(impact.releaseRevision)),
           content: Text(
-            '${impact.changedQuestionCount} değişen, ${impact.addedQuestionCount} eklenen, ${impact.removedQuestionCount} kaldırılan soru; ${impact.affectedEnrollmentCount} öğrenci etkileniyor.',
+            context.l10n.releaseImpactSummary(
+              impact.addedQuestionCount,
+              impact.changedQuestionCount,
+              impact.affectedEnrollmentCount,
+              impact.targetQuestionCount,
+              impact.removedQuestionCount,
+            ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, 'close'),
-              child: const Text('Kapat'),
+              child: Text(context.l10n.close),
             ),
             TextButton(
               onPressed: () => Navigator.pop(context, 'abandon'),
-              child: const Text('Taslağı terk et'),
+              child: Text(context.l10n.abandonDraft),
             ),
             FilledButton(
               onPressed: () => Navigator.pop(context, 'publish'),
-              child: const Text('Yayımla'),
+              child: Text(context.l10n.publishCourse),
             ),
           ],
         ),
@@ -190,9 +197,9 @@ final class TeacherHomeScreen extends ConsumerWidget {
             );
         ref.invalidate(teacherCoursesProvider);
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Taslak güvenle terk edildi.')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(context.l10n.draftAbandoned)));
         }
         return;
       }
@@ -208,14 +215,14 @@ final class TeacherHomeScreen extends ConsumerWidget {
       ref.invalidate(teacherCoursesProvider);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Kursun yeni sürümü yayımlandı.')),
+          SnackBar(content: Text(context.l10n.courseRevisionPublished)),
         );
       }
     } on Object catch (error) {
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Taslak yayımlanamadı: $error')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(context.l10n.draftPublishFailed('$error'))),
+        );
       }
     }
   }

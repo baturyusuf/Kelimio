@@ -5,6 +5,7 @@ import 'package:kelimio_mobile/application/providers.dart';
 import 'package:kelimio_mobile/application/teacher_course_controller.dart';
 import 'package:kelimio_mobile/domain/failures.dart';
 import 'package:kelimio_mobile/domain/teacher/teacher_course.dart';
+import 'package:kelimio_mobile/l10n/generated/app_localizations.dart';
 import 'package:kelimio_mobile/presentation/screens/full_course_editor_screen.dart';
 
 import '../support/test_doubles.dart';
@@ -148,6 +149,9 @@ void main() {
           ),
         ],
         child: MaterialApp(
+          locale: const Locale('tr'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: FullCourseEditorScreen(courseId: base.courseId),
         ),
       ),
@@ -161,8 +165,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('full-editor-conflict')), findsOneWidget);
-    expect(find.text('Düzenlemeye başladığın sürüm'), findsOneWidget);
-    expect(find.text('Senin düzenlemelerin'), findsOneWidget);
+    expect(find.text('Düzenlemeye başladığınız sürüm'), findsOneWidget);
+    expect(find.text('Sizin düzenlemeleriniz'), findsOneWidget);
     expect(find.text('Sunucudaki son sürüm'), findsOneWidget);
     expect(
       tester
@@ -183,6 +187,48 @@ void main() {
           .onPressed,
       isNotNull,
     );
+  });
+
+  testWidgets('Arabic full editor is RTL and survives 200% text scaling', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(412, 915));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final document = _document(
+      name: 'دورة تجريبية',
+      prompt: 'أنا أذهب كل يوم ---.',
+      entityTag: '"base"',
+      revision: 1,
+    );
+    final repository = _ConflictingTeacherCourseRepository(document, document);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          teacherCourseRepositoryProvider.overrideWithValue(repository),
+          identifierFactoryProvider.overrideWithValue(
+            SequenceIdentifierFactory(['command-1']),
+          ),
+        ],
+        child: MediaQuery(
+          data: const MediaQueryData(textScaler: TextScaler.linear(2)),
+          child: MaterialApp(
+            locale: const Locale('ar'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: FullCourseEditorScreen(courseId: document.courseId),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final directionality = tester.widget<Directionality>(
+      find.byType(Directionality).first,
+    );
+    expect(directionality.textDirection, TextDirection.rtl);
+    expect(find.text('محرر الدورة'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 }
 
