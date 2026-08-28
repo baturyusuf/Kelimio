@@ -423,11 +423,11 @@ final class _CourseEditorPanel extends StatelessWidget {
                 const SizedBox(height: 8),
                 Text(
                   context.l10n.releaseImpactSummary(
-                    impact.targetQuestionCount,
                     impact.addedQuestionCount,
                     impact.changedQuestionCount,
-                    impact.removedQuestionCount,
                     impact.affectedEnrollmentCount,
+                    impact.targetQuestionCount,
+                    impact.removedQuestionCount,
                   ),
                 ),
                 CheckboxListTile(
@@ -956,11 +956,11 @@ final class _ReleaseImpactCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             context.l10n.releaseImpactSummary(
-              impact.targetQuestionCount,
               impact.addedQuestionCount,
               impact.changedQuestionCount,
-              impact.removedQuestionCount,
               impact.affectedEnrollmentCount,
+              impact.targetQuestionCount,
+              impact.removedQuestionCount,
             ),
           ),
           CheckboxListTile(

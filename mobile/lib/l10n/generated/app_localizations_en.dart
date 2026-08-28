@@ -650,4 +650,323 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get keepEditing => 'Keep for later';
+
+  @override
+  String get myCourses => 'My courses';
+
+  @override
+  String get newCourseFromExcel => 'New course from Excel';
+
+  @override
+  String get noTeacherCourses =>
+      'You do not have a course yet. You can create your first course from an Excel file.';
+
+  @override
+  String courseRevision(Object language, Object revision) {
+    return '$language · revision $revision';
+  }
+
+  @override
+  String get unpublishedDraftAvailable => 'unpublished draft available';
+
+  @override
+  String get createInvitation => 'Create invitation';
+
+  @override
+  String get courseInvitationReady => 'Course invitation ready';
+
+  @override
+  String get courseInvitationShare =>
+      'Share this single-use code securely with your learner:';
+
+  @override
+  String get copy => 'Copy';
+
+  @override
+  String invitationCreateFailed(Object error) {
+    return 'Invitation could not be created: $error';
+  }
+
+  @override
+  String draftReleaseTitle(Object revision) {
+    return 'Draft revision $revision';
+  }
+
+  @override
+  String get close => 'Close';
+
+  @override
+  String get abandonDraft => 'Abandon draft';
+
+  @override
+  String get draftAbandoned => 'The draft was abandoned safely.';
+
+  @override
+  String get courseRevisionPublished =>
+      'The new course revision was published.';
+
+  @override
+  String draftPublishFailed(Object error) {
+    return 'The draft could not be published: $error';
+  }
+
+  @override
+  String get fullCourseEditorTitle => 'Course editor';
+
+  @override
+  String publishRevisionTitle(Object revision) {
+    return 'Publish revision $revision?';
+  }
+
+  @override
+  String get later => 'Later';
+
+  @override
+  String revisionPublished(Object revision) {
+    return 'Revision $revision was published.';
+  }
+
+  @override
+  String get fullEditorConflictHeading => 'The course changed elsewhere';
+
+  @override
+  String get fullEditorConflictBody =>
+      'Nothing was saved. Compare the three versions below, then use the latest server version or explicitly reapply your edits on top of it.';
+
+  @override
+  String get fullEditorBaseVersion => 'Version you started editing';
+
+  @override
+  String get fullEditorMineVersion => 'Your edits';
+
+  @override
+  String get fullEditorLatestVersion => 'Latest server version';
+
+  @override
+  String get fullEditorUseLatest => 'Use latest server version';
+
+  @override
+  String get fullEditorReapplyMine => 'Reapply my edits to the latest version';
+
+  @override
+  String fullEditorVersionSummary(
+    Object levels,
+    Object name,
+    Object questions,
+    Object revision,
+  ) {
+    return '$name · $levels levels · $questions questions · revision $revision';
+  }
+
+  @override
+  String editorChanges(Object count) {
+    return '$count changes:';
+  }
+
+  @override
+  String editorMoreChanges(Object count) {
+    return '$count more changes';
+  }
+
+  @override
+  String get courseName => 'Course name';
+
+  @override
+  String get description => 'Description';
+
+  @override
+  String get visibility => 'Visibility';
+
+  @override
+  String get publicVisibility => 'Public';
+
+  @override
+  String get privateVisibility => 'Private';
+
+  @override
+  String targetAndSupportLanguages(Object support, Object target) {
+    return '$target · support: $support';
+  }
+
+  @override
+  String get addLevel => 'Add level';
+
+  @override
+  String get level => 'Level';
+
+  @override
+  String get addUnit => 'Add unit';
+
+  @override
+  String get unit => 'Unit';
+
+  @override
+  String get addTopic => 'Add topic';
+
+  @override
+  String get topic => 'Topic';
+
+  @override
+  String get addTest => 'Add test';
+
+  @override
+  String get test => 'Test';
+
+  @override
+  String get addQuestion => 'Add question';
+
+  @override
+  String get questionTypeWordMultipleChoice => 'Word multiple choice';
+
+  @override
+  String get questionTypeMultipleChoiceCloze => 'Multiple-choice gap';
+
+  @override
+  String get questionTypeTypedCloze => 'Typed gap';
+
+  @override
+  String get questionTypeMatching => 'Matching';
+
+  @override
+  String questionTitle(Object type) {
+    return 'Question · $type';
+  }
+
+  @override
+  String get questionPrompt => 'Question text';
+
+  @override
+  String get alternativeCorrectAnswer => 'Alternative correct answer';
+
+  @override
+  String translationLanguage(Object language) {
+    return 'Translation ($language)';
+  }
+
+  @override
+  String get addMatchingPair => 'Add matching pair';
+
+  @override
+  String get moveOptionUp => 'Move option up';
+
+  @override
+  String get moveOptionDown => 'Move option down';
+
+  @override
+  String get correctOption => 'Correct option';
+
+  @override
+  String get option => 'Option';
+
+  @override
+  String optionTranslation(Object language) {
+    return 'Option translation ($language)';
+  }
+
+  @override
+  String get matchingTarget => 'Matching target';
+
+  @override
+  String matchingText(Object language) {
+    return 'Matching text ($language)';
+  }
+
+  @override
+  String get moveUp => 'Move up';
+
+  @override
+  String get moveDown => 'Move down';
+
+  @override
+  String get delete => 'Delete';
+
+  @override
+  String newLevel(Object ordinal) {
+    return 'New level $ordinal';
+  }
+
+  @override
+  String newUnit(Object ordinal) {
+    return 'New unit $ordinal';
+  }
+
+  @override
+  String newTopic(Object ordinal) {
+    return 'New topic $ordinal';
+  }
+
+  @override
+  String newTest(Object ordinal) {
+    return 'New test $ordinal';
+  }
+
+  @override
+  String newTarget(Object ordinal) {
+    return 'Target $ordinal';
+  }
+
+  @override
+  String newMatch(Object language, Object ordinal) {
+    return 'Match $ordinal $language';
+  }
+
+  @override
+  String newWord(Object ordinal) {
+    return 'New word $ordinal';
+  }
+
+  @override
+  String newSentence(Object ordinal) {
+    return 'New sentence --- $ordinal';
+  }
+
+  @override
+  String newAnswer(Object ordinal) {
+    return 'answer$ordinal';
+  }
+
+  @override
+  String newWrongAnswer(Object option, Object ordinal) {
+    return 'wrong$ordinal$option';
+  }
+
+  @override
+  String newTranslation(Object ordinal) {
+    return 'Translation $ordinal';
+  }
+
+  @override
+  String newOption(Object option, Object ordinal) {
+    return 'Option $ordinal.$option';
+  }
+
+  @override
+  String get course => 'Course';
+
+  @override
+  String get identifier => 'identifier';
+
+  @override
+  String get title => 'title';
+
+  @override
+  String get order => 'order';
+
+  @override
+  String get passThreshold => 'pass threshold';
+
+  @override
+  String get type => 'type';
+
+  @override
+  String get text => 'text';
+
+  @override
+  String get correctValue => 'correct';
+
+  @override
+  String get question => 'Question';
+
+  @override
+  String get matching => 'Matching';
 }

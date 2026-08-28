@@ -1171,6 +1171,527 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Keep for later'**
   String get keepEditing;
+
+  /// No description provided for @myCourses.
+  ///
+  /// In en, this message translates to:
+  /// **'My courses'**
+  String get myCourses;
+
+  /// No description provided for @newCourseFromExcel.
+  ///
+  /// In en, this message translates to:
+  /// **'New course from Excel'**
+  String get newCourseFromExcel;
+
+  /// No description provided for @noTeacherCourses.
+  ///
+  /// In en, this message translates to:
+  /// **'You do not have a course yet. You can create your first course from an Excel file.'**
+  String get noTeacherCourses;
+
+  /// No description provided for @courseRevision.
+  ///
+  /// In en, this message translates to:
+  /// **'{language} · revision {revision}'**
+  String courseRevision(Object language, Object revision);
+
+  /// No description provided for @unpublishedDraftAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'unpublished draft available'**
+  String get unpublishedDraftAvailable;
+
+  /// No description provided for @createInvitation.
+  ///
+  /// In en, this message translates to:
+  /// **'Create invitation'**
+  String get createInvitation;
+
+  /// No description provided for @courseInvitationReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Course invitation ready'**
+  String get courseInvitationReady;
+
+  /// No description provided for @courseInvitationShare.
+  ///
+  /// In en, this message translates to:
+  /// **'Share this single-use code securely with your learner:'**
+  String get courseInvitationShare;
+
+  /// No description provided for @copy.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy'**
+  String get copy;
+
+  /// No description provided for @invitationCreateFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Invitation could not be created: {error}'**
+  String invitationCreateFailed(Object error);
+
+  /// No description provided for @draftReleaseTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Draft revision {revision}'**
+  String draftReleaseTitle(Object revision);
+
+  /// No description provided for @close.
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get close;
+
+  /// No description provided for @abandonDraft.
+  ///
+  /// In en, this message translates to:
+  /// **'Abandon draft'**
+  String get abandonDraft;
+
+  /// No description provided for @draftAbandoned.
+  ///
+  /// In en, this message translates to:
+  /// **'The draft was abandoned safely.'**
+  String get draftAbandoned;
+
+  /// No description provided for @courseRevisionPublished.
+  ///
+  /// In en, this message translates to:
+  /// **'The new course revision was published.'**
+  String get courseRevisionPublished;
+
+  /// No description provided for @draftPublishFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The draft could not be published: {error}'**
+  String draftPublishFailed(Object error);
+
+  /// No description provided for @fullCourseEditorTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Course editor'**
+  String get fullCourseEditorTitle;
+
+  /// No description provided for @publishRevisionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Publish revision {revision}?'**
+  String publishRevisionTitle(Object revision);
+
+  /// No description provided for @later.
+  ///
+  /// In en, this message translates to:
+  /// **'Later'**
+  String get later;
+
+  /// No description provided for @revisionPublished.
+  ///
+  /// In en, this message translates to:
+  /// **'Revision {revision} was published.'**
+  String revisionPublished(Object revision);
+
+  /// No description provided for @fullEditorConflictHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'The course changed elsewhere'**
+  String get fullEditorConflictHeading;
+
+  /// No description provided for @fullEditorConflictBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing was saved. Compare the three versions below, then use the latest server version or explicitly reapply your edits on top of it.'**
+  String get fullEditorConflictBody;
+
+  /// No description provided for @fullEditorBaseVersion.
+  ///
+  /// In en, this message translates to:
+  /// **'Version you started editing'**
+  String get fullEditorBaseVersion;
+
+  /// No description provided for @fullEditorMineVersion.
+  ///
+  /// In en, this message translates to:
+  /// **'Your edits'**
+  String get fullEditorMineVersion;
+
+  /// No description provided for @fullEditorLatestVersion.
+  ///
+  /// In en, this message translates to:
+  /// **'Latest server version'**
+  String get fullEditorLatestVersion;
+
+  /// No description provided for @fullEditorUseLatest.
+  ///
+  /// In en, this message translates to:
+  /// **'Use latest server version'**
+  String get fullEditorUseLatest;
+
+  /// No description provided for @fullEditorReapplyMine.
+  ///
+  /// In en, this message translates to:
+  /// **'Reapply my edits to the latest version'**
+  String get fullEditorReapplyMine;
+
+  /// No description provided for @fullEditorVersionSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} · {levels} levels · {questions} questions · revision {revision}'**
+  String fullEditorVersionSummary(
+    Object levels,
+    Object name,
+    Object questions,
+    Object revision,
+  );
+
+  /// No description provided for @editorChanges.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} changes:'**
+  String editorChanges(Object count);
+
+  /// No description provided for @editorMoreChanges.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} more changes'**
+  String editorMoreChanges(Object count);
+
+  /// No description provided for @courseName.
+  ///
+  /// In en, this message translates to:
+  /// **'Course name'**
+  String get courseName;
+
+  /// No description provided for @description.
+  ///
+  /// In en, this message translates to:
+  /// **'Description'**
+  String get description;
+
+  /// No description provided for @visibility.
+  ///
+  /// In en, this message translates to:
+  /// **'Visibility'**
+  String get visibility;
+
+  /// No description provided for @publicVisibility.
+  ///
+  /// In en, this message translates to:
+  /// **'Public'**
+  String get publicVisibility;
+
+  /// No description provided for @privateVisibility.
+  ///
+  /// In en, this message translates to:
+  /// **'Private'**
+  String get privateVisibility;
+
+  /// No description provided for @targetAndSupportLanguages.
+  ///
+  /// In en, this message translates to:
+  /// **'{target} · support: {support}'**
+  String targetAndSupportLanguages(Object support, Object target);
+
+  /// No description provided for @addLevel.
+  ///
+  /// In en, this message translates to:
+  /// **'Add level'**
+  String get addLevel;
+
+  /// No description provided for @level.
+  ///
+  /// In en, this message translates to:
+  /// **'Level'**
+  String get level;
+
+  /// No description provided for @addUnit.
+  ///
+  /// In en, this message translates to:
+  /// **'Add unit'**
+  String get addUnit;
+
+  /// No description provided for @unit.
+  ///
+  /// In en, this message translates to:
+  /// **'Unit'**
+  String get unit;
+
+  /// No description provided for @addTopic.
+  ///
+  /// In en, this message translates to:
+  /// **'Add topic'**
+  String get addTopic;
+
+  /// No description provided for @topic.
+  ///
+  /// In en, this message translates to:
+  /// **'Topic'**
+  String get topic;
+
+  /// No description provided for @addTest.
+  ///
+  /// In en, this message translates to:
+  /// **'Add test'**
+  String get addTest;
+
+  /// No description provided for @test.
+  ///
+  /// In en, this message translates to:
+  /// **'Test'**
+  String get test;
+
+  /// No description provided for @addQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Add question'**
+  String get addQuestion;
+
+  /// No description provided for @questionTypeWordMultipleChoice.
+  ///
+  /// In en, this message translates to:
+  /// **'Word multiple choice'**
+  String get questionTypeWordMultipleChoice;
+
+  /// No description provided for @questionTypeMultipleChoiceCloze.
+  ///
+  /// In en, this message translates to:
+  /// **'Multiple-choice gap'**
+  String get questionTypeMultipleChoiceCloze;
+
+  /// No description provided for @questionTypeTypedCloze.
+  ///
+  /// In en, this message translates to:
+  /// **'Typed gap'**
+  String get questionTypeTypedCloze;
+
+  /// No description provided for @questionTypeMatching.
+  ///
+  /// In en, this message translates to:
+  /// **'Matching'**
+  String get questionTypeMatching;
+
+  /// No description provided for @questionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Question · {type}'**
+  String questionTitle(Object type);
+
+  /// No description provided for @questionPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Question text'**
+  String get questionPrompt;
+
+  /// No description provided for @alternativeCorrectAnswer.
+  ///
+  /// In en, this message translates to:
+  /// **'Alternative correct answer'**
+  String get alternativeCorrectAnswer;
+
+  /// No description provided for @translationLanguage.
+  ///
+  /// In en, this message translates to:
+  /// **'Translation ({language})'**
+  String translationLanguage(Object language);
+
+  /// No description provided for @addMatchingPair.
+  ///
+  /// In en, this message translates to:
+  /// **'Add matching pair'**
+  String get addMatchingPair;
+
+  /// No description provided for @moveOptionUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Move option up'**
+  String get moveOptionUp;
+
+  /// No description provided for @moveOptionDown.
+  ///
+  /// In en, this message translates to:
+  /// **'Move option down'**
+  String get moveOptionDown;
+
+  /// No description provided for @correctOption.
+  ///
+  /// In en, this message translates to:
+  /// **'Correct option'**
+  String get correctOption;
+
+  /// No description provided for @option.
+  ///
+  /// In en, this message translates to:
+  /// **'Option'**
+  String get option;
+
+  /// No description provided for @optionTranslation.
+  ///
+  /// In en, this message translates to:
+  /// **'Option translation ({language})'**
+  String optionTranslation(Object language);
+
+  /// No description provided for @matchingTarget.
+  ///
+  /// In en, this message translates to:
+  /// **'Matching target'**
+  String get matchingTarget;
+
+  /// No description provided for @matchingText.
+  ///
+  /// In en, this message translates to:
+  /// **'Matching text ({language})'**
+  String matchingText(Object language);
+
+  /// No description provided for @moveUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Move up'**
+  String get moveUp;
+
+  /// No description provided for @moveDown.
+  ///
+  /// In en, this message translates to:
+  /// **'Move down'**
+  String get moveDown;
+
+  /// No description provided for @delete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get delete;
+
+  /// No description provided for @newLevel.
+  ///
+  /// In en, this message translates to:
+  /// **'New level {ordinal}'**
+  String newLevel(Object ordinal);
+
+  /// No description provided for @newUnit.
+  ///
+  /// In en, this message translates to:
+  /// **'New unit {ordinal}'**
+  String newUnit(Object ordinal);
+
+  /// No description provided for @newTopic.
+  ///
+  /// In en, this message translates to:
+  /// **'New topic {ordinal}'**
+  String newTopic(Object ordinal);
+
+  /// No description provided for @newTest.
+  ///
+  /// In en, this message translates to:
+  /// **'New test {ordinal}'**
+  String newTest(Object ordinal);
+
+  /// No description provided for @newTarget.
+  ///
+  /// In en, this message translates to:
+  /// **'Target {ordinal}'**
+  String newTarget(Object ordinal);
+
+  /// No description provided for @newMatch.
+  ///
+  /// In en, this message translates to:
+  /// **'Match {ordinal} {language}'**
+  String newMatch(Object language, Object ordinal);
+
+  /// No description provided for @newWord.
+  ///
+  /// In en, this message translates to:
+  /// **'New word {ordinal}'**
+  String newWord(Object ordinal);
+
+  /// No description provided for @newSentence.
+  ///
+  /// In en, this message translates to:
+  /// **'New sentence --- {ordinal}'**
+  String newSentence(Object ordinal);
+
+  /// No description provided for @newAnswer.
+  ///
+  /// In en, this message translates to:
+  /// **'answer{ordinal}'**
+  String newAnswer(Object ordinal);
+
+  /// No description provided for @newWrongAnswer.
+  ///
+  /// In en, this message translates to:
+  /// **'wrong{ordinal}{option}'**
+  String newWrongAnswer(Object option, Object ordinal);
+
+  /// No description provided for @newTranslation.
+  ///
+  /// In en, this message translates to:
+  /// **'Translation {ordinal}'**
+  String newTranslation(Object ordinal);
+
+  /// No description provided for @newOption.
+  ///
+  /// In en, this message translates to:
+  /// **'Option {ordinal}.{option}'**
+  String newOption(Object option, Object ordinal);
+
+  /// No description provided for @course.
+  ///
+  /// In en, this message translates to:
+  /// **'Course'**
+  String get course;
+
+  /// No description provided for @identifier.
+  ///
+  /// In en, this message translates to:
+  /// **'identifier'**
+  String get identifier;
+
+  /// No description provided for @title.
+  ///
+  /// In en, this message translates to:
+  /// **'title'**
+  String get title;
+
+  /// No description provided for @order.
+  ///
+  /// In en, this message translates to:
+  /// **'order'**
+  String get order;
+
+  /// No description provided for @passThreshold.
+  ///
+  /// In en, this message translates to:
+  /// **'pass threshold'**
+  String get passThreshold;
+
+  /// No description provided for @type.
+  ///
+  /// In en, this message translates to:
+  /// **'type'**
+  String get type;
+
+  /// No description provided for @text.
+  ///
+  /// In en, this message translates to:
+  /// **'text'**
+  String get text;
+
+  /// No description provided for @correctValue.
+  ///
+  /// In en, this message translates to:
+  /// **'correct'**
+  String get correctValue;
+
+  /// No description provided for @question.
+  ///
+  /// In en, this message translates to:
+  /// **'Question'**
+  String get question;
+
+  /// No description provided for @matching.
+  ///
+  /// In en, this message translates to:
+  /// **'Matching'**
+  String get matching;
 }
 
 class _AppLocalizationsDelegate

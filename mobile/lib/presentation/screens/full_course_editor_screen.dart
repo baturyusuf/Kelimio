@@ -6,7 +6,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../application/providers.dart';
 import '../../application/teacher_course_controller.dart';
 import '../../domain/teacher/teacher_course.dart';
+import '../../l10n/generated/app_localizations.dart';
 import '../widgets/async_error_view.dart';
+import '../widgets/localization.dart';
 
 final class FullCourseEditorScreen extends ConsumerStatefulWidget {
   const FullCourseEditorScreen({required this.courseId, super.key});
@@ -30,11 +32,11 @@ final class _FullCourseEditorScreenState
     final conflict = notifier.conflict;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Kurs düzenleyici'),
+        title: Text(context.l10n.fullCourseEditorTitle),
         actions: [
           IconButton(
             key: const Key('full-editor-save'),
-            tooltip: 'Değişmez taslak oluştur',
+            tooltip: context.l10n.saveEditorDraft,
             onPressed:
                 _saving || conflict != null || (_draft ?? state.value) == null
                 ? null
@@ -108,18 +110,26 @@ final class _FullCourseEditorScreenState
       final publish = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
-          title: Text('Sürüm ${impact.releaseRevision} yayımlansın mı?'),
+          title: Text(
+            context.l10n.publishRevisionTitle(impact.releaseRevision),
+          ),
           content: Text(
-            '${impact.changedQuestionCount} değişen, ${impact.addedQuestionCount} eklenen, ${impact.removedQuestionCount} kaldırılan soru; ${impact.affectedEnrollmentCount} öğrenci etkileniyor.',
+            context.l10n.releaseImpactSummary(
+              impact.addedQuestionCount,
+              impact.changedQuestionCount,
+              impact.affectedEnrollmentCount,
+              impact.targetQuestionCount,
+              impact.removedQuestionCount,
+            ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('Daha sonra'),
+              child: Text(context.l10n.later),
             ),
             FilledButton(
               onPressed: () => Navigator.pop(context, true),
-              child: const Text('Yayımla'),
+              child: Text(context.l10n.publishCourse),
             ),
           ],
         ),
@@ -135,7 +145,9 @@ final class _FullCourseEditorScreenState
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Sürüm ${activation.releaseRevision} yayımlandı.'),
+              content: Text(
+                context.l10n.revisionPublished(activation.releaseRevision),
+              ),
             ),
           );
         }
@@ -170,28 +182,25 @@ final class _EditorConflictView extends StatelessWidget {
       ),
       const SizedBox(height: 12),
       Text(
-        'Kurs başka bir yerde değiştirildi',
+        context.l10n.fullEditorConflictHeading,
         textAlign: TextAlign.center,
         style: Theme.of(context).textTheme.headlineSmall,
       ),
       const SizedBox(height: 8),
-      const Text(
-        'Hiçbir değişiklik kaydedilmedi. Aşağıdaki üç sürümü karşılaştırıp sunucudaki son sürümü kullanabilir veya kendi düzenlemelerini onun üzerine açıkça yeniden uygulayabilirsin.',
-        textAlign: TextAlign.center,
-      ),
+      Text(context.l10n.fullEditorConflictBody, textAlign: TextAlign.center),
       const SizedBox(height: 16),
       _ConflictVersionCard(
-        title: 'Düzenlemeye başladığın sürüm',
+        title: context.l10n.fullEditorBaseVersion,
         document: conflict.base,
         changes: const [],
       ),
       _ConflictVersionCard(
-        title: 'Senin düzenlemelerin',
+        title: context.l10n.fullEditorMineVersion,
         document: conflict.mine,
         changes: conflict.mineChanges,
       ),
       _ConflictVersionCard(
-        title: 'Sunucudaki son sürüm',
+        title: context.l10n.fullEditorLatestVersion,
         document: conflict.latest,
         changes: conflict.latestChanges,
       ),
@@ -199,13 +208,13 @@ final class _EditorConflictView extends StatelessWidget {
       OutlinedButton(
         key: const Key('full-editor-use-latest'),
         onPressed: onUseLatest,
-        child: const Text('Sunucudaki son sürümü kullan'),
+        child: Text(context.l10n.fullEditorUseLatest),
       ),
       const SizedBox(height: 8),
       FilledButton(
         key: const Key('full-editor-reapply-mine'),
         onPressed: onReapplyMine,
-        child: const Text('Düzenlemelerimi son sürüme yeniden uygula'),
+        child: Text(context.l10n.fullEditorReapplyMine),
       ),
     ],
   );
@@ -252,14 +261,22 @@ final class _ConflictVersionCard extends StatelessWidget {
             Text(title, style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 4),
             Text(
-              '${document.name} · ${document.levels.length} seviye · $questionCount soru · sürüm ${document.releaseRevision}',
+              context.l10n.fullEditorVersionSummary(
+                document.levels.length,
+                document.name,
+                questionCount,
+                document.releaseRevision,
+              ),
             ),
             if (changes.isNotEmpty) ...[
               const SizedBox(height: 8),
-              Text('${changes.length} değişiklik:'),
-              for (final path in changes.take(12)) Text('• $path'),
+              Text(context.l10n.editorChanges(changes.length)),
+              for (final path in changes.take(12))
+                Text('• ${_localizedChangePath(context, path)}'),
               if (changes.length > 12)
-                Text('• ${changes.length - 12} değişiklik daha'),
+                Text(
+                  '• ${context.l10n.editorMoreChanges(changes.length - 12)}',
+                ),
             ],
           ],
         ),
@@ -301,7 +318,7 @@ final class _EditorForm extends StatelessWidget {
           key: const Key('full-editor-name'),
           initialValue: document.name,
           maxLength: 160,
-          decoration: const InputDecoration(labelText: 'Kurs adı'),
+          decoration: InputDecoration(labelText: context.l10n.courseName),
           onChanged: (value) => onChanged(_copy(name: value)),
         ),
         TextFormField(
@@ -309,20 +326,20 @@ final class _EditorForm extends StatelessWidget {
           initialValue: document.description,
           maxLength: 2000,
           maxLines: 3,
-          decoration: const InputDecoration(labelText: 'Açıklama'),
+          decoration: InputDecoration(labelText: context.l10n.description),
           onChanged: (value) => onChanged(_copy(description: value)),
         ),
         DropdownButtonFormField<TeacherCourseVisibility>(
           initialValue: document.visibility,
-          decoration: const InputDecoration(labelText: 'Görünürlük'),
-          items: const [
+          decoration: InputDecoration(labelText: context.l10n.visibility),
+          items: [
             DropdownMenuItem(
               value: TeacherCourseVisibility.public,
-              child: Text('Herkese açık'),
+              child: Text(context.l10n.publicVisibility),
             ),
             DropdownMenuItem(
               value: TeacherCourseVisibility.private,
-              child: Text('Özel'),
+              child: Text(context.l10n.privateVisibility),
             ),
           ],
           onChanged: (value) {
@@ -331,7 +348,10 @@ final class _EditorForm extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         Text(
-          '${document.targetLanguage.toUpperCase()} · destek: ${document.supportLanguages.join(', ')}',
+          context.l10n.targetAndSupportLanguages(
+            document.supportLanguages.join(', '),
+            document.targetLanguage.toUpperCase(),
+          ),
           style: Theme.of(context).textTheme.bodySmall,
         ),
         const SizedBox(height: 12),
@@ -371,12 +391,16 @@ final class _EditorForm extends StatelessWidget {
                     _copy(
                       levels: [
                         ...document.levels,
-                        _newLevel(document, document.levels.length + 1),
+                        _newLevel(
+                          document,
+                          document.levels.length + 1,
+                          context.l10n,
+                        ),
                       ],
                     ),
                   ),
             icon: const Icon(Icons.add),
-            label: const Text('Seviye ekle'),
+            label: Text(context.l10n.addLevel),
           ),
         ),
         const SizedBox(height: 48),
@@ -415,7 +439,7 @@ final class _LevelEditor extends StatelessWidget {
       initiallyExpanded: true,
       title: TextFormField(
         initialValue: level.title,
-        decoration: const InputDecoration(labelText: 'Seviye'),
+        decoration: InputDecoration(labelText: context.l10n.level),
         onChanged: (value) => onChanged(
           EditorLevel(id: level.id, title: value, units: level.units),
         ),
@@ -477,12 +501,13 @@ final class _LevelEditor extends StatelessWidget {
                         supportLanguages,
                         defaultSupportLanguage,
                         level.units.length + 1,
+                        context.l10n,
                       ),
                     ],
                   ),
                 ),
           icon: const Icon(Icons.add),
-          label: const Text('Ünite ekle'),
+          label: Text(context.l10n.addUnit),
         ),
       ],
     ),
@@ -518,7 +543,7 @@ final class _UnitEditor extends StatelessWidget {
     child: ExpansionTile(
       title: TextFormField(
         initialValue: unit.title,
-        decoration: const InputDecoration(labelText: 'Ünite'),
+        decoration: InputDecoration(labelText: context.l10n.unit),
         onChanged: (value) => onChanged(
           EditorUnit(id: unit.id, title: value, topics: unit.topics),
         ),
@@ -580,12 +605,13 @@ final class _UnitEditor extends StatelessWidget {
                         supportLanguages,
                         defaultSupportLanguage,
                         unit.topics.length + 1,
+                        context.l10n,
                       ),
                     ],
                   ),
                 ),
           icon: const Icon(Icons.add),
-          label: const Text('Konu ekle'),
+          label: Text(context.l10n.addTopic),
         ),
       ],
     ),
@@ -621,7 +647,7 @@ final class _TopicEditor extends StatelessWidget {
     child: ExpansionTile(
       title: TextFormField(
         initialValue: topic.title,
-        decoration: const InputDecoration(labelText: 'Konu'),
+        decoration: InputDecoration(labelText: context.l10n.topic),
         onChanged: (value) => onChanged(
           EditorTopic(id: topic.id, title: value, tests: topic.tests),
         ),
@@ -683,12 +709,13 @@ final class _TopicEditor extends StatelessWidget {
                         supportLanguages,
                         defaultSupportLanguage,
                         topic.tests.length + 1,
+                        context.l10n,
                       ),
                     ],
                   ),
                 ),
           icon: const Icon(Icons.add),
-          label: const Text('Test ekle'),
+          label: Text(context.l10n.addTest),
         ),
       ],
     ),
@@ -724,7 +751,7 @@ final class _TestEditor extends StatelessWidget {
     child: ExpansionTile(
       title: TextFormField(
         initialValue: test.title,
-        decoration: const InputDecoration(labelText: 'Test'),
+        decoration: InputDecoration(labelText: context.l10n.test),
         onChanged: (value) => onChanged(
           EditorTest(
             id: test.id,
@@ -807,7 +834,7 @@ final class _TestEditor extends StatelessWidget {
           ),
         PopupMenuButton<EditorQuestionType>(
           enabled: test.questions.length < 500,
-          tooltip: 'Soru ekle',
+          tooltip: context.l10n.addQuestion,
           onSelected: (type) => onChanged(
             EditorTest(
               id: test.id,
@@ -820,36 +847,37 @@ final class _TestEditor extends StatelessWidget {
                   supportLanguages,
                   defaultSupportLanguage,
                   test.questions.length + 1,
+                  context.l10n,
                 ),
               ],
             ),
           ),
-          itemBuilder: (context) => const [
+          itemBuilder: (context) => [
             PopupMenuItem(
               value: EditorQuestionType.wordMultipleChoice,
-              child: Text('Kelime çoktan seçmeli'),
+              child: Text(context.l10n.questionTypeWordMultipleChoice),
             ),
             PopupMenuItem(
               value: EditorQuestionType.multipleChoiceCloze,
-              child: Text('Boşluk doldurma · seçenekli'),
+              child: Text(context.l10n.questionTypeMultipleChoiceCloze),
             ),
             PopupMenuItem(
               value: EditorQuestionType.typedCloze,
-              child: Text('Boşluk doldurma · yazılı'),
+              child: Text(context.l10n.questionTypeTypedCloze),
             ),
             PopupMenuItem(
               value: EditorQuestionType.matching,
-              child: Text('Eşleştirme'),
+              child: Text(context.l10n.questionTypeMatching),
             ),
           ],
-          child: const Padding(
-            padding: EdgeInsets.all(12),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.add),
-                SizedBox(width: 8),
-                Text('Soru ekle'),
+                const Icon(Icons.add),
+                const SizedBox(width: 8),
+                Text(context.l10n.addQuestion),
               ],
             ),
           ),
@@ -905,7 +933,9 @@ final class _QuestionEditor extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Card.outlined(
     child: ExpansionTile(
-      title: Text('Soru · ${question.type.name}'),
+      title: Text(
+        context.l10n.questionTitle(_questionTypeLabel(context, question.type)),
+      ),
       trailing: _EditorActions(
         canDelete: canDelete,
         canMoveUp: canMoveUp,
@@ -920,22 +950,24 @@ final class _QuestionEditor extends StatelessWidget {
           TextFormField(
             initialValue: question.prompt,
             maxLength: 1000,
-            decoration: const InputDecoration(labelText: 'Soru metni'),
+            decoration: InputDecoration(labelText: context.l10n.questionPrompt),
             onChanged: (value) => onChanged(_copy(prompt: value)),
           ),
         if (question.type == EditorQuestionType.typedCloze)
           TextFormField(
             initialValue: question.correctAnswer,
             maxLength: 500,
-            decoration: const InputDecoration(labelText: 'Doğru cevap'),
+            decoration: InputDecoration(
+              labelText: context.l10n.correctAnswerLabel,
+            ),
             onChanged: (value) => onChanged(_copy(correctAnswer: value)),
           ),
         if (question.alternativeCorrectAnswer != null)
           TextFormField(
             initialValue: question.alternativeCorrectAnswer,
             maxLength: 500,
-            decoration: const InputDecoration(
-              labelText: 'Alternatif doğru cevap',
+            decoration: InputDecoration(
+              labelText: context.l10n.alternativeCorrectAnswer,
             ),
             onChanged: (value) =>
                 onChanged(_copy(alternativeCorrectAnswer: value)),
@@ -944,7 +976,9 @@ final class _QuestionEditor extends StatelessWidget {
           if (question.translations.containsKey(language))
             TextFormField(
               initialValue: question.translations[language],
-              decoration: InputDecoration(labelText: 'Çeviri ($language)'),
+              decoration: InputDecoration(
+                labelText: context.l10n.translationLanguage(language),
+              ),
               onChanged: (value) {
                 final translations = {
                   ...question.translations,
@@ -1038,10 +1072,13 @@ final class _QuestionEditor extends StatelessWidget {
                         matchingPairs: [
                           ...question.matchingPairs,
                           EditorMatchingPair(
-                            targetText: 'Hedef $ordinal',
+                            targetText: context.l10n.newTarget(ordinal),
                             translations: {
                               for (final language in supportLanguages)
-                                language: 'Eşleşme $ordinal $language',
+                                language: context.l10n.newMatch(
+                                  language,
+                                  ordinal,
+                                ),
                             },
                           ),
                         ],
@@ -1049,7 +1086,7 @@ final class _QuestionEditor extends StatelessWidget {
                     );
                   },
             icon: const Icon(Icons.add),
-            label: const Text('Eşleştirme çifti ekle'),
+            label: Text(context.l10n.addMatchingPair),
           ),
       ],
     ),
@@ -1084,12 +1121,12 @@ final class _OptionEditor extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
           IconButton(
-            tooltip: 'Seçeneği yukarı taşı',
+            tooltip: context.l10n.moveOptionUp,
             onPressed: canMoveUp ? onMoveUp : null,
             icon: const Icon(Icons.arrow_upward, size: 18),
           ),
           IconButton(
-            tooltip: 'Seçeneği aşağı taşı',
+            tooltip: context.l10n.moveOptionDown,
             onPressed: canMoveDown ? onMoveDown : null,
             icon: const Icon(Icons.arrow_downward, size: 18),
           ),
@@ -1098,7 +1135,9 @@ final class _OptionEditor extends StatelessWidget {
       TextFormField(
         initialValue: option.text,
         decoration: InputDecoration(
-          labelText: option.correct ? 'Doğru seçenek' : 'Seçenek',
+          labelText: option.correct
+              ? context.l10n.correctOption
+              : context.l10n.option,
         ),
         onChanged: (value) => onChanged(
           EditorOption(
@@ -1115,7 +1154,7 @@ final class _OptionEditor extends StatelessWidget {
           TextFormField(
             initialValue: option.translations[language],
             decoration: InputDecoration(
-              labelText: 'Seçenek çevirisi ($language)',
+              labelText: context.l10n.optionTranslation(language),
             ),
             onChanged: (value) => onChanged(
               EditorOption(
@@ -1166,7 +1205,7 @@ final class _MatchingEditor extends StatelessWidget {
       ),
       TextFormField(
         initialValue: pair.targetText,
-        decoration: const InputDecoration(labelText: 'Eşleştirme hedefi'),
+        decoration: InputDecoration(labelText: context.l10n.matchingTarget),
         onChanged: (value) => onChanged(
           EditorMatchingPair(
             targetText: value,
@@ -1177,7 +1216,9 @@ final class _MatchingEditor extends StatelessWidget {
       for (final language in supportLanguages)
         TextFormField(
           initialValue: pair.translations[language],
-          decoration: InputDecoration(labelText: 'Eşleşen metin ($language)'),
+          decoration: InputDecoration(
+            labelText: context.l10n.matchingText(language),
+          ),
           onChanged: (value) => onChanged(
             EditorMatchingPair(
               targetText: pair.targetText,
@@ -1212,19 +1253,19 @@ final class _EditorActions extends StatelessWidget {
     children: [
       IconButton(
         visualDensity: VisualDensity.compact,
-        tooltip: 'Yukarı taşı',
+        tooltip: context.l10n.moveUp,
         onPressed: canMoveUp ? onMoveUp : null,
         icon: const Icon(Icons.arrow_upward, size: 18),
       ),
       IconButton(
         visualDensity: VisualDensity.compact,
-        tooltip: 'Aşağı taşı',
+        tooltip: context.l10n.moveDown,
         onPressed: canMoveDown ? onMoveDown : null,
         icon: const Icon(Icons.arrow_downward, size: 18),
       ),
       IconButton(
         visualDensity: VisualDensity.compact,
-        tooltip: 'Sil',
+        tooltip: context.l10n.delete,
         onPressed: canDelete ? onDelete : null,
         icon: const Icon(Icons.delete_outline, size: 18),
       ),
@@ -1239,38 +1280,49 @@ List<T> _moved<T>(List<T> values, int index, int offset) {
   return result;
 }
 
-EditorLevel _newLevel(FullCourseEditorDocument document, int ordinal) =>
-    EditorLevel(
-      title: 'Yeni seviye $ordinal',
-      units: [
-        _newUnit(document.supportLanguages, document.defaultSupportLanguage, 1),
-      ],
-    );
+EditorLevel _newLevel(
+  FullCourseEditorDocument document,
+  int ordinal,
+  AppLocalizations l10n,
+) => EditorLevel(
+  title: l10n.newLevel(ordinal),
+  units: [
+    _newUnit(
+      document.supportLanguages,
+      document.defaultSupportLanguage,
+      1,
+      l10n,
+    ),
+  ],
+);
 
 EditorUnit _newUnit(
   List<String> supportLanguages,
   String defaultSupportLanguage,
   int ordinal,
+  AppLocalizations l10n,
 ) => EditorUnit(
-  title: 'Yeni ünite $ordinal',
-  topics: [_newTopic(supportLanguages, defaultSupportLanguage, 1)],
+  title: l10n.newUnit(ordinal),
+  topics: [_newTopic(supportLanguages, defaultSupportLanguage, 1, l10n)],
 );
 
 EditorTopic _newTopic(
   List<String> supportLanguages,
   String defaultSupportLanguage,
   int ordinal,
+  AppLocalizations l10n,
 ) => EditorTopic(
-  title: 'Yeni konu $ordinal',
-  tests: [_newTest(supportLanguages, defaultSupportLanguage, 1)],
+  title: l10n.newTopic(ordinal),
+  tests: [_newTest(supportLanguages, defaultSupportLanguage, 1, l10n)],
 );
 
 EditorTest _newTest(
   List<String> supportLanguages,
   String defaultSupportLanguage,
   int ordinal,
+  AppLocalizations l10n,
 ) => EditorTest(
-  title: 'Yeni test $ordinal',
+  title: l10n.newTest(ordinal),
   passThreshold: .7,
   questions: [
     _newQuestion(
@@ -1278,6 +1330,7 @@ EditorTest _newTest(
       supportLanguages,
       defaultSupportLanguage,
       1,
+      l10n,
     ),
   ],
 );
@@ -1287,6 +1340,7 @@ EditorQuestion _newQuestion(
   List<String> supportLanguages,
   String defaultSupportLanguage,
   int ordinal,
+  AppLocalizations l10n,
 ) {
   Map<String, String> translated(String label) => {
     for (final language in supportLanguages) language: '$label $language',
@@ -1294,11 +1348,11 @@ EditorQuestion _newQuestion(
 
   return switch (type) {
     EditorQuestionType.wordMultipleChoice => () {
-      final correctTranslations = translated('Çeviri $ordinal');
+      final correctTranslations = translated(l10n.newTranslation(ordinal));
       final correct = correctTranslations[defaultSupportLanguage]!;
       return EditorQuestion(
         type: type,
-        prompt: 'Yeni kelime $ordinal',
+        prompt: l10n.newWord(ordinal),
         correctAnswer: correct,
         translations: correctTranslations,
         options: [
@@ -1309,7 +1363,7 @@ EditorQuestion _newQuestion(
           ),
           for (var option = 1; option <= 3; option++)
             (() {
-              final translations = translated('Seçenek $ordinal.$option');
+              final translations = translated(l10n.newOption(option, ordinal));
               return EditorOption(
                 text: translations[defaultSupportLanguage]!,
                 correct: false,
@@ -1322,18 +1376,18 @@ EditorQuestion _newQuestion(
     }(),
     EditorQuestionType.multipleChoiceCloze => EditorQuestion(
       type: type,
-      prompt: 'Yeni cümle --- $ordinal',
-      correctAnswer: 'cevap$ordinal',
+      prompt: l10n.newSentence(ordinal),
+      correctAnswer: l10n.newAnswer(ordinal),
       translations: const {},
       options: [
         EditorOption(
-          text: 'cevap$ordinal',
+          text: l10n.newAnswer(ordinal),
           correct: true,
           translations: const {},
         ),
         for (var option = 1; option <= 3; option++)
           EditorOption(
-            text: 'yanlış$ordinal$option',
+            text: l10n.newWrongAnswer(option, ordinal),
             correct: false,
             translations: const {},
           ),
@@ -1342,8 +1396,8 @@ EditorQuestion _newQuestion(
     ),
     EditorQuestionType.typedCloze => EditorQuestion(
       type: type,
-      prompt: 'Yeni cümle --- $ordinal',
-      correctAnswer: 'cevap$ordinal',
+      prompt: l10n.newSentence(ordinal),
+      correctAnswer: l10n.newAnswer(ordinal),
       translations: const {},
       options: const [],
       matchingPairs: const [],
@@ -1354,14 +1408,73 @@ EditorQuestion _newQuestion(
       options: const [],
       matchingPairs: [
         EditorMatchingPair(
-          targetText: 'Hedef $ordinal.1',
-          translations: translated('Eşleşme $ordinal.1'),
+          targetText: l10n.newTarget('$ordinal.1'),
+          translations: translated(l10n.newMatch('', '$ordinal.1').trim()),
         ),
         EditorMatchingPair(
-          targetText: 'Hedef $ordinal.2',
-          translations: translated('Eşleşme $ordinal.2'),
+          targetText: l10n.newTarget('$ordinal.2'),
+          translations: translated(l10n.newMatch('', '$ordinal.2').trim()),
         ),
       ],
     ),
+  };
+}
+
+String _questionTypeLabel(BuildContext context, EditorQuestionType type) =>
+    switch (type) {
+      EditorQuestionType.wordMultipleChoice =>
+        context.l10n.questionTypeWordMultipleChoice,
+      EditorQuestionType.multipleChoiceCloze =>
+        context.l10n.questionTypeMultipleChoiceCloze,
+      EditorQuestionType.typedCloze => context.l10n.questionTypeTypedCloze,
+      EditorQuestionType.matching => context.l10n.questionTypeMatching,
+    };
+
+String _localizedChangePath(BuildContext context, String path) => path
+    .split(' / ')
+    .map((segment) => _localizedPathSegment(context, segment))
+    .join(' / ');
+
+String _localizedPathSegment(BuildContext context, String segment) {
+  final l10n = context.l10n;
+  final numbered = RegExp(
+    r'^(Seviye|Ünite|Konu|Test|Soru|Seçenek|Eşleşme) (\d+)$',
+  ).firstMatch(segment);
+  if (numbered != null) {
+    final label = switch (numbered.group(1)) {
+      'Seviye' => l10n.level,
+      'Ünite' => l10n.unit,
+      'Konu' => l10n.topic,
+      'Test' => l10n.test,
+      'Soru' => l10n.question,
+      'Seçenek' => l10n.option,
+      _ => l10n.matching,
+    };
+    return '$label ${numbered.group(2)}';
+  }
+  if (segment.startsWith('çeviri ')) {
+    return l10n.translationLanguage(segment.substring('çeviri '.length));
+  }
+  return switch (segment) {
+    'Kurs' => l10n.course,
+    'ad' => l10n.courseName,
+    'açıklama' => l10n.description,
+    'görünürlük' => l10n.visibility,
+    'seviye sırası' => '${l10n.level} ${l10n.order}',
+    'ünite sırası' => '${l10n.unit} ${l10n.order}',
+    'konu sırası' => '${l10n.topic} ${l10n.order}',
+    'test sırası' => '${l10n.test} ${l10n.order}',
+    'soru sırası' => '${l10n.question} ${l10n.order}',
+    'kimlik' => l10n.identifier,
+    'başlık' => l10n.title,
+    'geçme eşiği' => l10n.passThreshold,
+    'tür' => l10n.type,
+    'istem' => l10n.questionPrompt,
+    'doğru cevap' => l10n.correctAnswerLabel,
+    'alternatif cevap' => l10n.alternativeCorrectAnswer,
+    'metin' => l10n.text,
+    'doğru' => l10n.correctValue,
+    'hedef' => l10n.matchingTarget,
+    _ => segment,
   };
 }
