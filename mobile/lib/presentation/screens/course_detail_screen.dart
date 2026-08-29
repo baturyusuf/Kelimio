@@ -281,7 +281,11 @@ final class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(context.l10n.offlinePackageDownloadFailed('$error')),
+            content: Text(
+              context.l10n.offlinePackageDownloadFailed(
+                userFacingFailureMessage(context, error),
+              ),
+            ),
           ),
         );
       }

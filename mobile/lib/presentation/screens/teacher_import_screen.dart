@@ -8,6 +8,7 @@ import '../../application/course_editor_controller.dart';
 import '../../application/providers.dart';
 import '../../domain/course_authoring/course_authoring.dart';
 import '../../domain/failures.dart';
+import '../widgets/async_error_view.dart';
 import '../widgets/localization.dart';
 
 final class TeacherImportScreen extends ConsumerWidget {
@@ -660,10 +661,7 @@ final class _ErrorCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final message = switch (error) {
-      NetworkFailure() || TimeoutFailure() => context.l10n.networkError,
-      _ => context.l10n.genericError,
-    };
+    final message = userFacingFailureMessage(context, error);
     return Card(
       color: Theme.of(context).colorScheme.errorContainer,
       child: Padding(

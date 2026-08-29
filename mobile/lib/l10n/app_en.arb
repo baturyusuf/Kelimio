@@ -353,5 +353,9 @@
   "studentPreviewChooseOption": "Choose one answer. Preview controls are not interactive.",
   "studentPreviewTypeAnswer": "Enter your answer. Preview controls are not interactive.",
   "studentPreviewMatchItems": "Match the words and meanings. The preview does not reveal the correct pairs.",
-  "studentPreviewNoQuestions": "This test has no questions to preview."
+  "studentPreviewNoQuestions": "This test has no questions to preview.",
+  "authenticationRequiredError": "Your session has expired. Sign in again.",
+  "permissionError": "You do not have permission to perform this action.",
+  "validationError": "Check the information and try again.",
+  "conflictError": "The information changed before this action completed. Refresh and try again."
 }

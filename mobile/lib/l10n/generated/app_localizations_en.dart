@@ -1300,4 +1300,19 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get studentPreviewNoQuestions =>
       'This test has no questions to preview.';
+
+  @override
+  String get authenticationRequiredError =>
+      'Your session has expired. Sign in again.';
+
+  @override
+  String get permissionError =>
+      'You do not have permission to perform this action.';
+
+  @override
+  String get validationError => 'Check the information and try again.';
+
+  @override
+  String get conflictError =>
+      'The information changed before this action completed. Refresh and try again.';
 }

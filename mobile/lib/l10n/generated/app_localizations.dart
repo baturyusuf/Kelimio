@@ -2243,6 +2243,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This test has no questions to preview.'**
   String get studentPreviewNoQuestions;
+
+  /// No description provided for @authenticationRequiredError.
+  ///
+  /// In en, this message translates to:
+  /// **'Your session has expired. Sign in again.'**
+  String get authenticationRequiredError;
+
+  /// No description provided for @permissionError.
+  ///
+  /// In en, this message translates to:
+  /// **'You do not have permission to perform this action.'**
+  String get permissionError;
+
+  /// No description provided for @validationError.
+  ///
+  /// In en, this message translates to:
+  /// **'Check the information and try again.'**
+  String get validationError;
+
+  /// No description provided for @conflictError.
+  ///
+  /// In en, this message translates to:
+  /// **'The information changed before this action completed. Refresh and try again.'**
+  String get conflictError;
 }
 
 class _AppLocalizationsDelegate
