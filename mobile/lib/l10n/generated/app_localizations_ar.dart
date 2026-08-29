@@ -1252,4 +1252,35 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get accountProfileSaved => 'تم حفظ الملف الشخصي.';
+
+  @override
+  String get viewAsStudent => 'العرض كمتعلم';
+
+  @override
+  String get studentPreviewTitle => 'معاينة المتعلم';
+
+  @override
+  String get studentPreviewNotice =>
+      'معاينة للقراءة فقط للمراجعة المنشورة النشطة. لا تبدأ محاولة ولا تمنح نقاطًا أو طاقة.';
+
+  @override
+  String studentPreviewActiveRevision(Object revision) {
+    return 'المراجعة النشطة $revision';
+  }
+
+  @override
+  String get studentPreviewChooseOption =>
+      'اختر إجابة واحدة. عناصر المعاينة غير تفاعلية.';
+
+  @override
+  String get studentPreviewTypeAnswer =>
+      'أدخل إجابتك. عناصر المعاينة غير تفاعلية.';
+
+  @override
+  String get studentPreviewMatchItems =>
+      'طابق الكلمات والمعاني. لا تكشف المعاينة الأزواج الصحيحة.';
+
+  @override
+  String get studentPreviewNoQuestions =>
+      'لا توجد أسئلة لمعاينتها في هذا الاختبار.';
 }

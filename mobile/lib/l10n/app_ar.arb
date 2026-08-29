@@ -345,5 +345,13 @@
   "accountJoinLeaderboard": "الانضمام إلى لوحة المتصدرين",
   "accountProfileStats": "{score} مجموع النقاط · {tests} اختبارات",
   "accountSave": "حفظ",
-  "accountProfileSaved": "تم حفظ الملف الشخصي."
+  "accountProfileSaved": "تم حفظ الملف الشخصي.",
+  "viewAsStudent": "العرض كمتعلم",
+  "studentPreviewTitle": "معاينة المتعلم",
+  "studentPreviewNotice": "معاينة للقراءة فقط للمراجعة المنشورة النشطة. لا تبدأ محاولة ولا تمنح نقاطًا أو طاقة.",
+  "studentPreviewActiveRevision": "المراجعة النشطة {revision}",
+  "studentPreviewChooseOption": "اختر إجابة واحدة. عناصر المعاينة غير تفاعلية.",
+  "studentPreviewTypeAnswer": "أدخل إجابتك. عناصر المعاينة غير تفاعلية.",
+  "studentPreviewMatchItems": "طابق الكلمات والمعاني. لا تكشف المعاينة الأزواج الصحيحة.",
+  "studentPreviewNoQuestions": "لا توجد أسئلة لمعاينتها في هذا الاختبار."
 }

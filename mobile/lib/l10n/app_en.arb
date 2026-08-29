@@ -345,5 +345,13 @@
   "accountJoinLeaderboard": "Join the leaderboard",
   "accountProfileStats": "{score} total points · {tests} tests",
   "accountSave": "Save",
-  "accountProfileSaved": "Profile saved."
+  "accountProfileSaved": "Profile saved.",
+  "viewAsStudent": "View as learner",
+  "studentPreviewTitle": "Learner preview",
+  "studentPreviewNotice": "Read-only preview of the active published revision. It does not start an attempt or award score or energy.",
+  "studentPreviewActiveRevision": "Active revision {revision}",
+  "studentPreviewChooseOption": "Choose one answer. Preview controls are not interactive.",
+  "studentPreviewTypeAnswer": "Enter your answer. Preview controls are not interactive.",
+  "studentPreviewMatchItems": "Match the words and meanings. The preview does not reveal the correct pairs.",
+  "studentPreviewNoQuestions": "This test has no questions to preview."
 }

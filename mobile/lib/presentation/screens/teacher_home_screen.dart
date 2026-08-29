@@ -67,6 +67,14 @@ final class TeacherHomeScreen extends ConsumerWidget {
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
+                            IconButton(
+                              key: Key('teacher-preview-${course.id}'),
+                              tooltip: context.l10n.viewAsStudent,
+                              onPressed: () => context.push(
+                                '/teacher/course/${course.id}/preview',
+                              ),
+                              icon: const Icon(Icons.visibility_outlined),
+                            ),
                             if (course.visibility ==
                                 TeacherCourseVisibility.private)
                               IconButton(

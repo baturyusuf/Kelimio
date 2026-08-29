@@ -1269,4 +1269,35 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get accountProfileSaved => 'Profile saved.';
+
+  @override
+  String get viewAsStudent => 'View as learner';
+
+  @override
+  String get studentPreviewTitle => 'Learner preview';
+
+  @override
+  String get studentPreviewNotice =>
+      'Read-only preview of the active published revision. It does not start an attempt or award score or energy.';
+
+  @override
+  String studentPreviewActiveRevision(Object revision) {
+    return 'Active revision $revision';
+  }
+
+  @override
+  String get studentPreviewChooseOption =>
+      'Choose one answer. Preview controls are not interactive.';
+
+  @override
+  String get studentPreviewTypeAnswer =>
+      'Enter your answer. Preview controls are not interactive.';
+
+  @override
+  String get studentPreviewMatchItems =>
+      'Match the words and meanings. The preview does not reveal the correct pairs.';
+
+  @override
+  String get studentPreviewNoQuestions =>
+      'This test has no questions to preview.';
 }
