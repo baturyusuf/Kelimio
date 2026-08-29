@@ -1283,4 +1283,18 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get studentPreviewNoQuestions =>
       'لا توجد أسئلة لمعاينتها في هذا الاختبار.';
+
+  @override
+  String get authenticationRequiredError =>
+      'انتهت صلاحية جلستك. سجّل الدخول مرة أخرى.';
+
+  @override
+  String get permissionError => 'ليست لديك صلاحية تنفيذ هذا الإجراء.';
+
+  @override
+  String get validationError => 'تحقق من المعلومات وحاول مرة أخرى.';
+
+  @override
+  String get conflictError =>
+      'تغيّرت المعلومات قبل اكتمال الإجراء. حدّث الصفحة وحاول مرة أخرى.';
 }

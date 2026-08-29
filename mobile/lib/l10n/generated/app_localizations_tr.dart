@@ -1292,4 +1292,18 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get studentPreviewNoQuestions => 'Bu testte önizlenecek soru yok.';
+
+  @override
+  String get authenticationRequiredError =>
+      'Oturumunuzun süresi doldu. Yeniden giriş yapın.';
+
+  @override
+  String get permissionError => 'Bu işlemi yapma yetkiniz yok.';
+
+  @override
+  String get validationError => 'Bilgileri kontrol edip yeniden deneyin.';
+
+  @override
+  String get conflictError =>
+      'İşlem tamamlanmadan önce bilgiler değişti. Yenileyip yeniden deneyin.';
 }

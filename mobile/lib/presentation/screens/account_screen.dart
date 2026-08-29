@@ -145,8 +145,11 @@ final class AccountScreen extends ConsumerWidget {
                   Text(context.l10n.accountDeletionRecovery),
                   deletionRequests.when(
                     loading: () => const LinearProgressIndicator(),
-                    error: (error, stackTrace) =>
-                        Text(context.l10n.accountDeletionReadFailed('$error')),
+                    error: (error, stackTrace) => Text(
+                      context.l10n.accountDeletionReadFailed(
+                        userFacingFailureMessage(context, error),
+                      ),
+                    ),
                     data: (requests) {
                       final pending = requests
                           .where((request) => request.status == 'PENDING')
@@ -236,7 +239,13 @@ final class AccountScreen extends ConsumerWidget {
     } on Object catch (error) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(context.l10n.accountExportFailed('$error'))),
+          SnackBar(
+            content: Text(
+              context.l10n.accountExportFailed(
+                userFacingFailureMessage(context, error),
+              ),
+            ),
+          ),
         );
       }
     }
@@ -264,7 +273,11 @@ final class AccountScreen extends ConsumerWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(context.l10n.accountDeletionCancelFailed('$error')),
+            content: Text(
+              context.l10n.accountDeletionCancelFailed(
+                userFacingFailureMessage(context, error),
+              ),
+            ),
           ),
         );
       }
@@ -313,7 +326,11 @@ final class AccountScreen extends ConsumerWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(context.l10n.accountDeletionRequestFailed('$error')),
+            content: Text(
+              context.l10n.accountDeletionRequestFailed(
+                userFacingFailureMessage(context, error),
+              ),
+            ),
           ),
         );
       }
@@ -345,7 +362,13 @@ final class AccountScreen extends ConsumerWidget {
     } on Object catch (error) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(context.l10n.accountRevokeFailed('$error'))),
+          SnackBar(
+            content: Text(
+              context.l10n.accountRevokeFailed(
+                userFacingFailureMessage(context, error),
+              ),
+            ),
+          ),
         );
       }
     }
@@ -503,7 +526,9 @@ final class _NotificationEditorState
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              context.l10n.accountNotificationsSaveFailed('$error'),
+              context.l10n.accountNotificationsSaveFailed(
+                userFacingFailureMessage(context, error),
+              ),
             ),
           ),
         );

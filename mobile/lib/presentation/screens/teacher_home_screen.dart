@@ -143,7 +143,11 @@ final class TeacherHomeScreen extends ConsumerWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(context.l10n.invitationCreateFailed('$error')),
+            content: Text(
+              context.l10n.invitationCreateFailed(
+                userFacingFailureMessage(context, error),
+              ),
+            ),
           ),
         );
       }
@@ -229,7 +233,13 @@ final class TeacherHomeScreen extends ConsumerWidget {
     } on Object catch (error) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(context.l10n.draftPublishFailed('$error'))),
+          SnackBar(
+            content: Text(
+              context.l10n.draftPublishFailed(
+                userFacingFailureMessage(context, error),
+              ),
+            ),
+          ),
         );
       }
     }

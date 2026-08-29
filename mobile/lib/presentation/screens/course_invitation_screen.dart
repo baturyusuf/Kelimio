@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../application/catalog_controller.dart';
 import '../../application/profile_controller.dart';
 import '../../application/providers.dart';
+import '../widgets/async_error_view.dart';
 import '../widgets/localization.dart';
 
 final class CourseInvitationScreen extends ConsumerStatefulWidget {
@@ -70,7 +71,11 @@ final class _CourseInvitationScreenState
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(context.l10n.invitationAcceptFailed('$error')),
+            content: Text(
+              context.l10n.invitationAcceptFailed(
+                userFacingFailureMessage(context, error),
+              ),
+            ),
           ),
         );
       }

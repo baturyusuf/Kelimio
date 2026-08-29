@@ -353,5 +353,9 @@
   "studentPreviewChooseOption": "Bir cevap seçin. Önizleme kontrolleri etkileşimli değildir.",
   "studentPreviewTypeAnswer": "Cevabınızı yazın. Önizleme kontrolleri etkileşimli değildir.",
   "studentPreviewMatchItems": "Kelimelerle anlamları eşleştirin. Önizleme doğru çiftleri göstermez.",
-  "studentPreviewNoQuestions": "Bu testte önizlenecek soru yok."
+  "studentPreviewNoQuestions": "Bu testte önizlenecek soru yok.",
+  "authenticationRequiredError": "Oturumunuzun süresi doldu. Yeniden giriş yapın.",
+  "permissionError": "Bu işlemi yapma yetkiniz yok.",
+  "validationError": "Bilgileri kontrol edip yeniden deneyin.",
+  "conflictError": "İşlem tamamlanmadan önce bilgiler değişti. Yenileyip yeniden deneyin."
 }
