@@ -1107,6 +1107,33 @@ paths:
           $ref: "#/components/responses/Problem"
         default:
           $ref: "#/components/responses/Problem"
+  /v1/teacher/courses/{courseId}/analytics:
+    get:
+      operationId: getTeacherCourseAnalytics
+      tags: [Teacher]
+      summary: Read privacy-preserving active-release analytics for one owned course
+      parameters:
+        - $ref: "#/components/parameters/CourseId"
+      responses:
+        "200":
+          description: Owner-scoped release-consistent course analytics
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeacherCourseAnalytics"
+        "401":
+          $ref: "#/components/responses/Problem"
+        "403":
+          $ref: "#/components/responses/Problem"
+        "404":
+          $ref: "#/components/responses/Problem"
+        "409":
+          $ref: "#/components/responses/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
   /v1/teacher/courses/{courseId}/editor:
     get:
       operationId: getFullCourseEditor
@@ -1739,6 +1766,55 @@ components:
         createdAt:
           type: string
           format: date-time
+    TeacherCourseAnalytics:
+      type: object
+      additionalProperties: false
+      required: [courseId, courseReleaseId, updating]
+      properties:
+        courseId:
+          $ref: "#/components/schemas/Id"
+        courseReleaseId:
+          $ref: "#/components/schemas/Id"
+        updating:
+          type: boolean
+          description: True while learning delivery or active-release reprojection is unresolved; metrics are then null.
+        metrics:
+          anyOf:
+            - $ref: "#/components/schemas/TeacherCourseAnalyticsMetrics"
+            - type: "null"
+        updatedAt:
+          type: [string, "null"]
+          format: date-time
+    TeacherCourseAnalyticsMetrics:
+      type: object
+      additionalProperties: false
+      required: [learnersWithRecordedActivity]
+      properties:
+        learnersWithRecordedActivity:
+          type: integer
+          minimum: 0
+        performance:
+          anyOf:
+            - $ref: "#/components/schemas/TeacherCoursePerformance"
+            - type: "null"
+          description: Aggregate performance is suppressed until at least three learners have recorded activity.
+    TeacherCoursePerformance:
+      type: object
+      additionalProperties: false
+      required: [answeredQuestions, correctAnswers, completedAttempts, passedAttempts]
+      properties:
+        answeredQuestions:
+          type: integer
+          minimum: 0
+        correctAnswers:
+          type: integer
+          minimum: 0
+        completedAttempts:
+          type: integer
+          minimum: 0
+        passedAttempts:
+          type: integer
+          minimum: 0
     FullCourseEditorDocument:
       type: object
       additionalProperties: false

@@ -357,5 +357,16 @@
   "authenticationRequiredError": "Your session has expired. Sign in again.",
   "permissionError": "You do not have permission to perform this action.",
   "validationError": "Check the information and try again.",
-  "conflictError": "The information changed before this action completed. Refresh and try again."
+  "conflictError": "The information changed before this action completed. Refresh and try again.",
+  "teacherAnalyticsTitle": "Course analytics",
+  "viewAnalytics": "View analytics",
+  "teacherAnalyticsUpdatingTitle": "Analytics are updating",
+  "teacherAnalyticsUpdatingBody": "Learning activity is still being processed. Partial results are hidden until the course data is consistent.",
+  "teacherAnalyticsLearners": "{count} learners have recorded activity",
+  "teacherAnalyticsPrivacyTitle": "Performance is protected",
+  "teacherAnalyticsPrivacyBody": "Answer and completion totals appear after at least three learners have activity. This protects small groups.",
+  "teacherAnalyticsAnswers": "{correct} correct answers out of {answered}",
+  "teacherAnalyticsAttempts": "{passed} passed attempts out of {completed} completed",
+  "teacherAnalyticsCorrectRate": "Correct answer rate: {rate}",
+  "teacherAnalyticsLastUpdated": "Last updated: {value}"
 }

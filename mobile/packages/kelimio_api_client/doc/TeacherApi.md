@@ -14,6 +14,7 @@ Method | HTTP request | Description
 [**createFullCourseEditorDraft**](TeacherApi.md#createfullcourseeditordraft) | **POST** /v1/teacher/courses/{courseId}/editor/drafts | Save an ETag-bound complete immutable course draft
 [**getFullCourseEditor**](TeacherApi.md#getfullcourseeditor) | **GET** /v1/teacher/courses/{courseId}/editor | Read the active immutable release as a full owner-scoped editor document
 [**getTeacherAccess**](TeacherApi.md#getteacheraccess) | **GET** /v1/teacher/access | Return the authenticated user&#39;s production teacher access state
+[**getTeacherCourseAnalytics**](TeacherApi.md#getteachercourseanalytics) | **GET** /v1/teacher/courses/{courseId}/analytics | Read privacy-preserving active-release analytics for one owned course
 [**listTeacherCourses**](TeacherApi.md#listteachercourses) | **GET** /v1/teacher/courses | List courses owned by the authenticated authorized teacher
 
 
@@ -218,6 +219,47 @@ This endpoint does not need any parameter.
 ### Return type
 
 [**TeacherAccessResponse**](TeacherAccessResponse.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json, application/problem+json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **getTeacherCourseAnalytics**
+> TeacherCourseAnalytics getTeacherCourseAnalytics(courseId)
+
+Read privacy-preserving active-release analytics for one owned course
+
+### Example
+```dart
+import 'package:kelimio_api_client/api.dart';
+
+final api = KelimioApiClient().getTeacherApi();
+final String courseId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+
+try {
+    final response = api.getTeacherCourseAnalytics(courseId);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling TeacherApi->getTeacherCourseAnalytics: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **courseId** | **String**|  |
+
+### Return type
+
+[**TeacherCourseAnalytics**](TeacherCourseAnalytics.md)
 
 ### Authorization
 

@@ -295,7 +295,7 @@ class LearningProgressProjectionRepository(
                and enrollment_row.enrolled_at <= job.enrollment_cutoff_at
              where job.course_id = ?
                and job.target_release_id = ?
-               and job.status in ('PENDING', 'FAILED')
+               and job.status in ('PENDING', 'FAILED', 'DEAD')
         ) as pending
         """.trimIndent(),
         userId,

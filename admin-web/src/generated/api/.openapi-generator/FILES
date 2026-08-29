@@ -98,7 +98,10 @@ src/models/SessionRevocation.ts
 src/models/SubmitAnswerRequest.ts
 src/models/SubsequentCourseDraftResult.ts
 src/models/TeacherAccessResponse.ts
+src/models/TeacherCourseAnalytics.ts
+src/models/TeacherCourseAnalyticsMetrics.ts
 src/models/TeacherCoursePage.ts
+src/models/TeacherCoursePerformance.ts
 src/models/TeacherCourseSummary.ts
 src/models/TestSummary.ts
 src/models/UpdateNotificationPreferenceRequest.ts

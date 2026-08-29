@@ -273,6 +273,10 @@ final class _ConflictingTeacherCourseRepository
   @override
   Future<String> createInvitation(String courseId) =>
       throw UnimplementedError();
+
+  @override
+  Future<TeacherCourseAnalytics> getAnalytics(String courseId) =>
+      throw UnimplementedError();
 }
 
 FullCourseEditorDocument _document({

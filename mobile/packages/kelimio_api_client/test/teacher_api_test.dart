@@ -45,6 +45,13 @@ void main() {
       // TODO
     });
 
+    // Read privacy-preserving active-release analytics for one owned course
+    //
+    //Future<TeacherCourseAnalytics> getTeacherCourseAnalytics(String courseId) async
+    test('test getTeacherCourseAnalytics', () async {
+      // TODO
+    });
+
     // List courses owned by the authenticated authorized teacher
     //
     //Future<TeacherCoursePage> listTeacherCourses({ String cursor, int limit }) async

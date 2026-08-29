@@ -96,7 +96,10 @@ doc/SubmitAnswerRequest.md
 doc/SubsequentCourseDraftResult.md
 doc/TeacherAccessResponse.md
 doc/TeacherApi.md
+doc/TeacherCourseAnalytics.md
+doc/TeacherCourseAnalyticsMetrics.md
 doc/TeacherCoursePage.md
+doc/TeacherCoursePerformance.md
 doc/TeacherCourseSummary.md
 doc/TestSummary.md
 doc/UpdateNotificationPreferenceRequest.md
@@ -202,7 +205,10 @@ lib/src/model/session_revocation.dart
 lib/src/model/submit_answer_request.dart
 lib/src/model/subsequent_course_draft_result.dart
 lib/src/model/teacher_access_response.dart
+lib/src/model/teacher_course_analytics.dart
+lib/src/model/teacher_course_analytics_metrics.dart
 lib/src/model/teacher_course_page.dart
+lib/src/model/teacher_course_performance.dart
 lib/src/model/teacher_course_summary.dart
 lib/src/model/test_summary.dart
 lib/src/model/update_notification_preference_request.dart
@@ -301,7 +307,10 @@ test/submit_answer_request_test.dart
 test/subsequent_course_draft_result_test.dart
 test/teacher_access_response_test.dart
 test/teacher_api_test.dart
+test/teacher_course_analytics_metrics_test.dart
+test/teacher_course_analytics_test.dart
 test/teacher_course_page_test.dart
+test/teacher_course_performance_test.dart
 test/teacher_course_summary_test.dart
 test/test_summary_test.dart
 test/update_notification_preference_request_test.dart

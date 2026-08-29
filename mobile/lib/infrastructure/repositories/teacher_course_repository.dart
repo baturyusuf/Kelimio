@@ -31,6 +31,60 @@ final class GeneratedTeacherCourseRepository
       });
 
   @override
+  Future<TeacherCourseAnalytics> getAnalytics(String courseId) => _guard(
+    () async {
+      final response = await _api.getTeacherCourseAnalytics(courseId: courseId);
+      final data = response.data;
+      if (data == null || data.courseId != courseId) {
+        throw const ProtocolFailure(
+          'Teacher course analytics response was absent or mismatched',
+        );
+      }
+      final metrics = data.metrics;
+      if (data.updating == (metrics != null)) {
+        throw const ProtocolFailure(
+          'Teacher course analytics freshness state was inconsistent',
+        );
+      }
+      if (metrics != null &&
+          metrics.performance != null &&
+          metrics.learnersWithRecordedActivity < 3) {
+        throw const ProtocolFailure(
+          'Teacher course analytics exposed small-cohort performance',
+        );
+      }
+      final performance = metrics?.performance;
+      if (performance != null &&
+          (performance.correctAnswers > performance.answeredQuestions ||
+              performance.passedAttempts > performance.completedAttempts)) {
+        throw const ProtocolFailure(
+          'Teacher course analytics aggregate ranges were invalid',
+        );
+      }
+      return TeacherCourseAnalytics(
+        courseId: data.courseId,
+        courseReleaseId: data.courseReleaseId,
+        updating: data.updating,
+        metrics: metrics == null
+            ? null
+            : TeacherCourseAnalyticsMetrics(
+                learnersWithRecordedActivity:
+                    metrics.learnersWithRecordedActivity,
+                performance: performance == null
+                    ? null
+                    : TeacherCoursePerformance(
+                        answeredQuestions: performance.answeredQuestions,
+                        correctAnswers: performance.correctAnswers,
+                        completedAttempts: performance.completedAttempts,
+                        passedAttempts: performance.passedAttempts,
+                      ),
+              ),
+        updatedAt: data.updatedAt,
+      );
+    },
+  );
+
+  @override
   Future<FullCourseEditorDocument> getEditor(String courseId) =>
       _guard(() async {
         final response = await _api.getFullCourseEditor(courseId: courseId);
