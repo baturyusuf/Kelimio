@@ -2195,6 +2195,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Profile saved.'**
   String get accountProfileSaved;
+
+  /// No description provided for @viewAsStudent.
+  ///
+  /// In en, this message translates to:
+  /// **'View as learner'**
+  String get viewAsStudent;
+
+  /// No description provided for @studentPreviewTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Learner preview'**
+  String get studentPreviewTitle;
+
+  /// No description provided for @studentPreviewNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'Read-only preview of the active published revision. It does not start an attempt or award score or energy.'**
+  String get studentPreviewNotice;
+
+  /// No description provided for @studentPreviewActiveRevision.
+  ///
+  /// In en, this message translates to:
+  /// **'Active revision {revision}'**
+  String studentPreviewActiveRevision(Object revision);
+
+  /// No description provided for @studentPreviewChooseOption.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose one answer. Preview controls are not interactive.'**
+  String get studentPreviewChooseOption;
+
+  /// No description provided for @studentPreviewTypeAnswer.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your answer. Preview controls are not interactive.'**
+  String get studentPreviewTypeAnswer;
+
+  /// No description provided for @studentPreviewMatchItems.
+  ///
+  /// In en, this message translates to:
+  /// **'Match the words and meanings. The preview does not reveal the correct pairs.'**
+  String get studentPreviewMatchItems;
+
+  /// No description provided for @studentPreviewNoQuestions.
+  ///
+  /// In en, this message translates to:
+  /// **'This test has no questions to preview.'**
+  String get studentPreviewNoQuestions;
 }
 
 class _AppLocalizationsDelegate

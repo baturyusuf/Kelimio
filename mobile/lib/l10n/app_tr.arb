@@ -345,5 +345,13 @@
   "accountJoinLeaderboard": "Liderlik tablosuna katıl",
   "accountProfileStats": "{score} toplam puan · {tests} test",
   "accountSave": "Kaydet",
-  "accountProfileSaved": "Profil kaydedildi."
+  "accountProfileSaved": "Profil kaydedildi.",
+  "viewAsStudent": "Öğrenci olarak görüntüle",
+  "studentPreviewTitle": "Öğrenci önizlemesi",
+  "studentPreviewNotice": "Etkin yayımlanmış sürümün salt okunur önizlemesidir. Test başlatmaz; puan veya enerji kazandırmaz.",
+  "studentPreviewActiveRevision": "Etkin sürüm {revision}",
+  "studentPreviewChooseOption": "Bir cevap seçin. Önizleme kontrolleri etkileşimli değildir.",
+  "studentPreviewTypeAnswer": "Cevabınızı yazın. Önizleme kontrolleri etkileşimli değildir.",
+  "studentPreviewMatchItems": "Kelimelerle anlamları eşleştirin. Önizleme doğru çiftleri göstermez.",
+  "studentPreviewNoQuestions": "Bu testte önizlenecek soru yok."
 }

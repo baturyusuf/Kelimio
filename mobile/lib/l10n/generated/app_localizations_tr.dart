@@ -1262,4 +1262,34 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get accountProfileSaved => 'Profil kaydedildi.';
+
+  @override
+  String get viewAsStudent => 'Öğrenci olarak görüntüle';
+
+  @override
+  String get studentPreviewTitle => 'Öğrenci önizlemesi';
+
+  @override
+  String get studentPreviewNotice =>
+      'Etkin yayımlanmış sürümün salt okunur önizlemesidir. Test başlatmaz; puan veya enerji kazandırmaz.';
+
+  @override
+  String studentPreviewActiveRevision(Object revision) {
+    return 'Etkin sürüm $revision';
+  }
+
+  @override
+  String get studentPreviewChooseOption =>
+      'Bir cevap seçin. Önizleme kontrolleri etkileşimli değildir.';
+
+  @override
+  String get studentPreviewTypeAnswer =>
+      'Cevabınızı yazın. Önizleme kontrolleri etkileşimli değildir.';
+
+  @override
+  String get studentPreviewMatchItems =>
+      'Kelimelerle anlamları eşleştirin. Önizleme doğru çiftleri göstermez.';
+
+  @override
+  String get studentPreviewNoQuestions => 'Bu testte önizlenecek soru yok.';
 }
