@@ -357,5 +357,16 @@
   "authenticationRequiredError": "انتهت صلاحية جلستك. سجّل الدخول مرة أخرى.",
   "permissionError": "ليست لديك صلاحية تنفيذ هذا الإجراء.",
   "validationError": "تحقق من المعلومات وحاول مرة أخرى.",
-  "conflictError": "تغيّرت المعلومات قبل اكتمال الإجراء. حدّث الصفحة وحاول مرة أخرى."
+  "conflictError": "تغيّرت المعلومات قبل اكتمال الإجراء. حدّث الصفحة وحاول مرة أخرى.",
+  "teacherAnalyticsTitle": "تحليلات الدورة",
+  "viewAnalytics": "عرض التحليلات",
+  "teacherAnalyticsUpdatingTitle": "يتم تحديث التحليلات",
+  "teacherAnalyticsUpdatingBody": "لا يزال نشاط التعلّم قيد المعالجة. تُخفى النتائج الجزئية حتى تصبح بيانات الدورة متسقة.",
+  "teacherAnalyticsLearners": "لدى {count} متعلمين نشاط مسجل",
+  "teacherAnalyticsPrivacyTitle": "بيانات الأداء محمية",
+  "teacherAnalyticsPrivacyBody": "تظهر مجاميع الإجابات والإكمال بعد تسجيل نشاط لثلاثة متعلمين على الأقل. يحمي هذا المجموعات الصغيرة.",
+  "teacherAnalyticsAnswers": "{correct} إجابات صحيحة من أصل {answered}",
+  "teacherAnalyticsAttempts": "{passed} محاولات ناجحة من أصل {completed} مكتملة",
+  "teacherAnalyticsCorrectRate": "نسبة الإجابات الصحيحة: {rate}",
+  "teacherAnalyticsLastUpdated": "آخر تحديث: {value}"
 }

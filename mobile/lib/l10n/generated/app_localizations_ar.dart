@@ -1297,4 +1297,49 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get conflictError =>
       'تغيّرت المعلومات قبل اكتمال الإجراء. حدّث الصفحة وحاول مرة أخرى.';
+
+  @override
+  String get teacherAnalyticsTitle => 'تحليلات الدورة';
+
+  @override
+  String get viewAnalytics => 'عرض التحليلات';
+
+  @override
+  String get teacherAnalyticsUpdatingTitle => 'يتم تحديث التحليلات';
+
+  @override
+  String get teacherAnalyticsUpdatingBody =>
+      'لا يزال نشاط التعلّم قيد المعالجة. تُخفى النتائج الجزئية حتى تصبح بيانات الدورة متسقة.';
+
+  @override
+  String teacherAnalyticsLearners(Object count) {
+    return 'لدى $count متعلمين نشاط مسجل';
+  }
+
+  @override
+  String get teacherAnalyticsPrivacyTitle => 'بيانات الأداء محمية';
+
+  @override
+  String get teacherAnalyticsPrivacyBody =>
+      'تظهر مجاميع الإجابات والإكمال بعد تسجيل نشاط لثلاثة متعلمين على الأقل. يحمي هذا المجموعات الصغيرة.';
+
+  @override
+  String teacherAnalyticsAnswers(Object answered, Object correct) {
+    return '$correct إجابات صحيحة من أصل $answered';
+  }
+
+  @override
+  String teacherAnalyticsAttempts(Object completed, Object passed) {
+    return '$passed محاولات ناجحة من أصل $completed مكتملة';
+  }
+
+  @override
+  String teacherAnalyticsCorrectRate(Object rate) {
+    return 'نسبة الإجابات الصحيحة: $rate';
+  }
+
+  @override
+  String teacherAnalyticsLastUpdated(Object value) {
+    return 'آخر تحديث: $value';
+  }
 }

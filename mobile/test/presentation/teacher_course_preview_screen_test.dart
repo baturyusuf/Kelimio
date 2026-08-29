@@ -128,6 +128,10 @@ final class _TeacherRepository implements TeacherCourseRepository {
       throw UnimplementedError();
 
   @override
+  Future<TeacherCourseAnalytics> getAnalytics(String courseId) =>
+      throw UnimplementedError();
+
+  @override
   Future<FullCourseEditorDocument> getEditor(String courseId) async => document;
 
   @override

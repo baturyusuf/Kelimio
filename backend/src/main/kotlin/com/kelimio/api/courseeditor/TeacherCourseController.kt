@@ -4,12 +4,19 @@ import com.kelimio.api.identityprofile.AppUser
 import com.kelimio.api.identityprofile.CurrentUserService
 import com.kelimio.api.persistence.CourseReleases
 import com.kelimio.api.persistence.Courses
+import com.kelimio.api.progress.TeacherCourseAnalyticsMetrics
+import com.kelimio.api.progress.TeacherCourseAnalyticsQuery
+import com.kelimio.api.progress.TeacherCourseAnalyticsSnapshot
+import com.kelimio.api.progress.TeacherCoursePerformance
 import com.kelimio.api.teacher.TeacherAccessService
+import com.kelimio.api.web.NotFoundProblem
 import jakarta.validation.constraints.Max
 import jakarta.validation.constraints.Min
 import org.jooq.DSLContext
 import org.jooq.impl.DSL.noCondition
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
+import org.springframework.http.CacheControl
+import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.security.oauth2.jwt.Jwt
 import org.springframework.stereotype.Repository
@@ -17,6 +24,7 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.validation.annotation.Validated
 import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
@@ -38,6 +46,14 @@ internal class TeacherCourseController(
         @RequestParam(required = false) cursor: UUID?,
         @RequestParam(defaultValue = "20") @Min(1) @Max(100) limit: Int,
     ): TeacherCoursePageResponse = service.list(jwt, currentUserService.requireCompleted(jwt), cursor, limit)
+
+    @GetMapping("/{courseId}/analytics")
+    fun analytics(
+        @AuthenticationPrincipal jwt: Jwt,
+        @PathVariable courseId: UUID,
+    ): ResponseEntity<TeacherCourseAnalyticsResponse> = ResponseEntity.ok()
+        .cacheControl(CacheControl.noStore())
+        .body(service.analytics(jwt, currentUserService.requireCompleted(jwt), courseId))
 }
 
 internal data class TeacherCoursePageResponse(
@@ -60,12 +76,33 @@ internal data class TeacherCourseSummaryResponse(
     val createdAt: OffsetDateTime,
 )
 
+internal data class TeacherCourseAnalyticsResponse(
+    val courseId: UUID,
+    val courseReleaseId: UUID,
+    val updating: Boolean,
+    val metrics: TeacherCourseAnalyticsMetricsResponse?,
+    val updatedAt: OffsetDateTime?,
+)
+
+internal data class TeacherCourseAnalyticsMetricsResponse(
+    val learnersWithRecordedActivity: Int,
+    val performance: TeacherCoursePerformanceResponse?,
+)
+
+internal data class TeacherCoursePerformanceResponse(
+    val answeredQuestions: Long,
+    val correctAnswers: Long,
+    val completedAttempts: Long,
+    val passedAttempts: Long,
+)
+
 @Service
 @ConditionalOnProperty(name = ["KELIMIO_COURSE_RELEASE_ENABLED"], havingValue = "true")
 @ConditionalOnProperty(name = ["KELIMIO_RUNTIME_ROLE"], havingValue = "api", matchIfMissing = true)
 internal class TeacherCourseService(
     private val repository: TeacherCourseRepository,
     private val teacherAccessService: TeacherAccessService,
+    private val analyticsQuery: TeacherCourseAnalyticsQuery,
 ) {
     @Transactional(readOnly = true)
     fun list(jwt: Jwt, user: AppUser, cursor: UUID?, limit: Int): TeacherCoursePageResponse {
@@ -77,10 +114,24 @@ internal class TeacherCourseService(
             nextCursor = items.lastOrNull()?.id?.takeIf { rows.size > limit },
         )
     }
+
+    @Transactional(readOnly = true)
+    fun analytics(jwt: Jwt, user: AppUser, courseId: UUID): TeacherCourseAnalyticsResponse {
+        teacherAccessService.requireAuthorized(jwt, user)
+        val activeReleaseId = repository.findOwnedActiveRelease(user.id, courseId)
+            ?: throw NotFoundProblem("Course was not found.")
+        return analyticsQuery.get(courseId, activeReleaseId).toResponse()
+    }
 }
 
 @Repository
 internal class TeacherCourseRepository(private val dsl: DSLContext) {
+    fun findOwnedActiveRelease(ownerUserId: UUID, courseId: UUID): UUID? = dsl.fetchOne(
+        "select active_release_id from course where id = ? and owner_user_id = ?",
+        courseId,
+        ownerUserId,
+    )?.get("active_release_id", UUID::class.java)
+
     fun list(ownerUserId: UUID, cursor: UUID?, limit: Int): List<TeacherCourseSummaryResponse> {
         val cursorCondition = cursor?.let { Courses.ID.gt(it) } ?: noCondition()
         val openDraftReleaseId = org.jooq.impl.DSL.field(
@@ -126,3 +177,23 @@ internal class TeacherCourseRepository(private val dsl: DSLContext) {
             }
     }
 }
+
+private fun TeacherCourseAnalyticsSnapshot.toResponse() = TeacherCourseAnalyticsResponse(
+    courseId = courseId,
+    courseReleaseId = courseReleaseId,
+    updating = updating,
+    metrics = metrics?.toResponse(),
+    updatedAt = updatedAt,
+)
+
+private fun TeacherCourseAnalyticsMetrics.toResponse() = TeacherCourseAnalyticsMetricsResponse(
+    learnersWithRecordedActivity = learnersWithRecordedActivity,
+    performance = performance?.toResponse(),
+)
+
+private fun TeacherCoursePerformance.toResponse() = TeacherCoursePerformanceResponse(
+    answeredQuestions = answeredQuestions,
+    correctAnswers = correctAnswers,
+    completedAttempts = completedAttempts,
+    passedAttempts = passedAttempts,
+)

@@ -1315,4 +1315,49 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get conflictError =>
       'The information changed before this action completed. Refresh and try again.';
+
+  @override
+  String get teacherAnalyticsTitle => 'Course analytics';
+
+  @override
+  String get viewAnalytics => 'View analytics';
+
+  @override
+  String get teacherAnalyticsUpdatingTitle => 'Analytics are updating';
+
+  @override
+  String get teacherAnalyticsUpdatingBody =>
+      'Learning activity is still being processed. Partial results are hidden until the course data is consistent.';
+
+  @override
+  String teacherAnalyticsLearners(Object count) {
+    return '$count learners have recorded activity';
+  }
+
+  @override
+  String get teacherAnalyticsPrivacyTitle => 'Performance is protected';
+
+  @override
+  String get teacherAnalyticsPrivacyBody =>
+      'Answer and completion totals appear after at least three learners have activity. This protects small groups.';
+
+  @override
+  String teacherAnalyticsAnswers(Object answered, Object correct) {
+    return '$correct correct answers out of $answered';
+  }
+
+  @override
+  String teacherAnalyticsAttempts(Object completed, Object passed) {
+    return '$passed passed attempts out of $completed completed';
+  }
+
+  @override
+  String teacherAnalyticsCorrectRate(Object rate) {
+    return 'Correct answer rate: $rate';
+  }
+
+  @override
+  String teacherAnalyticsLastUpdated(Object value) {
+    return 'Last updated: $value';
+  }
 }

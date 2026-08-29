@@ -1477,6 +1477,65 @@ assert.equal(
   "progress must identify the immutable release represented by its active score",
 );
 
+const teacherAnalyticsOperation =
+  contract.paths["/v1/teacher/courses/{courseId}/analytics"].get;
+assert.equal(
+  teacherAnalyticsOperation.responses["200"].headers["Cache-Control"].$ref,
+  "#/components/headers/NoStore",
+  "teacher learning analytics must remain non-cacheable",
+);
+const validateTeacherAnalytics = compileSchema("TeacherCourseAnalytics");
+const updatingTeacherAnalytics = {
+  courseId: committedImport.courseId,
+  courseReleaseId: committedImport.draftReleaseId,
+  updating: true,
+  metrics: null,
+  updatedAt: null,
+};
+assert.equal(
+  validateTeacherAnalytics(updatingTeacherAnalytics),
+  true,
+  `updating teacher analytics must suppress partial metrics: ${ajv.errorsText(validateTeacherAnalytics.errors)}`,
+);
+const smallCohortTeacherAnalytics = {
+  ...updatingTeacherAnalytics,
+  updating: false,
+  metrics: {
+    learnersWithRecordedActivity: 2,
+    performance: null,
+  },
+  updatedAt: "2026-08-29T12:00:00Z",
+};
+assert.equal(
+  validateTeacherAnalytics(smallCohortTeacherAnalytics),
+  true,
+  `small cohorts must expose activity without performance: ${ajv.errorsText(validateTeacherAnalytics.errors)}`,
+);
+assert.equal(
+  validateTeacherAnalytics({
+    ...smallCohortTeacherAnalytics,
+    metrics: {
+      learnersWithRecordedActivity: 3,
+      performance: {
+        answeredQuestions: 12,
+        correctAnswers: 9,
+        completedAttempts: 4,
+        passedAttempts: 3,
+      },
+    },
+  }),
+  true,
+  `eligible aggregate performance must satisfy the contract: ${ajv.errorsText(validateTeacherAnalytics.errors)}`,
+);
+assert.equal(
+  validateTeacherAnalytics({
+    ...smallCohortTeacherAnalytics,
+    learnerId: "00000000-0000-4000-8000-000000000999",
+  }),
+  false,
+  "teacher analytics must reject learner-identifying fields",
+);
+
 assert.equal(
   validateCourseImportStatus({
     ...validImportStatus,

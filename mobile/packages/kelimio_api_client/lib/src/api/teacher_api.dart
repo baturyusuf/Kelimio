@@ -17,6 +17,7 @@ import 'package:kelimio_api_client/src/model/full_course_editor_draft_response.d
 import 'package:kelimio_api_client/src/model/problem.dart';
 import 'package:kelimio_api_client/src/model/save_full_course_editor_draft_request.dart';
 import 'package:kelimio_api_client/src/model/teacher_access_response.dart';
+import 'package:kelimio_api_client/src/model/teacher_course_analytics.dart';
 import 'package:kelimio_api_client/src/model/teacher_course_page.dart';
 
 class TeacherApi {
@@ -467,6 +468,88 @@ class TeacherApi {
     }
 
     return Response<TeacherAccessResponse>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// Read privacy-preserving active-release analytics for one owned course
+  ///
+  ///
+  /// Parameters:
+  /// * [courseId]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [TeacherCourseAnalytics] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<TeacherCourseAnalytics>> getTeacherCourseAnalytics({
+    required String courseId,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/v1/teacher/courses/{courseId}/analytics'.replaceAll(
+      '{'
+      r'courseId'
+      '}',
+      courseId.toString(),
+    );
+    final _options = Options(
+      method: r'GET',
+      headers: <String, dynamic>{...?headers},
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearerAuth'},
+        ],
+        ...?extra,
+      },
+      validateStatus: validateStatus,
+    );
+
+    final _response = await _dio.request<Object>(
+      _path,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    TeacherCourseAnalytics? _responseData;
+
+    try {
+      final rawData = _response.data;
+      _responseData = rawData == null
+          ? null
+          : deserialize<TeacherCourseAnalytics, TeacherCourseAnalytics>(
+              rawData,
+              'TeacherCourseAnalytics',
+              growable: true,
+            );
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<TeacherCourseAnalytics>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,

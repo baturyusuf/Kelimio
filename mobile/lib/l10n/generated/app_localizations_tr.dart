@@ -1306,4 +1306,49 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get conflictError =>
       'İşlem tamamlanmadan önce bilgiler değişti. Yenileyip yeniden deneyin.';
+
+  @override
+  String get teacherAnalyticsTitle => 'Kurs analitiği';
+
+  @override
+  String get viewAnalytics => 'Analitiği görüntüle';
+
+  @override
+  String get teacherAnalyticsUpdatingTitle => 'Analitik güncelleniyor';
+
+  @override
+  String get teacherAnalyticsUpdatingBody =>
+      'Öğrenme etkinliği hâlâ işleniyor. Kurs verileri tutarlı olana kadar kısmi sonuçlar gizlenir.';
+
+  @override
+  String teacherAnalyticsLearners(Object count) {
+    return '$count öğrencinin kayıtlı etkinliği var';
+  }
+
+  @override
+  String get teacherAnalyticsPrivacyTitle => 'Başarı verileri korunuyor';
+
+  @override
+  String get teacherAnalyticsPrivacyBody =>
+      'Cevap ve tamamlama toplamları en az üç öğrencinin etkinliği olduğunda gösterilir. Bu kural küçük grupları korur.';
+
+  @override
+  String teacherAnalyticsAnswers(Object answered, Object correct) {
+    return '$answered cevabın $correct tanesi doğru';
+  }
+
+  @override
+  String teacherAnalyticsAttempts(Object completed, Object passed) {
+    return 'Tamamlanan $completed denemenin $passed tanesi başarılı';
+  }
+
+  @override
+  String teacherAnalyticsCorrectRate(Object rate) {
+    return 'Doğru cevap oranı: $rate';
+  }
+
+  @override
+  String teacherAnalyticsLastUpdated(Object value) {
+    return 'Son güncelleme: $value';
+  }
 }

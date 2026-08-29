@@ -841,6 +841,114 @@ class VerticalSliceIntegrationTest {
     }
 
     @Test
+    fun `teacher course analytics are owner scoped release consistent and suppress small cohort performance`() {
+        val fixture = createSourcedAuthoringFixture()
+        val ownerJwt = jwt().jwt {
+            it.subject(fixture.ownerSubject)
+                .claim("email", "analytics-owner@integration.invalid")
+                .claim("email_verified", true)
+                .audience(listOf("kelimio-mobile"))
+        }
+
+        fun recordCompletedAttempt(index: Int): RequestPostProcessor {
+            val learnerJwt = jwt().jwt {
+                it.subject("analytics-learner-$index-${fixture.courseId}")
+                    .claim("email", "analytics-learner-$index@integration.invalid")
+                    .claim("email_verified", true)
+                    .audience(listOf("kelimio-mobile"))
+            }
+            mockMvc.get("/v1/me") { with(learnerJwt) }.andExpect { status { isOk() } }
+            completeProfileSetup(learnerJwt, displayName = "Analytics Learner $index")
+            mockMvc.post("/v1/courses/${fixture.courseId}/enrollments") {
+                with(learnerJwt)
+                header("Idempotency-Key", UUID.randomUUID().toString())
+                contentType = MediaType.APPLICATION_JSON
+                content = """{"supportLanguage":"en"}"""
+            }.andExpect { status { isCreated() } }
+            val attemptBody = mockMvc.post("/v1/tests/${fixture.testId}/attempts") {
+                with(learnerJwt)
+                header("Idempotency-Key", UUID.randomUUID().toString())
+            }.andExpect {
+                status { isCreated() }
+                jsonPath("$.questions[0].correctAnswer") { doesNotExist() }
+            }.andReturn().response.contentAsString
+            val attemptId = UUID.fromString(objectMapper.readTree(attemptBody)["id"].asText())
+            val submissionId = UUID.randomUUID()
+            mockMvc.post("/v1/attempts/$attemptId/answers") {
+                with(learnerJwt)
+                header("Idempotency-Key", submissionId.toString())
+                contentType = MediaType.APPLICATION_JSON
+                content = objectMapper.writeValueAsString(
+                    mapOf(
+                        "submissionId" to submissionId,
+                        "questionRevisionId" to fixture.questionRevisionId,
+                        "typedAnswer" to "yazarim",
+                    ),
+                )
+            }.andExpect {
+                status { isOk() }
+                jsonPath("$.correct") { value(true) }
+            }
+            mockMvc.post("/v1/attempts/$attemptId/finish") {
+                with(learnerJwt)
+                header("Idempotency-Key", UUID.randomUUID().toString())
+            }.andExpect {
+                status { isOk() }
+                jsonPath("$.state") { value("COMPLETED_PASS") }
+            }
+            return learnerJwt
+        }
+
+        val firstLearnerJwt = recordCompletedAttempt(1)
+        mockMvc.get("/v1/teacher/courses/${fixture.courseId}/analytics") {
+            with(ownerJwt)
+        }.andExpect {
+            status { isOk() }
+            header { string("Cache-Control", "no-store") }
+            jsonPath("$.courseReleaseId") { value(fixture.baseReleaseId.toString()) }
+            jsonPath("$.updating") { value(true) }
+            jsonPath("$.metrics") { doesNotExist() }
+        }
+
+        while (projectionWorker.processAvailable() > 0) {
+            // Drain the first learner so the small-cohort privacy rule is observable.
+        }
+        mockMvc.get("/v1/teacher/courses/${fixture.courseId}/analytics") {
+            with(ownerJwt)
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$.updating") { value(false) }
+            jsonPath("$.metrics.learnersWithRecordedActivity") { value(1) }
+            jsonPath("$.metrics.performance") { doesNotExist() }
+            jsonPath("$.updatedAt") { exists() }
+        }
+
+        recordCompletedAttempt(2)
+        recordCompletedAttempt(3)
+        while (projectionWorker.processAvailable() > 0) {
+            // Drain every course projection before exposing aggregate performance.
+        }
+        mockMvc.get("/v1/teacher/courses/${fixture.courseId}/analytics") {
+            with(ownerJwt)
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$.updating") { value(false) }
+            jsonPath("$.metrics.learnersWithRecordedActivity") { value(3) }
+            jsonPath("$.metrics.performance.answeredQuestions") { value(3) }
+            jsonPath("$.metrics.performance.correctAnswers") { value(3) }
+            jsonPath("$.metrics.performance.completedAttempts") { value(3) }
+            jsonPath("$.metrics.performance.passedAttempts") { value(3) }
+        }
+
+        mockMvc.get("/v1/teacher/courses/${fixture.courseId}/analytics") {
+            with(firstLearnerJwt)
+        }.andExpect {
+            status { isNotFound() }
+            jsonPath("$.detail") { value("Course was not found.") }
+        }
+    }
+
+    @Test
     fun `authenticated learner completes a real server-scored attempt idempotently`() {
         val fixture = createCourseFixture()
         val learnerJwt = jwt().jwt {

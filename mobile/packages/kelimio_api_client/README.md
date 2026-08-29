@@ -113,6 +113,7 @@ Class | Method | HTTP request | Description
 [*TeacherApi*](doc/TeacherApi.md) | [**createFullCourseEditorDraft**](doc/TeacherApi.md#createfullcourseeditordraft) | **POST** /v1/teacher/courses/{courseId}/editor/drafts | Save an ETag-bound complete immutable course draft
 [*TeacherApi*](doc/TeacherApi.md) | [**getFullCourseEditor**](doc/TeacherApi.md#getfullcourseeditor) | **GET** /v1/teacher/courses/{courseId}/editor | Read the active immutable release as a full owner-scoped editor document
 [*TeacherApi*](doc/TeacherApi.md) | [**getTeacherAccess**](doc/TeacherApi.md#getteacheraccess) | **GET** /v1/teacher/access | Return the authenticated user&#39;s production teacher access state
+[*TeacherApi*](doc/TeacherApi.md) | [**getTeacherCourseAnalytics**](doc/TeacherApi.md#getteachercourseanalytics) | **GET** /v1/teacher/courses/{courseId}/analytics | Read privacy-preserving active-release analytics for one owned course
 [*TeacherApi*](doc/TeacherApi.md) | [**listTeacherCourses**](doc/TeacherApi.md#listteachercourses) | **GET** /v1/teacher/courses | List courses owned by the authenticated authorized teacher
 
 
@@ -200,7 +201,10 @@ Class | Method | HTTP request | Description
  - [SubmitAnswerRequest](doc/SubmitAnswerRequest.md)
  - [SubsequentCourseDraftResult](doc/SubsequentCourseDraftResult.md)
  - [TeacherAccessResponse](doc/TeacherAccessResponse.md)
+ - [TeacherCourseAnalytics](doc/TeacherCourseAnalytics.md)
+ - [TeacherCourseAnalyticsMetrics](doc/TeacherCourseAnalyticsMetrics.md)
  - [TeacherCoursePage](doc/TeacherCoursePage.md)
+ - [TeacherCoursePerformance](doc/TeacherCoursePerformance.md)
  - [TeacherCourseSummary](doc/TeacherCourseSummary.md)
  - [TestSummary](doc/TestSummary.md)
  - [UpdateNotificationPreferenceRequest](doc/UpdateNotificationPreferenceRequest.md)

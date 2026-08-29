@@ -77,7 +77,10 @@ import 'package:kelimio_api_client/src/model/session_revocation.dart';
 import 'package:kelimio_api_client/src/model/submit_answer_request.dart';
 import 'package:kelimio_api_client/src/model/subsequent_course_draft_result.dart';
 import 'package:kelimio_api_client/src/model/teacher_access_response.dart';
+import 'package:kelimio_api_client/src/model/teacher_course_analytics.dart';
+import 'package:kelimio_api_client/src/model/teacher_course_analytics_metrics.dart';
 import 'package:kelimio_api_client/src/model/teacher_course_page.dart';
+import 'package:kelimio_api_client/src/model/teacher_course_performance.dart';
 import 'package:kelimio_api_client/src/model/teacher_course_summary.dart';
 import 'package:kelimio_api_client/src/model/test_summary.dart';
 import 'package:kelimio_api_client/src/model/update_notification_preference_request.dart';
@@ -365,8 +368,19 @@ ReturnType deserialize<ReturnType, BaseType>(
     case 'TeacherAccessResponse':
       return TeacherAccessResponse.fromJson(value as Map<String, dynamic>)
           as ReturnType;
+    case 'TeacherCourseAnalytics':
+      return TeacherCourseAnalytics.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'TeacherCourseAnalyticsMetrics':
+      return TeacherCourseAnalyticsMetrics.fromJson(
+            value as Map<String, dynamic>,
+          )
+          as ReturnType;
     case 'TeacherCoursePage':
       return TeacherCoursePage.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'TeacherCoursePerformance':
+      return TeacherCoursePerformance.fromJson(value as Map<String, dynamic>)
           as ReturnType;
     case 'TeacherCourseSummary':
       return TeacherCourseSummary.fromJson(value as Map<String, dynamic>)

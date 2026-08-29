@@ -357,5 +357,16 @@
   "authenticationRequiredError": "Oturumunuzun süresi doldu. Yeniden giriş yapın.",
   "permissionError": "Bu işlemi yapma yetkiniz yok.",
   "validationError": "Bilgileri kontrol edip yeniden deneyin.",
-  "conflictError": "İşlem tamamlanmadan önce bilgiler değişti. Yenileyip yeniden deneyin."
+  "conflictError": "İşlem tamamlanmadan önce bilgiler değişti. Yenileyip yeniden deneyin.",
+  "teacherAnalyticsTitle": "Kurs analitiği",
+  "viewAnalytics": "Analitiği görüntüle",
+  "teacherAnalyticsUpdatingTitle": "Analitik güncelleniyor",
+  "teacherAnalyticsUpdatingBody": "Öğrenme etkinliği hâlâ işleniyor. Kurs verileri tutarlı olana kadar kısmi sonuçlar gizlenir.",
+  "teacherAnalyticsLearners": "{count} öğrencinin kayıtlı etkinliği var",
+  "teacherAnalyticsPrivacyTitle": "Başarı verileri korunuyor",
+  "teacherAnalyticsPrivacyBody": "Cevap ve tamamlama toplamları en az üç öğrencinin etkinliği olduğunda gösterilir. Bu kural küçük grupları korur.",
+  "teacherAnalyticsAnswers": "{answered} cevabın {correct} tanesi doğru",
+  "teacherAnalyticsAttempts": "Tamamlanan {completed} denemenin {passed} tanesi başarılı",
+  "teacherAnalyticsCorrectRate": "Doğru cevap oranı: {rate}",
+  "teacherAnalyticsLastUpdated": "Son güncelleme: {value}"
 }

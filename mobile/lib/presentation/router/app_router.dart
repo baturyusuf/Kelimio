@@ -15,6 +15,7 @@ import '../screens/full_course_editor_screen.dart';
 import '../screens/profile_setup_screen.dart';
 import '../screens/sign_in_screen.dart';
 import '../screens/splash_screen.dart';
+import '../screens/teacher_course_analytics_screen.dart';
 import '../screens/teacher_course_preview_screen.dart';
 import '../screens/teacher_gate_screen.dart';
 import '../widgets/localization.dart';
@@ -126,6 +127,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                   path: '/teacher',
                   builder: (context, state) => const TeacherGateScreen(),
                   routes: [
+                    GoRoute(
+                      path: 'course/:courseId/analytics',
+                      builder: (context, state) => TeacherCourseAnalyticsScreen(
+                        courseId: state.pathParameters['courseId']!,
+                      ),
+                    ),
                     GoRoute(
                       path: 'course/:courseId/preview',
                       builder: (context, state) => TeacherCoursePreviewScreen(

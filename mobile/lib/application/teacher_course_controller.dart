@@ -23,6 +23,29 @@ final class TeacherCoursesController extends AsyncNotifier<TeacherCoursePage> {
   }
 }
 
+final teacherCourseAnalyticsProvider = AsyncNotifierProvider.autoDispose
+    .family<TeacherCourseAnalyticsController, TeacherCourseAnalytics, String>(
+      (courseId) => TeacherCourseAnalyticsController(courseId),
+    );
+
+final class TeacherCourseAnalyticsController
+    extends AsyncNotifier<TeacherCourseAnalytics> {
+  TeacherCourseAnalyticsController(this.courseId);
+
+  final String courseId;
+
+  @override
+  Future<TeacherCourseAnalytics> build() =>
+      ref.watch(teacherCourseRepositoryProvider).getAnalytics(courseId);
+
+  Future<void> refresh() async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(
+      () => ref.read(teacherCourseRepositoryProvider).getAnalytics(courseId),
+    );
+  }
+}
+
 final teacherCourseEditorProvider = AsyncNotifierProvider.autoDispose
     .family<TeacherCourseEditorController, FullCourseEditorDocument, String>(
       (courseId) => TeacherCourseEditorController(courseId),

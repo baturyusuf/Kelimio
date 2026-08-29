@@ -40,6 +40,46 @@ final class TeacherCoursePage {
   final String? nextCursor;
 }
 
+final class TeacherCourseAnalytics {
+  const TeacherCourseAnalytics({
+    required this.courseId,
+    required this.courseReleaseId,
+    required this.updating,
+    required this.metrics,
+    this.updatedAt,
+  });
+
+  final String courseId;
+  final String courseReleaseId;
+  final bool updating;
+  final TeacherCourseAnalyticsMetrics? metrics;
+  final DateTime? updatedAt;
+}
+
+final class TeacherCourseAnalyticsMetrics {
+  const TeacherCourseAnalyticsMetrics({
+    required this.learnersWithRecordedActivity,
+    required this.performance,
+  });
+
+  final int learnersWithRecordedActivity;
+  final TeacherCoursePerformance? performance;
+}
+
+final class TeacherCoursePerformance {
+  const TeacherCoursePerformance({
+    required this.answeredQuestions,
+    required this.correctAnswers,
+    required this.completedAttempts,
+    required this.passedAttempts,
+  });
+
+  final int answeredQuestions;
+  final int correctAnswers;
+  final int completedAttempts;
+  final int passedAttempts;
+}
+
 final class FullCourseEditorDocument {
   FullCourseEditorDocument({
     required this.courseId,
@@ -173,6 +213,7 @@ final class FullCourseDraft {
 
 abstract interface class TeacherCourseRepository {
   Future<TeacherCoursePage> listCourses({String? cursor, int limit = 20});
+  Future<TeacherCourseAnalytics> getAnalytics(String courseId);
   Future<FullCourseEditorDocument> getEditor(String courseId);
   Future<FullCourseDraft> saveDraft({
     required FullCourseEditorDocument document,

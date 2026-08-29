@@ -23,6 +23,7 @@ import type {
   Problem,
   SaveFullCourseEditorDraftRequest,
   TeacherAccessResponse,
+  TeacherCourseAnalytics,
   TeacherCoursePage,
 } from '../models/index';
 import {
@@ -42,6 +43,8 @@ import {
     SaveFullCourseEditorDraftRequestToJSON,
     TeacherAccessResponseFromJSON,
     TeacherAccessResponseToJSON,
+    TeacherCourseAnalyticsFromJSON,
+    TeacherCourseAnalyticsToJSON,
     TeacherCoursePageFromJSON,
     TeacherCoursePageToJSON,
 } from '../models/index';
@@ -63,6 +66,10 @@ export interface CreateFullCourseEditorDraftRequest {
 }
 
 export interface GetFullCourseEditorRequest {
+    courseId: string;
+}
+
+export interface GetTeacherCourseAnalyticsRequest {
     courseId: string;
 }
 
@@ -157,6 +164,21 @@ export interface TeacherApiInterface {
      * Return the authenticated user\'s production teacher access state
      */
     getTeacherAccess(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<TeacherAccessResponse>;
+
+    /**
+     *
+     * @summary Read privacy-preserving active-release analytics for one owned course
+     * @param {string} courseId
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof TeacherApiInterface
+     */
+    getTeacherCourseAnalyticsRaw(requestParameters: GetTeacherCourseAnalyticsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<TeacherCourseAnalytics>>;
+
+    /**
+     * Read privacy-preserving active-release analytics for one owned course
+     */
+    getTeacherCourseAnalytics(requestParameters: GetTeacherCourseAnalyticsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<TeacherCourseAnalytics>;
 
     /**
      *
@@ -443,6 +465,51 @@ export class TeacherApi extends runtime.BaseAPI implements TeacherApiInterface {
      */
     async getTeacherAccess(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<TeacherAccessResponse> {
         const response = await this.getTeacherAccessRaw(initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Read privacy-preserving active-release analytics for one owned course
+     */
+    async getTeacherCourseAnalyticsRaw(requestParameters: GetTeacherCourseAnalyticsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<TeacherCourseAnalytics>> {
+        if (requestParameters['courseId'] == null) {
+            throw new runtime.RequiredError(
+                'courseId',
+                'Required parameter "courseId" was null or undefined when calling getTeacherCourseAnalytics().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("bearerAuth", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/v1/teacher/courses/{courseId}/analytics`;
+        urlPath = urlPath.replace(`{${"courseId"}}`, encodeURIComponent(String(requestParameters['courseId'])));
+
+        const response = await this.request({
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => TeacherCourseAnalyticsFromJSON(jsonValue));
+    }
+
+    /**
+     * Read privacy-preserving active-release analytics for one owned course
+     */
+    async getTeacherCourseAnalytics(requestParameters: GetTeacherCourseAnalyticsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<TeacherCourseAnalytics> {
+        const response = await this.getTeacherCourseAnalyticsRaw(requestParameters, initOverrides);
         return await response.value();
     }
 

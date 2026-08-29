@@ -2267,6 +2267,72 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The information changed before this action completed. Refresh and try again.'**
   String get conflictError;
+
+  /// No description provided for @teacherAnalyticsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Course analytics'**
+  String get teacherAnalyticsTitle;
+
+  /// No description provided for @viewAnalytics.
+  ///
+  /// In en, this message translates to:
+  /// **'View analytics'**
+  String get viewAnalytics;
+
+  /// No description provided for @teacherAnalyticsUpdatingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Analytics are updating'**
+  String get teacherAnalyticsUpdatingTitle;
+
+  /// No description provided for @teacherAnalyticsUpdatingBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Learning activity is still being processed. Partial results are hidden until the course data is consistent.'**
+  String get teacherAnalyticsUpdatingBody;
+
+  /// No description provided for @teacherAnalyticsLearners.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} learners have recorded activity'**
+  String teacherAnalyticsLearners(Object count);
+
+  /// No description provided for @teacherAnalyticsPrivacyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Performance is protected'**
+  String get teacherAnalyticsPrivacyTitle;
+
+  /// No description provided for @teacherAnalyticsPrivacyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Answer and completion totals appear after at least three learners have activity. This protects small groups.'**
+  String get teacherAnalyticsPrivacyBody;
+
+  /// No description provided for @teacherAnalyticsAnswers.
+  ///
+  /// In en, this message translates to:
+  /// **'{correct} correct answers out of {answered}'**
+  String teacherAnalyticsAnswers(Object answered, Object correct);
+
+  /// No description provided for @teacherAnalyticsAttempts.
+  ///
+  /// In en, this message translates to:
+  /// **'{passed} passed attempts out of {completed} completed'**
+  String teacherAnalyticsAttempts(Object completed, Object passed);
+
+  /// No description provided for @teacherAnalyticsCorrectRate.
+  ///
+  /// In en, this message translates to:
+  /// **'Correct answer rate: {rate}'**
+  String teacherAnalyticsCorrectRate(Object rate);
+
+  /// No description provided for @teacherAnalyticsLastUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Last updated: {value}'**
+  String teacherAnalyticsLastUpdated(Object value);
 }
 
 class _AppLocalizationsDelegate
