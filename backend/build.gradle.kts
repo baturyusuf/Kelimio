@@ -4,8 +4,8 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 plugins {
     id("org.springframework.boot") version "3.5.16"
     id("io.spring.dependency-management") version "1.1.7"
-    kotlin("jvm") version "2.4.10"
-    kotlin("plugin.spring") version "2.4.10"
+    kotlin("jvm") version "2.4.20"
+    kotlin("plugin.spring") version "2.4.20"
 }
 
 group = "com.kelimio"
@@ -23,7 +23,7 @@ java {
 }
 
 dependencies {
-    implementation(platform("software.amazon.awssdk:bom:2.50.2"))
+    implementation(platform("software.amazon.awssdk:bom:2.54.17"))
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("org.springframework.boot:spring-boot-starter-jooq")
     implementation("org.springframework.boot:spring-boot-starter-oauth2-resource-server")
@@ -42,7 +42,7 @@ dependencies {
     implementation("software.amazon.awssdk:ssm")
     implementation("software.amazon.awssdk:url-connection-client")
 
-    runtimeOnly("org.postgresql:postgresql:42.7.12")
+    runtimeOnly("org.postgresql:postgresql:42.7.13")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.security:spring-security-test")
