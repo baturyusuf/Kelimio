@@ -1,4 +1,4 @@
-FROM localstack/localstack:4.4.0@sha256:b52c16663c70b7234f217cb993a339b46686e30a1a5d9279cb5feeb2202f837c
+FROM localstack/localstack:4.14.0@sha256:3ebc37595918b8accb852f8048fef2aff047d465167edd655528065b07bc364a
 
 COPY init/ /etc/localstack/init/ready.d/
 RUN sed -i 's/\r$//' /etc/localstack/init/ready.d/*.sh \
