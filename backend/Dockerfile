@@ -10,7 +10,7 @@ COPY settings.gradle.kts build.gradle.kts gradle.properties gradle.lockfile ./
 COPY src ./src
 RUN gradle --no-daemon clean bootJar
 
-FROM eclipse-temurin:21-jre-alpine@sha256:3f08b13888f595cc49edabea7250ba69499ba25602b267da591720769400e08c AS runtime
+FROM eclipse-temurin:25-jre-alpine@sha256:3137541deb3cac6626b5d9a4a2187bc0d6a34312f858bd2c67dd01e732e6b682 AS runtime
 RUN apk add --no-cache --upgrade \
         libexpat=2.8.3-r0 \
         libcrypto3=3.5.8-r0 \
