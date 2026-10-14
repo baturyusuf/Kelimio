@@ -4,7 +4,7 @@
 # native worker platform and reserve ARM64 emulation/cross-pull for the runtime
 # image, otherwise production builds can spend many minutes running Gradle
 # under QEMU.
-FROM --platform=$BUILDPLATFORM gradle:8.14.3-jdk21@sha256:21bd311ed01360c189b8870c6b6e988199ff10f72d445d02fb39d3cff9da91d7 AS build
+FROM --platform=$BUILDPLATFORM gradle:9.8.1-jdk21@sha256:d5c815d1281e3edc7e986ca573b1b309639747fa0d91a2199adadf327cfdf634 AS build
 WORKDIR /workspace
 COPY settings.gradle.kts build.gradle.kts gradle.properties gradle.lockfile ./
 COPY src ./src
